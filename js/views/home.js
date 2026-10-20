@@ -1,0 +1,78 @@
+/* Tela inicial: expansões. */
+import {visibleSets} from '../catalog.js';
+import {groupBySet, ownedQty, setStat} from '../collection.js';
+import {S, soft} from '../state.js';
+import {modeSeg, noteHTML} from '../ui.js';
+import {$, $$, esc, fmtDate, fmtN, nz, pct} from '../util.js';
+
+export function viewHome(){
+ S.cur={name:'home',soft:renderHome,refresh:renderHome};
+ $('#view').innerHTML=`
+  <div class="top">
+   <div><h1>Expansões</h1><p class="lead">Todas as expansões do Pokémon TCG. Abra uma para marcar as cartas que você tem.</p></div>
+   <div class="tools"><input class="field" id="q" type="search" placeholder="Buscar expansão" aria-label="Buscar expansão" value="${esc(S.ui.q)}">${modeSeg()}</div>
+  </div>
+  <div id="homebody"></div>`;
+ renderHome();
+}
+export function statusNotes(){
+ let h='';
+ if(!S.persist)h+=noteHTML('warn','Seu navegador não permitiu salvar dados neste modo de abertura. Abra o app por um servidor local (veja o LEIA-ME) para que a coleção fique guardada.');
+ if(S.status.catalog==='error')h+=noteHTML('err',`Não consegui acessar a TCGdex (${esc(S.status.err)}). Verifique a conexão. <button class="btn small" data-act="retry-catalog" type="button">Tentar de novo</button>`);
+ if(S.status.pre)h+=noteHTML('',`Carregando detalhes das expansões: ${S.status.pre.done} de ${S.status.pre.total}. Os totais do Master Set aparecem à medida que chegam.`);
+ return h;
+}
+export function renderHome(){
+ const body=$('#homebody');if(!body)return;
+ const mode=S.settings.mode;
+ $$('[data-act=mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===mode)));
+ const sets=visibleSets();
+ if(!sets.length){
+  body.innerHTML=statusNotes()+(S.status.catalog==='error'?'':`<div class="sets">${'<div class="skel"></div>'.repeat(12)}</div>`);
+  return;
+ }
+ const bySet=groupBySet();
+ const stats={};let diff=0,copies=0,done=0;
+ sets.forEach(s=>{stats[s.id]=setStat(s,bySet);if(stats[s.id].tot>0&&stats[s.id].own>=stats[s.id].tot)done++;});
+ for(const id in S.collection){const q=ownedQty(id);if(q>0){diff++;copies+=q;}}
+ /* grupos por série, da mais nova para a mais antiga */
+ const groups=[];const gm={};
+ sets.slice().reverse().forEach(s=>{
+  const se=S.serieOf[s.id];const name=se?se.name:'Outras';
+  if(!gm[name]){gm[name]={name,sets:[]};groups.push(gm[name]);}
+  gm[name].sets.push(s);
+ });
+ const q=nz(S.ui.q);
+ const serieSel=S.ui.serie;
+ const shown=groups.filter(g=>serieSel==='all'||g.name===serieSel).map(g=>({name:g.name,sets:g.sets.filter(s=>!q||nz(s.name).includes(q)||nz(s.id).includes(q))})).filter(g=>g.sets.length);
+ const tabs=`<div class="tabs" role="group" aria-label="Filtrar por série"><button type="button" data-act="serie" data-v="all" aria-pressed="${serieSel==='all'}">Todas</button>${groups.map(g=>`<button type="button" data-act="serie" data-v="${esc(g.name)}" aria-pressed="${serieSel===g.name}">${esc(g.name)}</button>`).join('')}</div>`;
+ const summary=`<div class="summary"><div><b>${fmtN(diff)}</b><span>cartas diferentes</span></div><div><b>${fmtN(copies)}</b><span>exemplares</span></div><div><b>${fmtN(done)}</b><span>expansões completas (Set)</span></div></div>`;
+ const grid=shown.length?shown.map(g=>`
+  <section class="series"><div class="series-head"><h2>${esc(g.name)}</h2><small>${g.sets.length} ${g.sets.length===1?'expansão':'expansões'}</small></div>
+  <div class="sets">${g.sets.map(s=>setTile(s,stats[s.id],mode)).join('')}</div></section>`).join('')
+  :`<div class="empty"><h3>Nenhuma expansão encontrada</h3><p>Tente outro nome ou limpe o filtro de série.</p></div>`;
+ body.innerHTML=statusNotes()+summary+tabs+grid;
+}
+export function setTile(s,st,mode){
+ const d=S.setd[s.id];
+ const logo=s.logo?`<img loading="lazy" decoding="async" alt="" src="${esc(s.logo)}.webp" data-role="logo" data-name="${esc(s.name)}">`:`<span class="noimg">${esc(s.name)}</span>`;
+ const sym=s.symbol?`<img class="sym" loading="lazy" alt="" src="${esc(s.symbol)}.webp" data-role="sym">`:'';
+ let main,sub,own,tot;
+ if(mode==='master'){
+  own=st.ownM;tot=st.masterTot;
+  main=`<strong>${fmtN(own)}</strong><span>${tot==null?'de …':'de '+fmtN(tot)}</span>`;
+  sub=`Set: ${st.own} de ${st.tot}`;
+ }else{
+  own=st.own;tot=st.tot;
+  main=`<strong>${fmtN(own)}</strong><span>de ${fmtN(tot)}</span>`;
+  sub=st.masterTot==null?'Master Set: …':`Master Set: ${st.ownM} de ${st.masterTot}`;
+ }
+ const complete=tot>0&&own>=tot;
+ return `<a class="set ${complete?'done':''}" href="#/set/${encodeURIComponent(s.id)}" aria-label="${esc(s.name)}: ${own} de ${tot==null?'?':tot}">
+  <div class="logo">${logo}</div>
+  <div class="meta">${sym}<div><span class="sname">${esc(s.name)}</span><span class="sdate">${d&&d.releaseDate?fmtDate(d.releaseDate):''}${s.lang==='en'?(d&&d.releaseDate?' · ':'')+'nome em inglês':''}</span></div></div>
+  <div class="count">${main}</div>
+  <div class="bar ${complete?'done':''}"><i style="width:${pct(own,tot)}%"></i></div>
+  <div class="sub">${esc(sub)}${complete?' <span class="badge gold">Completo</span>':''}</div>
+ </a>`;
+}
