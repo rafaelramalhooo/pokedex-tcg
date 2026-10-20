@@ -3,6 +3,8 @@ import {S} from './state.js';
 import {logoFail} from './logos.js';
 import {$, esc} from './util.js';
 import {customCard} from './custom.js';
+import {modeOf, tileOf} from './modes.js';
+import {derivedImage} from './reprints.js';
 
 let toastT=null;
 export function toast(msg,label,fn){
@@ -18,6 +20,10 @@ export function toast(msg,label,fn){
 export function imgTag(base,q,name,role,id){
  const own=id&&customCard(id);
  if(own)return `<img decoding="async" alt="" src="${esc(own)}" data-role="own">`;
+ if(!base&&id){
+  const dv=derivedImage(id);
+  if(dv)return `<img loading="lazy" decoding="async" alt="" src="${esc(dv.url)}/${q}.webp" data-b="${esc(dv.url)}" data-q="${q}" data-name="${esc(name||'')}" data-id="${esc(id)}" data-derived="${dv.kind}"${role?` data-role="${role}"`:''}>`;
+ }
  if(!base){
   const b=id&&S.briefs[id];
   return `<div class="ph" data-noimg="1"><b>${esc(name||'')}</b>${b&&b.localId?`<small>${esc(b.localId)}</small>`:''}</div>`;
@@ -37,9 +43,9 @@ document.addEventListener('error',e=>{
 
 
 export function modeSeg(){
- const m=S.settings.mode;
+ const m=S.cur&&S.cur.name==='set'?modeOf(S.cur.id):S.settings.mode;
  return `<div class="seg" role="group" aria-label="Modo de contagem"><button type="button" data-act="mode" data-v="set" aria-pressed="${m==='set'}">Set</button><button type="button" data-act="mode" data-v="master" aria-pressed="${m==='master'}">Master Set</button></div>`;
 }
 
 export function noteHTML(kind,html){return `<div class="note ${kind||''}">${html}</div>`;}
-export const sizeCtl=()=>`<label class="size">Tamanho<input type="range" id="tile" min="100" max="240" step="10" value="${S.settings.tile}"></label>`;
+export const sizeCtl=()=>`<label class="size">Tamanho<input type="range" id="tile" min="100" max="240" step="10" value="${tileOf()}"></label>`;

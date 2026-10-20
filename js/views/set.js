@@ -6,8 +6,10 @@ import {H, S, soft} from '../state.js';
 import {logoImg} from '../logos.js';
 import {customLogo} from '../custom.js';
 import {imgTag, modeSeg, noteHTML, sizeCtl} from '../ui.js';
+import {modeOf} from '../modes.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
 import {$, $$, ICON, esc, fmtDate, fmtN, nz, pct} from '../util.js';
+import {matchQuery, parseQuery} from './dex.js';
 
 export async function viewSet(id){
  S.cur={name:'set',id,soft:()=>{renderSetHero();renderSetGrid();},refresh:()=>{renderSetHero();renderSetGrid();}};
@@ -21,18 +23,18 @@ export async function viewSet(id){
  if(!S.cur||S.cur.id!==id)return;
  $('#settools').innerHTML=`<div class="toolbar">${modeSeg()}
   <div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="sfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="sfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="sfilter" data-v="miss" aria-pressed="false">Faltam</button></div>
-  <input class="field" id="sq" type="search" placeholder="Nome ou número" aria-label="Buscar carta">
+  <input class="field" id="sq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar carta">
   <span class="grow"></span><span class="bookctl" id="bookctl"></span></div><div id="setnote"></div>`;
  renderBookCtl();
  renderSetHero();renderSetGrid();
- if(S.settings.mode==='master')ensureSetCards(id);
+ if(modeOf(id)==='master')ensureSetCards(id);
 }
 export function renderSetHero(){
  const el=$('#sethero');if(!el||!S.cur||S.cur.name!=='set')return;
  const id=S.cur.id;const set=S.setMap[id]||{id,name:id};const d=S.setd[id];if(!d)return;
  const st=setStat(set,groupBySet());
  const se=S.serieOf[id]||(d.serie&&{name:d.serie.name});
- const m=S.settings.mode;
+ const m=modeOf(id);
  const logo=logoImg({...d,...set,id,name:d.name,logo:d.logo||set.logo});
  const stat=(k,label,own,tot)=>`<button type="button" class="hstat ${m===k?'active':''}" data-act="mode" data-v="${k}" style="background:none;border:0;text-align:left;cursor:pointer;padding:0"><div class="lbl">${label}</div><div class="count"><strong>${fmtN(own)}</strong><span>${tot==null?'de …':'de '+fmtN(tot)}</span></div><div class="bar ${tot>0&&own>=tot?'done':''}"><i style="width:${pct(own,tot)}%"></i></div></button>`;
  el.innerHTML=`<div class="hero">
@@ -44,11 +46,11 @@ export function renderSetHero(){
 export function renderSetGrid(){
  const g=$('#grid');if(!g||!S.cur||S.cur.name!=='set')return;
  const id=S.cur.id;const d=S.setd[id];if(!d)return;
- const mode=S.settings.mode;
+ const mode=modeOf(id);
  $$('[data-act=mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===mode)));
  $$('[data-act=sfilter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.ui.setFilter)));
  const official=(d.cardCount&&d.cardCount.official)||0;
- const q=nz(S.ui.setQ);
+ const q=parseQuery(S.ui.setQ);const hasQ=q.words.length||q.num!==null||q.tot!==null;
  const cards=(d.cards||[]).slice();
  const note=$('#setnote');
  const load=S.setLoad[id];
@@ -73,7 +75,7 @@ export function renderSetGrid(){
   (mode==='master'?fin:[null]).forEach(f=>slots.push({c,f,sec}));
  });
  const filtered=slots.filter(({c,f})=>{
-  if(q&&!nz(c.name).includes(q)&&!nz(c.localId).includes(q))return false;
+  if(hasQ&&!matchQuery({...c,setId:id},q))return false;
   const own=f?!!(S.collection[c.id]&&S.collection[c.id].f[f]&&S.collection[c.id].f[f].q>0):isOwned(c.id);
   if(S.ui.setFilter==='have'&&!own)return false;
   if(S.ui.setFilter==='miss'&&own)return false;

@@ -5,6 +5,7 @@ import {H, S} from '../state.js';
 import {imgTag, noteHTML} from '../ui.js';
 import {dexModel} from '../rules.js';
 import {customCard} from '../custom.js';
+import {derivedImage} from '../reprints.js';
 import {$, esc} from '../util.js';
 
 export function openPanel(id,ctx){
@@ -100,7 +101,8 @@ function dexPick(ctx,id){
 /* Foto própria da carta: aparece sempre, mas com destaque quando a TCGdex não tem imagem. */
 function photoCtl(id,hasImg){
  const own=customCard(id);
+ const dv=!hasImg&&derivedImage(id);
  return`<div class="fin" style="margin-top:14px"><div class="fin-head"><h3>Foto da carta</h3></div>
-  <p class="lbl2" style="margin:0 0 8px">${own?'Você enviou uma foto para esta carta. Ela fica guardada só neste navegador.':hasImg?'A imagem vem da TCGdex. Se preferir, envie uma foto sua para ocupar o lugar dela.':'A TCGdex não tem imagem desta carta. Envie uma foto da sua carta para ela aparecer no app.'}</p>
+  <p class="lbl2" style="margin:0 0 8px">${own?'Você enviou uma foto para esta carta. Ela fica guardada só neste navegador.':dv&&dv.kind==='reprint'?'Esta carta é uma reimpressão. A imagem mostrada é a da carta original. Se a sua tiver outra moldura, envie uma foto sua.':hasImg?'A imagem vem da TCGdex. Se preferir, envie uma foto sua para ocupar o lugar dela.':'A TCGdex não tem imagem desta carta. Envie uma foto da sua carta para ela aparecer no app.'}</p>
   <div class="row"><button type="button" class="btn small ${!hasImg&&!own?'primary':''}" data-act="upload" data-kind="card" data-id="${esc(id)}">${own?'Trocar foto':'Enviar foto da carta'}</button>${own?`<button type="button" class="btn small" data-act="upload-rm" data-kind="card" data-id="${esc(id)}">Remover minha foto</button>`:''}</div></div>`;
 }

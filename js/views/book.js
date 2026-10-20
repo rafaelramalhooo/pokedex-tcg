@@ -3,30 +3,31 @@ import {saveSettings} from '../db.js';
 import {S} from '../state.js';
 import {sizeCtl} from '../ui.js';
 import {$, $$} from '../util.js';
+import {cfg, ctxKey, setCfg, tileOf} from '../modes.js';
 
 export const PRESETS=['2x2','3x3','3x4','4x4','5x4'];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,Math.round(+n)||a));
-export const isBook=()=>S.settings.view==='book';
+export const isBook=()=>cfg().view==='book';
 export function gridOf(){
- const g=S.settings.grid||{p:'3x3'};
+ const g=cfg().grid;
  if(g.p==='custom')return{cols:clamp(g.cols,1,8),rows:clamp(g.rows,1,8)};
  const [c,r]=String(g.p).split('x').map(Number);
  return{cols:c||3,rows:r||3};
 }
 const wide=()=>typeof matchMedia==='function'&&matchMedia('(min-width:900px)').matches;
-export const isSpread=()=>!!S.settings.spread&&wide();
+export const isSpread=()=>!!cfg().spread&&wide();
 
 /* Controles da barra: Lista/Fichário e, no modo fichário, grade e página dupla. */
 export function bookCtlHTML(){
- const book=isBook();const g=S.settings.grid||{p:'3x3'};
+ const book=isBook();const g=cfg().grid;
  let h=`<div class="seg" role="group" aria-label="Forma de exibir"><button type="button" data-act="view" data-v="list" aria-pressed="${!book}">Lista</button><button type="button" data-act="view" data-v="book" aria-pressed="${book}">Fichário</button></div>`;
  if(!book)return h+sizeCtl();
  h+=`<label class="size">Grade <select class="field" data-bk="preset" aria-label="Grade da página">${PRESETS.map(p=>`<option value="${p}" ${g.p===p?'selected':''}>${p.replace('x',' × ')}</option>`).join('')}<option value="custom" ${g.p==='custom'?'selected':''}>Personalizada</option></select></label>`;
  if(g.p==='custom'){const {cols,rows}=gridOf();h+=`<label class="size">Colunas <input class="field mini" type="number" min="1" max="8" value="${cols}" data-bk="cols" aria-label="Colunas"></label><label class="size">Linhas <input class="field mini" type="number" min="1" max="8" value="${rows}" data-bk="rows" aria-label="Linhas"></label>`;}
- h+=`<label class="size wide-only"><input type="checkbox" data-bk="spread" ${S.settings.spread?'checked':''}> Página dupla</label>`;
+ h+=`<label class="size wide-only"><input type="checkbox" data-bk="spread" ${cfg().spread?'checked':''}> Página dupla</label>`;
  return h;
 }
-export function renderBookCtl(){const el=$('#bookctl');if(el)el.innerHTML=bookCtlHTML();}
+export function renderBookCtl(){const el=$('#bookctl');if(el)el.innerHTML=bookCtlHTML();document.documentElement.style.setProperty('--tile',tileOf()+'px');}
 
 /* Monta o livro com os itens (HTML de cada espaço) e guarda a página atual. */
 export function bookHTML(items,key){
@@ -56,12 +57,12 @@ export function bookGo(d){
 }
 export function bookTo(n){S.ui.page=Math.max(0,n-1);if(S.cur&&S.cur.refresh)S.cur.refresh();}
 export function bookSetting(t){
- const k=t.dataset.bk;const g=S.settings.grid=S.settings.grid||{p:'3x3'};
- if(k==='preset'){g.p=t.value;if(t.value==='custom'){const c=gridOf();g.cols=g.cols||c.cols;g.rows=g.rows||c.rows;}}
- else if(k==='cols')g.cols=clamp(t.value,1,8);
- else if(k==='rows')g.rows=clamp(t.value,1,8);
- else if(k==='spread')S.settings.spread=t.checked;
- S.ui.page=0;saveSettings();
+ const k=t.dataset.bk;const g={...cfg().grid};
+ if(k==='preset'){g.p=t.value;if(t.value==='custom'){const c=gridOf();g.cols=g.cols||c.cols;g.rows=g.rows||c.rows;}setCfg({grid:g});}
+ else if(k==='cols'){g.cols=clamp(t.value,1,8);setCfg({grid:g});}
+ else if(k==='rows'){g.rows=clamp(t.value,1,8);setCfg({grid:g});}
+ else if(k==='spread')setCfg({spread:t.checked});
+ S.ui.page=0;
  if(k==='preset'||k==='spread')renderBookCtl();
  if(S.cur&&S.cur.refresh)S.cur.refresh();
 }

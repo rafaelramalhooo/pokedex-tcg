@@ -2,6 +2,7 @@
 import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
 import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl} from './views/book.js';
+import {setCfg} from './modes.js';
 import {checkLogos} from './logos.js';
 import {pickImage, removeCustom} from './custom.js';
 import {pickSave, pickSerie, pickToggle, renderPicker, viewPicker} from './views/picker.js';
@@ -19,18 +20,20 @@ import {closePanel, openPanel, panelNav} from './views/panel.js';
 import './tilt.js';
 import {dexToggle, openDex, renderDex, renderDexGrid, retryDex} from './views/dex.js';
 import {renderSetGrid, viewSet} from './views/set.js';
+import {setSetMode} from './modes.js';
 import {exportBackup, importBackup, renderSettings, viewSettings} from './views/settings.js';
 
 const ACT={
- mode:t=>{S.settings.mode=t.dataset.v;saveSettings();
-  if(S.cur&&S.cur.name==='set'&&S.settings.mode==='master')ensureSetCards(S.cur.id);
+ mode:t=>{
+  if(S.cur&&S.cur.name==='set'){setSetMode(S.cur.id,t.dataset.v);ensureSetCards(S.cur.id);}
+  else{S.settings.mode=t.dataset.v;saveSettings();}
   refreshAll();},
  serie:t=>{S.ui.serie=t.dataset.v;renderHome();},
  sfilter:t=>{S.ui.setFilter=t.dataset.v;renderSetGrid();},
  bfilter:t=>{S.ui.binderFilter=t.dataset.v;S.ui.binderShown=240;renderBinderBody();},
  more:()=>{S.ui.binderShown+=240;renderBinderBody();},
  open:t=>{openPanel(t.dataset.id,t.dataset.binder?{binderId:t.dataset.binder,dex:t.dataset.dex?+t.dataset.dex:null}:null);},
- view:t=>{S.settings.view=t.dataset.v;S.ui.page=0;saveSettings();renderBookCtl();if(S.cur&&S.cur.refresh)S.cur.refresh();},
+ view:t=>{setCfg({view:t.dataset.v});S.ui.page=0;renderBookCtl();if(S.cur&&S.cur.refresh)S.cur.refresh();},
  'dex-open':t=>openDex(+t.dataset.dex,t.dataset.binder),
  'dex-toggle':t=>dexToggle(t.dataset.id),
  'dex-close':()=>{closeModal();viewCache.clear();refreshAll();},
@@ -121,9 +124,10 @@ document.addEventListener('input',e=>{
  if(t.id==='dq'&&S.ui.dexdlg){S.ui.dexdlg.q=t.value;renderDexGrid();return;}
  if(t.id==='q'){S.ui.q=t.value;renderHome();return;}
  if(t.id==='pq'){S.ui.pick.q=t.value;renderPicker();return;}
+ if(t.id==='bq'){S.ui.binderQ=t.value;S.ui.binderShown=240;S.ui.page=0;renderBinderBody();return;}
  if(t.id==='sq'){S.ui.setQ=t.value;renderSetGrid();return;}
  if(t.id==='ac'&&S.ui.adding){S.ui.adding.q=t.value;renderAddResults();return;}
- if(t.id==='tile'){S.settings.tile=+t.value;document.documentElement.style.setProperty('--tile',t.value+'px');saveSettingsSoon();return;}
+ if(t.id==='tile'){setCfg({tile:+t.value});document.documentElement.style.setProperty('--tile',t.value+'px');return;}
  if(t.id==='note'){const id=t.dataset.id,v=t.value;noteSoon(id,v);return;}
  if(t.dataset.ed==='v'&&S.ui.edit){
   const c=S.ui.edit.b.conds[+t.dataset.i];if(c){c.v=t.value;updatePreviewSoon();}

@@ -6,7 +6,8 @@ import {S, soft} from '../state.js';
 import {imgTag, noteHTML, sizeCtl} from '../ui.js';
 import {$, $$, ICON, esc, fmtN, pct} from '../util.js';
 import {slotHTML} from './set.js';
-import {dexArt, dexName, loadDexNames, pad4} from './dex.js';
+import {dexArt, dexName, loadDexNames, matchQuery, pad4, parseQuery} from './dex.js';
+import {nz} from '../util.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
 
 export function viewBinders(){
@@ -32,14 +33,14 @@ export function renderBinders(){
 }
 export function viewBinder(id){
  const b=S.binders.find(x=>x.id===id);
- S.ui.binderFilter='all';S.ui.binderShown=240;
+ S.ui.binderFilter='all';S.ui.binderShown=240;S.ui.binderQ='';
  if(!b){$('#view').innerHTML=`<a class="back" href="#/binders">${ICON.back} Fichários</a><div class="empty"><h3>Fichário não encontrado</h3></div>`;return;}
  S.cur={name:'binder',id,soft:renderBinderBody,refresh:renderBinderBody};
  $('#view').innerHTML=`<a class="back" href="#/binders">${ICON.back} Fichários</a>
   <div class="top"><div><h1 id="bname"></h1><div class="chips" id="bchips"></div></div>
   <div class="tools"><button class="btn" type="button" data-act="edit-binder" data-id="${esc(id)}">Editar regras</button>${b.mode==='manual'?`<button class="btn" type="button" data-act="add-cards" data-id="${esc(id)}">Adicionar cartas</button>`:''}<button class="btn danger" type="button" data-act="del-binder" data-id="${esc(id)}">Excluir</button></div></div>
   <div id="bsum"></div>
-  <div class="toolbar"><div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="bfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="bfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="bfilter" data-v="miss" aria-pressed="false">Faltam</button></div><span class="grow"></span><span class="bookctl" id="bookctl"></span></div>
+  <div class="toolbar"><div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="bfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="bfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="bfilter" data-v="miss" aria-pressed="false">Faltam</button></div><input class="field" id="bq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar no fichário"><span class="grow"></span><span class="bookctl" id="bookctl"></span></div>
   <div id="bgrid"></div>`;
  renderBookCtl();
  renderBinderBody();
@@ -71,7 +72,8 @@ export function renderBinderBody(){
  $('#bsum').innerHTML=notes+`<div class="summary"><div><b>${fmtN(own)}</b><span>${r.dex?'espaços preenchidos':'cartas que você tem'}</span></div><div><b>${fmtN(Math.max(0,tot-own))}</b><span>faltam</span></div><div><b>${pct(own,tot)}%</b><span>concluído</span></div></div>`;
  const g=$('#bgrid');
  if(r.dex){
-  const list=r.dex.filter(x=>S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned));
+  const q=parseQuery(S.ui.binderQ);
+  const list=r.dex.filter(x=>(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned))&&slotMatches(x,q));
   S.cur.nav=list.filter(x=>x.rep).map(x=>({id:x.rep,dex:x.dex}));
   const shown=list.slice(0,S.ui.binderShown);
   if(list.length&&isBook()){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
@@ -79,7 +81,8 @@ export function renderBinderBody(){
    :`<div class="empty"><h3>Nada por aqui</h3><p>Ajuste o filtro.</p></div>`;
   return;
  }
- const list=r.ids.filter(id=>{const o=isOwned(id);return S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?o:!o);});
+ const q=parseQuery(S.ui.binderQ);
+ const list=r.ids.filter(id=>{const o=isOwned(id);if(!(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?o:!o)))return false;return cardMatches(id,q);});
  if(!list.length){
   g.innerHTML=r.empty?`<div class="empty"><h3>Defina ao menos uma regra</h3><p>Use “Editar regras” para escolher o que entra neste fichário.</p></div>`:
   `<div class="empty"><h3>${b.mode==='manual'?'Nenhuma carta no fichário':'Nenhuma carta combina'}</h3><p>${b.mode==='manual'?'Use “Adicionar cartas” para escolher.':'Revise as regras ou sincronize o catálogo.'}</p></div>`;
@@ -92,6 +95,20 @@ export function renderBinderBody(){
   const br=S.briefs[id]||{id,name:id,localId:''};
   return slotHTMLCtx(br,b.id);
  }).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`;
+}
+const noQ=q=>!q.words.length&&q.num===null&&q.tot===null;
+function cardMatches(id,q){
+ if(noQ(q))return true;
+ const b=S.briefs[id]||{};const c=S.cards[id]||{};
+ return matchQuery({id,name:b.name||c.name||id,localId:b.localId||'',setId:b.setId||c.set||''},q);
+}
+/* Na Pokédex: o número buscado é o da Pokédex; o nome é o do Pokémon; "(001/132)" procura entre as cartas do espaço. */
+function slotMatches(x,q){
+ if(noQ(q))return true;
+ if(q.tot!==null)return x.cand.some(id=>cardMatches(id,q));
+ if(q.num!==null&&q.num!==x.dex)return false;
+ const nm=nz((x.name||dexName(x.dex))+' '+x.cand.map(id=>(S.briefs[id]||{}).name||'').join(' '));
+ return q.words.every(w=>nm.includes(w));
 }
 export function dexSlotHTML(x,binderId){
  const nm=x.name||dexName(x.dex);
