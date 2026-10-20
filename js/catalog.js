@@ -42,16 +42,39 @@ export async function fetchCatalog(){
  softNow();
  if(S.status.catalog==='ok')preloadSetd();
 }
+/* A TCGdex às vezes devolve a expansão em português com a lista de cartas incompleta (tradução pela metade).
+   Nesse caso completamos com a lista em inglês, mantendo o nome em português onde existir. */
+async function fetchSetFull(id){
+ const path=`/sets/${encodeURIComponent(id)}`;
+ const d=await getFB(path);
+ const cc=d.cardCount||{};
+ const want=Math.max(cc.total||0,cc.official||0);
+ if(d.__lang!=='en'&&(d.cards||[]).length<want){
+  const en=await getOrNull(path,'en');
+  if(en&&(en.cards||[]).length>(d.cards||[]).length){
+   const pt=new Map((d.cards||[]).map(c=>[c.id,c]));
+   d.cards=en.cards.map(c=>pt.get(c.id)||c);
+   const ec=en.cardCount||{};
+   d.cardCount={...cc,total:Math.max(cc.total||0,ec.total||0),official:cc.official||ec.official||0};
+   d.completedFromEn=true;
+  }
+ }
+ d.fullChecked=2;
+ return d;
+}
 export async function ensureSetd(id,force){
- if(S.setd[id]&&!force)return S.setd[id];
- const d=await getFB(`/sets/${encodeURIComponent(id)}`);
+ const old=S.setd[id];
+ if(old&&old.fullChecked===2&&!force)return old;
+ let d;
+ try{d=await fetchSetFull(id);}
+ catch(e){if(old)return old;throw e;}
  S.setd[id]=d;indexSetd(d);viewCache.clear();C.opt=null;
  await DB.put('setd',id,d);
  return d;
 }
 export async function preloadSetd(force){
  if(S.status.pre)return;
- const todo=mySets().filter(s=>force||!S.setd[s.id]);
+ const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==2);
  if(!todo.length){loadSelectedCards();return;}
  S.status.pre={done:0,total:todo.length};S.status.preErr=0;softNow();
  await pool(todo,6,async s=>{

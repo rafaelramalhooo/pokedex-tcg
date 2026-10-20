@@ -32,7 +32,7 @@ def set_detail(sid, lang):
             "symbol": f"https://assets.tcgdex.net/univ/x/{sid}/symbol", "releaseDate": rel,
             "serie": {"id": ser, "name": sername},
             "cardCount": {"official": off, "total": tot, "normal": tot, "holo": 2, "reverse": 4, "firstEd": 0},
-            "cards": set_cards(sid, tot, lang)}
+            "cards": set_cards(sid, tot, lang)[:2] if (sid == "swsh1" and lang == "pt") else set_cards(sid, tot, lang)}
 
 def card_detail(cid, lang):
     sid, i = cid.rsplit("-", 1); i = int(i)
@@ -347,6 +347,11 @@ with sync_playwright() as p:
     page.mouse.move(cb["x"] + cb["width"]*0.9, cb["y"] + cb["height"]*0.1); page.wait_for_timeout(200)
     check(page.evaluate("getComputedStyle(document.querySelector('.tilt')).getPropertyValue('--ry').trim()") == "0deg", "movimento reduzido: carta não inclina")
     page.keyboard.press("Escape"); page.emulate_media(reduced_motion="no-preference")
+
+    # tradução incompleta: pt devolve só 2 cartas de 5, o app completa com o inglês
+    page.goto(APP + "#/set/swsh1"); page.wait_for_selector(".slot")
+    page.wait_for_timeout(500)
+    check(page.locator(".slot").count() == 5, f"expansão com tradução incompleta mostra as 5 cartas ({page.locator('.slot').count()})")
 
     # pt-only fallback: cartas da set em inglês carregam imagem
     page.goto(APP + "#/set/xx9"); page.wait_for_selector(".slot")
