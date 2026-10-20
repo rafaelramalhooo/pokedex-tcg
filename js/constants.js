@@ -13,6 +13,9 @@ export const CAT_ALIAS={pokemon:'pokemon',trainer:'treinador',treinador:'treinad
 export const STAGES=[['basico','Básico'],['fase1','Fase 1'],['fase2','Fase 2']];
 export const STAGE_ALIAS={basic:'basico',basico:'basico',stage1:'fase1',fase1:'fase1',stage2:'fase2',fase2:'fase2'};
 export const VARS=[['normal','Normal'],['holo','Holo'],['reverse','Reverse holo']];
+/* Gerações pelos números da Pokédex Nacional (faixas de conhecimento prévio, não conferidas em fonte oficial). */
+export const GENS=[[1,1,151],[2,152,251],[3,252,386],[4,387,493],[5,494,649],[6,650,721],[7,722,809],[8,810,905],[9,906,1025]];
+export const genOf=n=>{const g=GENS.find(([,a,b])=>n>=a&&n<=b);return g?g[0]:0;};
 export const BOOL=[['sim','Sim'],['nao','Não']];
 export const OPS={eq:'é igual a',ne:'é diferente de',contains:'contém',notcontains:'não contém',in:'está em (lista)',gt:'maior que',gte:'maior ou igual a',lt:'menor que',lte:'menor ou igual a'};
 export const TEXT_OPS=['contains','eq','ne','notcontains','in'];
@@ -21,6 +24,8 @@ export const NUM_OPS=['eq','gte','lte','gt','lt','ne','in'];
 export const FIELDS=[
  {k:'name',label:'Nome da carta',t:'text',d:false,def:'contains'},
  {k:'dexId',label:'Pokémon (nº da Pokédex)',t:'num',d:true,def:'eq',hint:'Agrupa todas as cartas do mesmo Pokémon, em qualquer forma.'},
+ {k:'pokemon',label:'Pokémon (por nome)',t:'poke',d:false,def:'in',hint:'Um ou vários Pokémon, separados por vírgula. Pega todas as formas (ex, V, VMAX, Mega…) pelo nome da carta.'},
+ {k:'generation',label:'Geração',t:'gen',d:true,def:'in',hint:'Pelo número da Pokédex Nacional (1ª: 1–151, 2ª: 152–251… 9ª: 906–1025). Faixas aplicadas de conhecimento prévio; não conferidas em fonte oficial.'},
  {k:'set',label:'Expansão',t:'text',d:false,def:'eq'},
  {k:'serie',label:'Série',t:'text',d:false,def:'eq'},
  {k:'types',label:'Tipo',t:'enum',opts:TYPES,d:true,def:'eq'},

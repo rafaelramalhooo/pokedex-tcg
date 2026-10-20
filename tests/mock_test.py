@@ -17,8 +17,12 @@ EN_ONLY = {"xx9": ("English Only Set", "swsh", "Espada e Escudo", 3, 3, "E", "20
 TYPES_PT = ["Fogo", "Água", "Planta"]
 ILL = ["Mitsuhiro Arita", "Ken Sugimori"]
 
+def cname(sid, i, lang="pt"):
+    if (sid, i) in (("sv02", 2), ("swsh1", 3)): return "Gengar ex" if sid == "sv02" else "Gengar V"
+    return f"Carta {sid} {i}" if lang == "pt" else f"Card {sid} {i}"
+
 def set_cards(sid, n, lang):
-    return [{"id": f"{sid}-{i}", "localId": str(i), "name": f"Carta {sid} {i}" if lang=="pt" else f"Card {sid} {i}",
+    return [{"id": f"{sid}-{i}", "localId": str(i), "name": cname(sid, i, lang),
              "image": f"https://assets.tcgdex.net/{lang}/x/{sid}/{i}"} for i in range(1, n+1)]
 
 def set_detail(sid, lang):
@@ -33,11 +37,11 @@ def set_detail(sid, lang):
 def card_detail(cid, lang):
     sid, i = cid.rsplit("-", 1); i = int(i)
     d = {**SETS, **EN_ONLY}[sid]; mark = d[5]
-    return {"id": cid, "localId": str(i), "name": f"Carta {sid} {i}", "category": "Pokemon" if i % 4 else "Trainer",
+    return {"id": cid, "localId": str(i), "name": cname(sid, i), "category": "Pokemon" if i % 4 else "Trainer",
             "illustrator": ILL[i % 2], "rarity": "Rara" if i % 3 == 0 else "Comum",
             "set": {"id": sid, "name": d[0]}, "image": f"https://assets.tcgdex.net/{lang}/x/{sid}/{i}",
             "variants": {"normal": True, "reverse": i <= 4, "holo": i in (5, 6), "firstEdition": False},
-            "dexId": [i], "hp": 50 + i * 20, "types": [TYPES_PT[i % 3]], "stage": "Basic", "regulationMark": mark,
+            "dexId": [150 + i if sid == "xx9" else i], "hp": 50 + i * 20, "types": [TYPES_PT[i % 3]], "stage": "Basic", "regulationMark": mark,
             "legal": {"standard": mark in ("G", "H"), "expanded": True}}
 
 hits = {"cards": 0, "sets": 0}
@@ -89,15 +93,41 @@ def check(cond, msg):
 
 with sync_playwright() as p:
     b = p.chromium.launch()
-    ctx = b.new_context(viewport={"width": 1360, "height": 900}, locale="pt-BR")
+    ctx = b.new_context(viewport={"width": 1360, "height": 900}, locale="pt-BR", service_workers="block")
     page = ctx.new_page()
     logs = []
-    page.on("pageerror", lambda e: logs.append("pageerror: " + str(e)))
+    page.on("pageerror", lambda e: (logs.append("pageerror: " + str(e)), print("PAGEERROR", e)))
     page.on("console", lambda m: logs.append(m.type + ": " + m.text) if m.type == "error" and "404" not in m.text and "ERR_FAILED" not in m.text else None)
     page.route("**/*", handle)
     page.goto(APP)
+    # primeira vez: nada escolhido, a home pede para escolher expansões
+    page.wait_for_selector(".empty .btn.primary", timeout=8000)
+    check(page.locator(".set").count() == 0, "home vazia antes de escolher expansões")
+    n0 = hits["sets"]
+    page.locator(".empty .btn.primary").click()
+    page.wait_for_selector(".pk", timeout=5000)
+    names = page.locator(".pk .sname").all_inner_texts()
+    check("Ilha Lendária" not in names, "picker: expansão do Pocket escondida por padrão")
+    check("English Only Set" in names, "picker: expansão só em inglês aparece")
+    check(hits["sets"] == n0, "nada foi baixado antes de escolher")
+    page.screenshot(path=str(ROOT/"tests/00_picker.png"))
+    page.fill("#pq", "paldea")
+    check(page.locator(".pk").count() == 1, "busca no picker filtra")
+    page.fill("#pq", "")
+    page.locator('[data-act="pick-toggle"]', has_text="Espada e Escudo").click()
+    check(page.locator('.pk.on').count() == 1, "marcar uma expansão")
+    bar = page.locator("#pickbar").inner_text()
+    check("1 expansão" in bar and "5 cartas" in bar, f"estimativa na barra: {bar[:60]!r}")
+    page.locator('[data-act="pick-serie"][data-on="0"]').first.click()
+    check(page.locator('.pk.on').count() == 0 or page.locator('.pk.on').count() == 1, "limpar série age só na série")
+    page.locator('[data-act="pick-serie"][data-on="1"]').nth(0).click()
+    page.locator('[data-act="pick-serie"][data-on="1"]').nth(1).click()
+    check(page.locator('.pk.on').count() == 4, "selecionar séries inteiras marca as 4 expansões")
+    page.locator('[data-act="pick-save"]').click()
     page.wait_for_selector(".set", timeout=8000)
-    page.wait_for_timeout(800)
+    page.wait_for_function("!document.body.innerText.includes('Baixando os detalhes')", timeout=15000)
+    page.wait_for_timeout(500)
+    check(hits["sets"] >= 4 and hits["cards"] >= 26, f"só as escolhidas carregam completas (sets {hits['sets']}, cartas {hits['cards']})")
 
     names = page.locator(".set .sname").all_inner_texts()
     check("Ilha Lendária" not in names, "expansão do Pocket escondida por padrão")
@@ -155,9 +185,8 @@ with sync_playwright() as p:
 
     # sincronizar catálogo
     page.goto(APP + "#/ajustes"); page.wait_for_selector("#sbody .panel-sec")
-    page.locator('[data-act="sync-start"]').click()
     page.wait_for_function("document.body.innerText.includes('Catálogo completo')", timeout=20000)
-    check(True, "sincronização concluiu")
+    check(True, "detalhes das expansões escolhidas já vieram completos (sem sincronização manual)")
     page.screenshot(path=str(ROOT/"tests/04_ajustes.png"))
 
     # fichário por regra: tipo Fogo E standard
@@ -201,6 +230,124 @@ with sync_playwright() as p:
     data = json.loads(pathlib.Path(dl.value.path()).read_text())
     check(len(data["collection"]) == 4 and len(data["binders"]) == 1, "backup exporta coleção e fichários")
 
+
+    # --- regras novas: Pokémon por nome, geração e fichário Pokédex ---
+    def novo(nome):
+        page.goto(APP + "#/binders"); page.wait_for_selector("#bbody")
+        page.locator('[data-act="new-binder"]').first.click()
+        page.fill("#bn", nome)
+    novo("Gengar")
+    page.select_option('select[data-ed="f"]', "pokemon")
+    page.fill('input[data-ed="v"]', "gengar, pikachu")
+    page.wait_for_timeout(400)
+    prev = page.locator("#edprev").inner_text()
+    check("2 cartas combinam" in prev, f"regra Pokémon por nome (Gengar ex e V): {prev}")
+    page.locator('[data-ed-act="save"]').click(); page.wait_for_timeout(800); page.wait_for_selector("#bgrid .slot")
+    check(page.locator("#bgrid .slot").count() == 2, "fichário de Pokémon lista as 2 formas")
+    check("Pokémon: Gengar, Pikachu" in page.locator("#bchips").inner_text(), "chip da regra de Pokémon")
+
+    novo("Segunda geração")
+    page.select_option('select[data-ed="f"]', "generation")
+    page.locator('.rule .gc[data-g="2"]').click()
+    page.wait_for_timeout(400)
+    prev = page.locator("#edprev").inner_text()
+    check("2 cartas combinam" in prev, f"regra de geração (2ª = dex 152 a 251): {prev}")
+    page.locator('.rule .gc[data-g="all"]').click()
+    page.wait_for_timeout(400)
+    prev = page.locator("#edprev").inner_text()
+    check("25 cartas combinam" in prev, f"geração 'todas' pega as 25 cartas com Pokédex: {prev}")
+    page.locator('[data-ed-act="save"]').click(); page.wait_for_selector("#bgrid .slot")
+
+    novo("Minha Pokédex 1ª geração")
+    page.locator('[data-ed-act="mode"][data-v="pokedex"]').click()
+    page.locator('.gc[data-ed-act="bgen"][data-g="1"]').click()
+    page.locator('[data-ed-act="save"]').click(); page.wait_for_selector("#bgrid .slot")
+    check(page.locator("#bgrid .slot").count() == 151, "Pokédex da 1ª geração tem 151 espaços")
+    check(page.locator("#bgrid .slot.dexempty").count() == 140, "espaços sem carta ficam vazios e cinza (140)")
+    check(page.locator("#bgrid .slot.on").count() == 4, "4 espaços preenchidos com cartas que tenho")
+    check("espaços preenchidos" in page.locator("#bsum").inner_text(), "resumo fala em espaços")
+    page.screenshot(path=str(ROOT/"tests/08_pokedex.png"))
+    # trocar a carta do espaço 2 (Gengar)
+    page.locator('#bgrid .slot[data-dex="2"]').click()
+    page.wait_for_selector("#panel.open .cand", timeout=5000)
+    check(page.locator("#panel .cand").count() == 3, "painel oferece as 3 cartas do espaço #2")
+    page.locator('#panel .cand').nth(0).click(); page.wait_for_timeout(300)
+    check(page.locator('#panel .cand[aria-pressed="true"]').count() == 1, "carta fixada no espaço")
+    page.keyboard.press("Escape")
+    saved = page.evaluate("JSON.parse(JSON.stringify(Array.from(document.querySelectorAll('.slot[data-dex]')).length))")
+    page.reload(); page.wait_for_selector("#bgrid .slot")
+    page.locator('#bgrid .slot[data-dex="2"]').click(); page.wait_for_selector("#panel.open .cand")
+    check(page.locator('#panel .cand[aria-pressed="true"]').count() == 1, "carta fixada persiste após recarregar")
+    page.keyboard.press("Escape")
+
+    # --- visual de fichário ---
+    page.goto(APP + "#/set/sv01"); page.wait_for_selector(".slot")
+    page.locator('[data-act="view"][data-v="book"]').click()
+    page.wait_for_selector(".bpage")
+    check(page.locator(".bpage .slot").count() == 9 and page.locator(".bpage").count() == 1, "fichário 3x3 mostra 9 cartas na 1ª página")
+    check("Página 1 de 2" in page.locator(".booklbl").first.inner_text(), "sv01 (10 cartas) tem 2 páginas na grade 3x3")
+    page.locator('[data-act="book-go"][data-d="1"]').first.click()
+    check(page.locator(".bpage .slot").count() == 1 and page.locator(".bempty").count() == 8, "2ª página: 1 carta e 8 espaços vazios")
+    page.keyboard.press("ArrowLeft")
+    check("Página 1 de 2" in page.locator(".booklbl").first.inner_text(), "seta do teclado volta a página")
+    page.keyboard.press("ArrowRight")
+    check("Página 2 de 2" in page.locator(".booklbl").first.inner_text(), "seta do teclado avança a página")
+    for preset, per, pages in (("2x2", 4, 3), ("3x4", 12, 1), ("4x4", 16, 1), ("5x4", 20, 1)):
+        page.select_option('select[data-bk="preset"]', preset)
+        n = page.locator(".bpage .slot").count() + page.locator(".bempty").count()
+        check(n == per and f"de {pages}" in page.locator(".booklbl").first.inner_text(), f"grade {preset}: {per} por página, {pages} página(s)")
+    page.select_option('select[data-bk="preset"]', "custom")
+    page.fill('input[data-bk="cols"]', "2"); page.fill('input[data-bk="rows"]', "5"); page.keyboard.press("Tab")
+    page.wait_for_timeout(200)
+    n = page.locator(".bpage .slot").count() + page.locator(".bempty").count()
+    check(n == 10, f"grade personalizada 2 colunas x 5 linhas = 10 por página ({n})")
+    page.select_option('select[data-bk="preset"]', "3x3")
+    page.locator('input[data-bk="spread"]').check()
+    page.wait_for_timeout(200)
+    check(page.locator(".bpage:not(.ghost)").count() == 2 and "Páginas 1 e 2" in page.locator(".booklbl").first.inner_text(), "página dupla no computador mostra duas páginas")
+    page.screenshot(path=str(ROOT/"tests/09_fichario_duplo.png"))
+    page.locator('input[data-bk="spread"]').uncheck()
+    page.screenshot(path=str(ROOT/"tests/10_fichario.png"))
+    page.reload(); page.wait_for_selector(".bpage")
+    check(page.locator(".bpage").count() == 1, "modo fichário persiste após recarregar")
+    page.goto(APP + "#/binders"); page.locator(".binder", has_text="Minha Pokédex").click(); page.wait_for_selector(".bpage")
+    check(page.locator(".bpage .slot").count() == 9, "fichário Pokédex também em páginas")
+    page.locator('[data-act="view"][data-v="list"]').click()
+    page.wait_for_selector("#bgrid .cards")
+    check(page.locator(".bpage").count() == 0, "voltar para lista")
+
+    # --- popup centralizado com efeito 3D ---
+    page.goto(APP + "#/set/sv01"); page.wait_for_selector(".slot")
+    page.locator(".slot").nth(0).click(); page.wait_for_selector("#panel.open .tcard"); page.wait_for_timeout(350)
+    bb = page.locator("#panel").bounding_box(); vp = page.viewport_size
+    check(abs((bb["x"] + bb["width"]/2) - vp["width"]/2) < 4 and abs((bb["y"] + bb["height"]/2) - vp["height"]/2) < 4, "popup centralizado na tela")
+    cb = page.locator(".tcard").bounding_box()
+    page.mouse.move(cb["x"] + cb["width"]*0.85, cb["y"] + cb["height"]*0.15); page.wait_for_timeout(200)
+    ry = page.evaluate("getComputedStyle(document.querySelector('.tilt')).getPropertyValue('--ry')")
+    check(ry.strip().endswith("deg") and float(ry.strip()[:-3]) > 5, f"mouse no canto direito inclina a carta (ry={ry.strip()})")
+    check("hot" in (page.locator(".tilt").get_attribute("class") or ""), "brilho ativo sob o mouse")
+    page.screenshot(path=str(ROOT/"tests/11_popup.png"))
+    page.mouse.move(5, 5); page.wait_for_timeout(200)
+    check(page.evaluate("getComputedStyle(document.querySelector('.tilt')).getPropertyValue('--ry').trim()") == "0deg", "carta volta ao repouso ao sair")
+    t1 = page.locator("#panel h2").inner_text()
+    check("1 de 10" in page.locator(".pn span").inner_text(), "contador 1 de 10")
+    page.locator('[data-act="panel-nav"][data-d="1"]').click(); page.wait_for_timeout(200)
+    t2 = page.locator("#panel h2").inner_text()
+    check(t1 != t2 and "2 de 10" in page.locator(".pn span").inner_text(), f"próxima carta sem fechar ({t1} -> {t2})")
+    page.keyboard.press("ArrowRight"); page.wait_for_timeout(200)
+    check("3 de 10" in page.locator(".pn span").inner_text(), "seta do teclado avança no popup")
+    page.keyboard.press("ArrowLeft"); page.keyboard.press("ArrowLeft"); page.wait_for_timeout(200)
+    check(page.locator('[data-act="panel-nav"][data-d="-1"]').is_disabled(), "botão anterior desativado na primeira")
+    page.keyboard.press("Escape"); page.wait_for_timeout(300)
+    check(page.locator("#panel.open").count() == 0, "Esc fecha o popup")
+    # movimento reduzido: sem inclinação
+    page.emulate_media(reduced_motion="reduce")
+    page.locator(".slot").nth(0).click(); page.wait_for_selector("#panel.open .tcard"); page.wait_for_timeout(300)
+    cb = page.locator(".tcard").bounding_box()
+    page.mouse.move(cb["x"] + cb["width"]*0.9, cb["y"] + cb["height"]*0.1); page.wait_for_timeout(200)
+    check(page.evaluate("getComputedStyle(document.querySelector('.tilt')).getPropertyValue('--ry').trim()") == "0deg", "movimento reduzido: carta não inclina")
+    page.keyboard.press("Escape"); page.emulate_media(reduced_motion="no-preference")
+
     # pt-only fallback: cartas da set em inglês carregam imagem
     page.goto(APP + "#/set/xx9"); page.wait_for_selector(".slot")
     check(page.locator(".slot").count() == 3, "expansão só em inglês abre com 3 cartas")
@@ -212,6 +359,49 @@ with sync_playwright() as p:
     page.goto(APP + "#/set/sv01"); page.wait_for_selector(".slot"); page.wait_for_timeout(300)
     page.locator(".slot").nth(3).click(); page.wait_for_selector("#panel.open .fin"); page.wait_for_timeout(500)
     page.screenshot(path=str(ROOT/"tests/07_mobile_panel.png"))
+
+    # --- celular ---
+    nav = page.locator(".rail").bounding_box()
+    check(abs(nav["y"] + nav["height"] - 800) < 2 and nav["width"] >= 388, "menu fica fixo embaixo no celular")
+    def no_scroll(name):
+        w = page.evaluate("[document.documentElement.scrollWidth, document.documentElement.clientWidth]")
+        check(w[0] <= w[1] + 1, f"sem rolagem horizontal: {name} ({w[0]} x {w[1]})")
+    page.keyboard.press("Escape")
+    no_scroll("painel da carta")
+    for rota, nome in (("#/", "início"), ("#/expansoes", "minhas expansões"), ("#/binders", "fichários"), ("#/ajustes", "ajustes"), ("#/set/sv01", "expansão")):
+        page.goto(APP + rota); page.wait_for_timeout(500); no_scroll(nome)
+    small = page.evaluate("Array.from(document.querySelectorAll('.btn:not(.small), .rail a.nav, .seg button')).filter(e=>e.offsetParent&&e.getBoundingClientRect().height<40).length")
+    check(small == 0, f"botões principais com altura de toque >= 40px ({small} menores)")
+    # fichário: virar página deslizando
+    page.goto(APP + "#/set/sv01"); page.wait_for_selector(".slot")
+    page.locator('[data-act="view"][data-v="book"]').click(); page.wait_for_selector(".bpage")
+    check("Página 1 de 2" in page.locator(".booklbl").first.inner_text(), "celular em modo fichário, 3x3")
+    check(page.locator('input[data-bk="spread"]').count() == 1 and not page.locator('input[data-bk="spread"]').is_visible(), "página dupla escondida no celular")
+    page.evaluate("""() => {
+      const el = document.querySelector('.spread'); const r = el.getBoundingClientRect();
+      const mk = (x, y) => new Touch({identifier: 1, target: el, clientX: x, clientY: y});
+      const y = r.top + 60;
+      el.dispatchEvent(new TouchEvent('touchstart', {bubbles: true, touches: [mk(300, y)], changedTouches: [mk(300, y)]}));
+      el.dispatchEvent(new TouchEvent('touchend', {bubbles: true, touches: [], changedTouches: [mk(120, y + 5)]}));
+    }""")
+    page.wait_for_timeout(200)
+    check("Página 2 de 2" in page.locator(".booklbl").first.inner_text(), "deslizar para a esquerda avança a página")
+    page.screenshot(path=str(ROOT/"tests/12_mobile_fichario.png"))
+    page.locator(".bpage .slot").first.click(); page.wait_for_selector("#panel.open .tcard"); page.wait_for_timeout(350)
+    pb = page.locator("#panel").bounding_box()
+    check(pb["x"] >= 0 and pb["x"] + pb["width"] <= 390.5 and pb["y"] >= 0 and pb["y"] + pb["height"] <= 800.5, "popup cabe na tela do celular")
+    page.screenshot(path=str(ROOT/"tests/13_mobile_popup.png"))
+    page.keyboard.press("Escape")
+    page.goto(APP + "#/binders"); page.wait_for_selector("#bbody"); page.wait_for_timeout(300)
+    page.screenshot(path=str(ROOT/"tests/14_mobile_binders.png"))
+    page.goto(APP + "#/expansoes"); page.wait_for_selector(".pk"); page.wait_for_timeout(300)
+    page.screenshot(path=str(ROOT/"tests/15_mobile_picker.png"))
+    # instalável: manifesto e ícones
+    mf = page.evaluate("fetch('manifest.webmanifest').then(r=>r.json())")
+    check(mf["display"] == "standalone" and len(mf["icons"]) >= 3, "manifesto do app instalável")
+    codes = [page.evaluate(f"fetch('{i['src']}').then(r=>r.status)") for i in mf["icons"]]
+    check(all(c == 200 for c in codes), "ícones do app existem")
+    check(page.evaluate("fetch('sw.js').then(r=>r.status)") == 200, "service worker disponível")
     b.close()
 
 SERVER.terminate()

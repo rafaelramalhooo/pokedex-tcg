@@ -1,14 +1,14 @@
 /* Editor de fichário e busca para fichário manual. */
 import {visibleSet} from '../catalog.js';
 import {isOwned} from '../collection.js';
-import {BOOL, FIELDS, FM, NUM_OPS, OPS, TEXT_OPS} from '../constants.js';
+import {BOOL, FIELDS, FM, GENS, NUM_OPS, OPS, TEXT_OPS} from '../constants.js';
 import {saveBinders} from '../db.js';
 import {evalBinder, optionsFor, sortIds} from '../rules.js';
 import {S, refreshAll} from '../state.js';
 import {imgTag, toast} from '../ui.js';
 import {$, debounce, esc, fmtN, nz, uid} from '../util.js';
 
-export function newBinder(){return{id:uid(),name:'',mode:'rule',match:'all',conds:[{f:'types',op:'eq',v:''}],cardIds:[],created:Date.now()};}
+export function newBinder(){return{id:uid(),name:'',mode:'rule',match:'all',conds:[{f:'types',op:'eq',v:''}],cardIds:[],gens:[],pick:{},created:Date.now()};}
 export function openEditor(id){
  const b=id?JSON.parse(JSON.stringify(S.binders.find(x=>x.id===id))):newBinder();
  S.ui.edit={b,isNew:!id};
@@ -17,8 +17,15 @@ export function openEditor(id){
  setTimeout(()=>{const n=$('#bn');if(n)n.focus();},30);
 }
 export function closeModal(){$('#modal').classList.remove('on');S.ui.edit=null;S.ui.adding=null;}
+const ORD=['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª','9ª'];
+export function genChips(sel,attr){
+ const set=new Set(sel.map(String));
+ return`<div class="genchips" role="group" aria-label="Gerações">${GENS.map(([g,a,b])=>`<button type="button" class="gc" ${attr} data-g="${g}" aria-pressed="${set.has(String(g))}" title="Pokédex ${a} a ${b}">${ORD[g-1]}</button>`).join('')}<button type="button" class="gc all" ${attr} data-g="all" aria-pressed="${set.size===GENS.length}">Todas</button></div>`;
+}
 export function valueCtl(c,i){
  const F=FM[c.f];
+ if(F.t==='gen')return genChips(String(c.v).split(','),`data-ed-act="gen" data-i="${i}"`);
+ if(F.t==='poke')return`<input class="field" data-ed="v" data-i="${i}" type="text" list="dlp${i}" value="${esc(c.v)}" placeholder="Ex.: Gengar, Pikachu" aria-label="Pokémon"><datalist id="dlp${i}">${optionsFor('pokemon').map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist>`;
  if(F.t==='bool'||F.t==='enum'){
   const o=F.t==='bool'?BOOL:F.opts;
   return`<select class="field" data-ed="v" data-i="${i}" aria-label="Valor"><option value="">Escolha…</option>${o.map(([k,l])=>`<option value="${k}" ${c.v===k?'selected':''}>${l}</option>`).join('')}</select>`;
@@ -28,7 +35,7 @@ export function valueCtl(c,i){
  const type=(F.t==='num'&&c.op!=='in')?'number':'text';
  return`<input class="field" data-ed="v" data-i="${i}" type="${type}" ${dl} value="${esc(c.v)}" placeholder="${F.t==='num'&&c.op==='in'?'ex.: 25, 26':'Valor'}" aria-label="Valor">${opts}`;
 }
-export function opsFor(F){return F.t==='bool'||F.t==='enum'?['eq','ne'].slice(0,F.t==='bool'?1:2):(F.t==='num'?NUM_OPS:TEXT_OPS);}
+export function opsFor(F){if(F.t==='gen'||F.t==='poke')return['in'];return F.t==='bool'||F.t==='enum'?['eq','ne'].slice(0,F.t==='bool'?1:2):(F.t==='num'?NUM_OPS:TEXT_OPS);}
 export function renderEditor(){
  const st=S.ui.edit;if(!st)return;const b=st.b;
  const rules=b.mode==='rule'?`
@@ -36,17 +43,20 @@ export function renderEditor(){
    <div class="seg" role="group" aria-label="Combinar regras"><button type="button" data-ed-act="match" data-v="all" aria-pressed="${b.match==='all'}">todas as regras</button><button type="button" data-ed-act="match" data-v="any" aria-pressed="${b.match==='any'}">qualquer regra</button></div></div>
   ${b.conds.map((c,i)=>{const F=FM[c.f];return`<div class="rule">
    <select class="field" data-ed="f" data-i="${i}" aria-label="Campo">${FIELDS.map(x=>`<option value="${x.k}" ${c.f===x.k?'selected':''}>${x.label}</option>`).join('')}</select>
-   <select class="field" data-ed="op" data-i="${i}" aria-label="Condição">${opsFor(F).map(o=>`<option value="${o}" ${c.op===o?'selected':''}>${OPS[o]}</option>`).join('')}</select>
+   ${F.t==='gen'||F.t==='poke'?'<span class="opfix">'+(F.t==='gen'?'é uma de':'é um destes')+'</span>':`<select class="field" data-ed="op" data-i="${i}" aria-label="Condição">${opsFor(F).map(o=>`<option value="${o}" ${c.op===o?'selected':''}>${OPS[o]}</option>`).join('')}</select>`}
    ${valueCtl(c,i)}
    <button class="btn small danger" type="button" data-ed-act="rm" data-i="${i}" aria-label="Remover regra">Remover</button></div>${F.hint?`<p class="lbl2" style="margin:-2px 0 8px">${esc(F.hint)}</p>`:''}`;}).join('')}
   <button class="btn small" type="button" data-ed-act="add">Adicionar regra</button>
   <p class="preview" id="edprev" style="margin-top:14px"></p>`
+  :b.mode==='pokedex'?`<p class="lead">Um espaço para cada Pokémon, na ordem da Pokédex Nacional. Cada espaço mostra a carta que você escolher para representá-lo ou, se não escolher, a melhor que você tiver. Espaços sem carta ficam cinza, com número e nome.</p>
+  <label class="lbl2">Gerações incluídas (sem marcar nenhuma, entram todas)</label>${genChips(b.gens||[],'data-ed-act="bgen"')}
+  <p class="lbl2" style="margin-top:8px">A lista usa as cartas das suas expansões carregadas; o nome do Pokémon aparece quando alguma carta dele já foi baixada.</p>`
   :`<p class="lead">Neste modo você escolhe as cartas uma a uma depois de salvar, com “Adicionar cartas”.</p>`;
  $('#dialog').innerHTML=`<h2>${st.isNew?'Novo fichário':'Editar fichário'}</h2>
   <label class="lbl2" for="bn">Nome do fichário</label>
   <input class="field" id="bn" style="width:100%;margin-bottom:14px" value="${esc(b.name)}" placeholder="Ex.: Pokémon de Fogo no Standard">
   <div class="row" style="margin-bottom:14px"><span>Como montar</span>
-   <div class="seg" role="group" aria-label="Modo do fichário"><button type="button" data-ed-act="mode" data-v="rule" aria-pressed="${b.mode==='rule'}">Por regras</button><button type="button" data-ed-act="mode" data-v="manual" aria-pressed="${b.mode==='manual'}">Escolher cartas</button></div></div>
+   <div class="seg" role="group" aria-label="Modo do fichário"><button type="button" data-ed-act="mode" data-v="rule" aria-pressed="${b.mode==='rule'}">Por regras</button><button type="button" data-ed-act="mode" data-v="manual" aria-pressed="${b.mode==='manual'}">Escolher cartas</button><button type="button" data-ed-act="mode" data-v="pokedex" aria-pressed="${b.mode==='pokedex'}">Pokédex</button></div></div>
   ${rules}
   <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-ed-act="save">Salvar fichário</button></div>`;
  updatePreview();
@@ -110,6 +120,14 @@ export function editorAct(t){
  b.name=($('#bn')||{}).value||b.name;
  if(a==='mode'){b.mode=t.dataset.v;}
  else if(a==='match'){b.match=t.dataset.v;}
+ else if(a==='gen'||a==='bgen'){
+  const g=t.dataset.g;const cur=a==='gen'?String(b.conds[+t.dataset.i].v).split(',').filter(Boolean):(b.gens||[]).map(String);
+  let next;
+  if(g==='all')next=cur.length===GENS.length?[]:GENS.map(x=>String(x[0]));
+  else next=cur.includes(g)?cur.filter(x=>x!==g):[...cur,g];
+  next.sort((x,y)=>x-y);
+  if(a==='gen')b.conds[+t.dataset.i].v=next.join(',');else b.gens=next.map(Number);
+ }
  else if(a==='add'){b.conds.push({f:'name',op:'contains',v:''});}
  else if(a==='rm'){b.conds.splice(+t.dataset.i,1);if(!b.conds.length)b.conds.push({f:'types',op:'eq',v:''});}
  renderEditor();

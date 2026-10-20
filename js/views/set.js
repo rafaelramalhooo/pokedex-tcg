@@ -3,7 +3,9 @@ import {ensureSetCards, ensureSetd} from '../catalog.js';
 import {groupBySet, isOfficialNo, isOwned, ownedQty, setStat} from '../collection.js';
 import {FIN_LABEL} from '../constants.js';
 import {H, S, soft} from '../state.js';
+import {logoImg} from '../logos.js';
 import {imgTag, modeSeg, noteHTML, sizeCtl} from '../ui.js';
+import {bookHTML, isBook, renderBookCtl} from './book.js';
 import {$, $$, ICON, esc, fmtDate, fmtN, nz, pct} from '../util.js';
 
 export async function viewSet(id){
@@ -19,7 +21,8 @@ export async function viewSet(id){
  $('#settools').innerHTML=`<div class="toolbar">${modeSeg()}
   <div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="sfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="sfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="sfilter" data-v="miss" aria-pressed="false">Faltam</button></div>
   <input class="field" id="sq" type="search" placeholder="Nome ou número" aria-label="Buscar carta">
-  <span class="grow"></span>${sizeCtl()}</div><div id="setnote"></div>`;
+  <span class="grow"></span><span class="bookctl" id="bookctl"></span></div><div id="setnote"></div>`;
+ renderBookCtl();
  renderSetHero();renderSetGrid();
  if(S.settings.mode==='master')ensureSetCards(id);
 }
@@ -29,7 +32,7 @@ export function renderSetHero(){
  const st=setStat(set,groupBySet());
  const se=S.serieOf[id]||(d.serie&&{name:d.serie.name});
  const m=S.settings.mode;
- const logo=d.logo?`<img alt="" src="${esc(d.logo)}.webp" data-role="logo" data-name="${esc(d.name)}">`:`<span class="noimg">${esc(d.name)}</span>`;
+ const logo=logoImg({...d,...set,id,name:d.name,logo:d.logo||set.logo});
  const stat=(k,label,own,tot)=>`<button type="button" class="hstat ${m===k?'active':''}" data-act="mode" data-v="${k}" style="background:none;border:0;text-align:left;cursor:pointer;padding:0"><div class="lbl">${label}</div><div class="count"><strong>${fmtN(own)}</strong><span>${tot==null?'de …':'de '+fmtN(tot)}</span></div><div class="bar ${tot>0&&own>=tot?'done':''}"><i style="width:${pct(own,tot)}%"></i></div></button>`;
  el.innerHTML=`<div class="hero">
   <div class="hlogo">${logo}</div>
@@ -76,6 +79,8 @@ export function renderSetGrid(){
   return true;
  });
  if(!filtered.length){g.innerHTML=`<div class="empty"><h3>Nenhuma carta aqui</h3><p>${S.ui.setFilter==='have'?'Você ainda não marcou cartas desta expansão.':'Ajuste o filtro ou a busca.'}</p></div>`;return;}
+ S.cur.nav=filtered.filter((x,i)=>!i||x.c.id!==filtered[i-1].c.id).map(x=>({id:x.c.id}));
+ if(isBook()){g.innerHTML=bookHTML(filtered.map(({c,f})=>slotHTML(c,f)),'set:'+id+':'+mode);return;}
  let html='<div class="cards">';let secShown=false;
  filtered.forEach(({c,f,sec})=>{
   if(sec&&!secShown){secShown=true;html+=`<div class="divider">Cartas secretas, numeradas acima de ${official}</div>`;}

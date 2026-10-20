@@ -6,9 +6,10 @@ export const S={
  sets:[],setMap:{},setIdx:{},serieOf:{},catalogAt:0,
  setd:{},briefs:{},cards:{},
  collection:{},binders:[],
- settings:{legalMarks:['H','I','J'],masterReverse:true,showPocket:false,mode:'set',tile:150},
- ui:{q:'',serie:'all',setFilter:'all',setQ:'',binderFilter:'all',binderShown:240,panelId:null,panelCtx:null,edit:null},
- status:{catalog:'idle',pre:null,preErr:0,err:''},
+ settings:{legalMarks:['H','I','J'],masterReverse:true,showPocket:false,mode:'set',tile:150,mySets:null,view:'list',grid:{p:'3x3'},spread:false},
+ logoOk:{},logoDiag:null,
+ ui:{page:0,pageKey:'',q:'',serie:'all',setFilter:'all',setQ:'',binderFilter:'all',binderShown:240,panelId:null,panelCtx:null,edit:null,pick:{q:'',draft:[],groups:[]}},
+ status:{catalog:'idle',pre:null,cl:null,all:null,ids:null,preErr:0,err:''},
  sync:{running:false,stop:false,done:0,total:0,fail:0},
  setLoad:{},
  cur:null

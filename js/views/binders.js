@@ -1,11 +1,12 @@
 /* Telas de fichários. */
-import {catalogCoverage} from '../catalog.js';
+import {catalogCoverage, visibleSets} from '../catalog.js';
 import {isOwned} from '../collection.js';
-import {evalBinder, ruleChips} from '../rules.js';
+import {evalBinder, ruleChips, scopeIds} from '../rules.js';
 import {S, soft} from '../state.js';
-import {noteHTML, sizeCtl} from '../ui.js';
+import {imgTag, noteHTML, sizeCtl} from '../ui.js';
 import {$, $$, ICON, esc, fmtN, pct} from '../util.js';
 import {slotHTML} from './set.js';
+import {bookHTML, isBook, renderBookCtl} from './book.js';
 
 export function viewBinders(){
  S.cur={name:'binders',soft:renderBinders,refresh:renderBinders};
@@ -20,10 +21,10 @@ export function renderBinders(){
   return;
  }
  el.innerHTML=`<div class="binders">${S.binders.map(b=>{
-  const r=evalBinder(b);const own=r.ids.filter(isOwned).length;const tot=r.ids.length;
+  const r=evalBinder(b);const own=r.dex?r.dex.filter(x=>x.owned).length:r.ids.filter(isOwned).length;const tot=r.dex?r.dex.length:r.ids.length;
   return`<a class="binder" href="#/binder/${esc(b.id)}"><div><h3>${esc(b.name)}</h3></div>
    <div class="chips" style="margin:0">${ruleChips(b)}</div>
-   <div class="count"><strong>${fmtN(own)}</strong><span>de ${fmtN(tot)} cartas</span></div>
+   <div class="count"><strong>${fmtN(own)}</strong><span>de ${fmtN(tot)} ${r.dex?'espaços':'cartas'}</span></div>
    <div class="bar ${tot>0&&own>=tot?'done':''}"><i style="width:${pct(own,tot)}%"></i></div>
    ${r.pending?`<p>${fmtN(r.pending)} cartas ainda sem detalhes baixados.</p>`:''}</a>`;
  }).join('')}</div>`;
@@ -37,34 +38,68 @@ export function viewBinder(id){
   <div class="top"><div><h1 id="bname"></h1><div class="chips" id="bchips"></div></div>
   <div class="tools"><button class="btn" type="button" data-act="edit-binder" data-id="${esc(id)}">Editar regras</button>${b.mode==='manual'?`<button class="btn" type="button" data-act="add-cards" data-id="${esc(id)}">Adicionar cartas</button>`:''}<button class="btn danger" type="button" data-act="del-binder" data-id="${esc(id)}">Excluir</button></div></div>
   <div id="bsum"></div>
-  <div class="toolbar"><div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="bfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="bfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="bfilter" data-v="miss" aria-pressed="false">Faltam</button></div><span class="grow"></span>${sizeCtl()}</div>
+  <div class="toolbar"><div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="bfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="bfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="bfilter" data-v="miss" aria-pressed="false">Faltam</button></div><span class="grow"></span><span class="bookctl" id="bookctl"></span></div>
   <div id="bgrid"></div>`;
+ renderBookCtl();
  renderBinderBody();
 }
+const hasPoke=b=>b.mode==='rule'&&(b.conds||[]).some(c=>c.f==='pokemon'&&String(c.v).trim());
 export function renderBinderBody(){
  if(!S.cur||S.cur.name!=='binder')return;
  const b=S.binders.find(x=>x.id===S.cur.id);if(!b)return;
  $('#bname').textContent=b.name;$('#bchips').innerHTML=ruleChips(b);
  $$('[data-act=bfilter]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.v===S.ui.binderFilter)));
  const r=evalBinder(b);
- const own=r.ids.filter(isOwned).length,tot=r.ids.length;
+ const own=r.dex?r.dex.filter(x=>x.owned).length:r.ids.filter(isOwned).length,tot=r.dex?r.dex.length:r.ids.length;
  const cov=catalogCoverage();
  let notes='';
  if(r.pending)notes+=noteHTML('warn',`${fmtN(r.pending)} cartas ainda não têm detalhes baixados e ficam de fora desta regra. <a href="#/ajustes"><strong>Sincronizar o catálogo</strong></a> para completar.`);
- if(cov.setsLoaded<cov.sets)notes+=noteHTML('',`Só ${cov.setsLoaded} de ${cov.sets} expansões foram carregadas até agora; o fichário cresce conforme chegam.`);
- $('#bsum').innerHTML=notes+`<div class="summary"><div><b>${fmtN(own)}</b><span>cartas que você tem</span></div><div><b>${fmtN(Math.max(0,tot-own))}</b><span>faltam</span></div><div><b>${pct(own,tot)}%</b><span>concluído</span></div></div>`;
- const list=r.ids.filter(id=>{const o=isOwned(id);return S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?o:!o);});
+ if(hasPoke(b)){
+  const all=S.status.all,ids=S.status.ids;
+  const missingSets=visibleSets().filter(s=>!S.setd[s.id]).length;
+  const need=scopeIds(b);
+  if(all)notes+=noteHTML('',`Procurando em todas as expansões: ${all.done} de ${all.total}.`);
+  else if(ids)notes+=noteHTML('',`Baixando os detalhes das cartas deste Pokémon: ${ids.done} de ${ids.total}.`);
+  else{
+   if(missingSets)notes+=noteHTML('warn',`Este fichário só enxerga as ${visibleSets().length-missingSets} expansões já carregadas. <button class="btn small" data-act="load-all-lists" type="button">Procurar em todas as expansões (${fmtN(missingSets)} pedidos leves)</button>`);
+   if(need.length)notes+=noteHTML('warn',`${fmtN(need.length)} cartas deste Pokémon ainda não têm detalhes (acabamentos, ilustrador…). <button class="btn small" data-act="load-scope" data-id="${esc(b.id)}" type="button">Baixar só estas ${fmtN(need.length)}</button>`);
+  }
+ }else if(cov.setsLoaded<cov.sets&&!r.dex)notes+=noteHTML('',`Só ${cov.setsLoaded} de ${cov.sets} expansões foram carregadas até agora; o fichário cresce conforme chegam.`);
+ if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas expansões: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
+ $('#bsum').innerHTML=notes+`<div class="summary"><div><b>${fmtN(own)}</b><span>${r.dex?'espaços preenchidos':'cartas que você tem'}</span></div><div><b>${fmtN(Math.max(0,tot-own))}</b><span>faltam</span></div><div><b>${pct(own,tot)}%</b><span>concluído</span></div></div>`;
  const g=$('#bgrid');
+ if(r.dex){
+  const list=r.dex.filter(x=>S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned));
+  S.cur.nav=list.filter(x=>x.rep).map(x=>({id:x.rep,dex:x.dex}));
+  const shown=list.slice(0,S.ui.binderShown);
+  if(list.length&&isBook()){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
+  g.innerHTML=list.length?`<div class="cards">${shown.map(x=>dexSlotHTML(x,b.id)).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`
+   :`<div class="empty"><h3>Nada por aqui</h3><p>Ajuste o filtro.</p></div>`;
+  return;
+ }
+ const list=r.ids.filter(id=>{const o=isOwned(id);return S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?o:!o);});
  if(!list.length){
   g.innerHTML=r.empty?`<div class="empty"><h3>Defina ao menos uma regra</h3><p>Use “Editar regras” para escolher o que entra neste fichário.</p></div>`:
   `<div class="empty"><h3>${b.mode==='manual'?'Nenhuma carta no fichário':'Nenhuma carta combina'}</h3><p>${b.mode==='manual'?'Use “Adicionar cartas” para escolher.':'Revise as regras ou sincronize o catálogo.'}</p></div>`;
   return;
  }
+ S.cur.nav=list.map(id=>({id}));
+ if(isBook()){g.innerHTML=bookHTML(list.map(id=>slotHTMLCtx(S.briefs[id]||{id,name:id,localId:''},b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
  const shown=list.slice(0,S.ui.binderShown);
  g.innerHTML=`<div class="cards">${shown.map(id=>{
   const br=S.briefs[id]||{id,name:id,localId:''};
   return slotHTMLCtx(br,b.id);
  }).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`;
+}
+const pad=n=>String(n).padStart(4,'0');
+export function dexSlotHTML(x,binderId){
+ const label=`Pokédex ${pad(x.dex)}${x.name?', '+x.name:''}`;
+ if(!x.rep)return`<div class="slot off dexempty" aria-label="${esc(label)}, sem carta"><div class="pocket"><div class="ph"><b>#${pad(x.dex)}</b></div></div><div class="num"><b>${esc(x.name||'—')}</b><span>#${pad(x.dex)}</span></div></div>`;
+ const br=S.briefs[x.rep]||{id:x.rep,name:(S.cards[x.rep]||{}).name||x.rep,localId:(S.cards[x.rep]||{}).localId||'',image:(S.cards[x.rep]||{}).image};
+ const on=x.owned;
+ return`<div class="slot ${on?'on':'off'}" data-act="open" data-id="${esc(x.rep)}" data-binder="${esc(binderId)}" data-dex="${x.dex}" role="button" tabindex="0" aria-label="${esc(label)}, ${on?'tenho':'não tenho'}">
+  <div class="pocket">${imgTag(br.image,'low',br.name)}<span class="dexno">#${pad(x.dex)}</span></div>
+  <div class="num"><b>${esc(x.name||br.name)}</b><span>#${pad(x.dex)}</span></div></div>`;
 }
 export function slotHTMLCtx(c,binderId){
  return slotHTML(c,null).replace('data-act="open"',`data-act="open" data-binder="${esc(binderId)}"`);

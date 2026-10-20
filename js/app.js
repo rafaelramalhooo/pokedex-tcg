@@ -1,5 +1,10 @@
 /* Eventos, rotas e início do app. */
-import {ensureSetCards, fetchCatalog, indexSetd, indexSets, preloadSetd, runSync} from './catalog.js';
+import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
+import {scopeIds} from './rules.js';
+import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl} from './views/book.js';
+import {checkLogos} from './logos.js';
+import {pickSave, pickSerie, pickToggle, renderPicker, viewPicker} from './views/picker.js';
+import {visibleSets} from './catalog.js';
 import {saveNote, setFin, toggleOwn} from './collection.js';
 import {FM} from './constants.js';
 import {DB, saveBinders, saveSettings} from './db.js';
@@ -9,7 +14,8 @@ import {$, $$, debounce} from './util.js';
 import {renderBinderBody, viewBinder, viewBinders} from './views/binders.js';
 import {closeModal, editorAct, openAddCards, openEditor, renderAddResults, renderEditor, updatePreviewSoon} from './views/editor.js';
 import {renderHome, viewHome} from './views/home.js';
-import {closePanel, openPanel} from './views/panel.js';
+import {closePanel, openPanel, panelNav} from './views/panel.js';
+import './tilt.js';
 import {renderSetGrid, viewSet} from './views/set.js';
 import {exportBackup, importBackup, renderSettings, viewSettings} from './views/settings.js';
 
@@ -21,7 +27,13 @@ const ACT={
  sfilter:t=>{S.ui.setFilter=t.dataset.v;renderSetGrid();},
  bfilter:t=>{S.ui.binderFilter=t.dataset.v;S.ui.binderShown=240;renderBinderBody();},
  more:()=>{S.ui.binderShown+=240;renderBinderBody();},
- open:t=>{openPanel(t.dataset.id,t.dataset.binder?{binderId:t.dataset.binder}:null);},
+ open:t=>{openPanel(t.dataset.id,t.dataset.binder?{binderId:t.dataset.binder,dex:t.dataset.dex?+t.dataset.dex:null}:null);},
+ view:t=>{S.settings.view=t.dataset.v;S.ui.page=0;saveSettings();renderBookCtl();if(S.cur&&S.cur.refresh)S.cur.refresh();},
+ 'panel-nav':t=>panelNav(+t.dataset.d),
+ 'book-go':t=>bookGo(+t.dataset.d),
+ 'dex-pick':t=>{const b=S.binders.find(x=>x.id===t.dataset.binder);if(!b)return;b.pick=b.pick||{};if(t.dataset.id)b.pick[t.dataset.dex]=t.dataset.id;else delete b.pick[t.dataset.dex];saveBinders();viewCache.clear();refreshAll();},
+ 'load-all-lists':()=>loadAllSetLists(),
+ 'load-scope':t=>{const b=S.binders.find(x=>x.id===t.dataset.id);if(b)loadIds(scopeIds(b));},
  tog:t=>{toggleOwn(t.dataset.id,t.dataset.fin||null);},
  close:()=>closePanel(),
  inc:t=>{const e=S.collection[t.dataset.id];const q=e&&e.f[t.dataset.fin]?e.f[t.dataset.fin].q:0;setFin(t.dataset.id,t.dataset.fin,{q:q+1});},
@@ -34,6 +46,10 @@ const ACT={
  'edit-binder':t=>openEditor(t.dataset.id),
  'add-cards':t=>openAddCards(t.dataset.id),
  'del-binder':t=>{const b=S.binders.find(x=>x.id===t.dataset.id);if(b&&confirm(`Excluir o fichário “${b.name}”? As cartas da sua coleção não são afetadas.`)){S.binders=S.binders.filter(x=>x!==b);saveBinders();location.hash='#/binders';}},
+ 'pick-toggle':t=>pickToggle(t.dataset.id),
+ 'pick-serie':t=>pickSerie(+t.dataset.gi,t.dataset.on==='1'),
+ 'pick-save':()=>pickSave(),
+ 'check-logos':()=>checkLogos(visibleSets()),
  'sync-start':()=>runSync(),
  'sync-stop':()=>{S.sync.stop=true;},
  'reload-setd':()=>{viewCache.clear();preloadSetd(true);},
@@ -56,6 +72,8 @@ document.addEventListener('click',e=>{
  if(t&&ACT[t.dataset.act])ACT[t.dataset.act](t,e);
 });
 document.addEventListener('keydown',e=>{
+ if(S.ui.panelId&&!$('#modal').classList.contains('on')&&(e.key==='ArrowLeft'||e.key==='ArrowRight')&&!(e.target.tagName&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))){e.preventDefault();panelNav(e.key==='ArrowRight'?1:-1);return;}
+ if(bookKey(e)){e.preventDefault();return;}
  if(e.key==='Escape'){
   if($('#modal').classList.contains('on'))closeModal();else if(S.ui.panelId)closePanel();
   return;
@@ -68,6 +86,8 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('change',e=>{
  const t=e.target;
+ if(t.dataset.bk){bookSetting(t);return;}
+ if(t.classList&&t.classList.contains('bookrange')){bookTo(+t.value);return;}
  if(t.dataset.ch){setFin(t.dataset.id,t.dataset.fin,{[t.dataset.ch]:t.value});return;}
  if(t.dataset.set){S.settings[t.dataset.set]=t.checked;saveSettings();viewCache.clear();
   if(t.dataset.set==='showPocket'&&t.checked)toast('Expansões do Pocket incluídas na lista.');
@@ -78,7 +98,7 @@ document.addEventListener('change',e=>{
   const c=S.ui.edit.b.conds[+t.dataset.i];if(!c)return;
   if(ed==='f'){c.f=t.value;c.op=FM[c.f].def;c.v='';}
   else if(ed==='op'){c.op=t.value;if(FM[c.f].t==='num')c.v='';}
-  else if(ed==='v'){c.v=t.value;}
+  else if(ed==='v'){c.v=t.value;if(t.tagName!=='SELECT'){updatePreviewSoon();return;}}
   S.ui.edit.b.name=($('#bn')||{}).value||'';
   renderEditor();
  }
@@ -86,6 +106,7 @@ document.addEventListener('change',e=>{
 document.addEventListener('input',e=>{
  const t=e.target;
  if(t.id==='q'){S.ui.q=t.value;renderHome();return;}
+ if(t.id==='pq'){S.ui.pick.q=t.value;renderPicker();return;}
  if(t.id==='sq'){S.ui.setQ=t.value;renderSetGrid();return;}
  if(t.id==='ac'&&S.ui.adding){S.ui.adding.q=t.value;renderAddResults();return;}
  if(t.id==='tile'){S.settings.tile=+t.value;document.documentElement.style.setProperty('--tile',t.value+'px');saveSettingsSoon();return;}
@@ -110,6 +131,7 @@ function route(){
  if(parts[0]==='set'&&parts[1])viewSet(decodeURIComponent(parts[1]));
  else if(parts[0]==='binders')viewBinders();
  else if(parts[0]==='binder'&&parts[1])viewBinder(parts[1]);
+ else if(parts[0]==='expansoes')viewPicker();
  else if(parts[0]==='ajustes')viewSettings();
  else viewHome();
 }
@@ -126,7 +148,13 @@ async function boot(){
   S.binders=(await DB.get('kv','binders'))||[];
   Object.assign(S.settings,(await DB.get('kv','settings'))||{});
   if(!Array.isArray(S.settings.legalMarks))S.settings.legalMarks=['H','I','J'];
- }
+  S.logoOk=(await DB.get('kv','logoOk'))||{};
+  /* primeira vez com a seleção de expansões: começa pelas que já têm cartas marcadas */
+  if(!Array.isArray(S.settings.mySets)){
+   S.settings.mySets=[...new Set(Object.values(S.collection).map(e=>e.s).filter(Boolean))];
+   await saveSettings();
+  }
+ }else if(!Array.isArray(S.settings.mySets))S.settings.mySets=[];
  indexSets();Object.values(S.setd).forEach(indexSetd);
  route();
  const stale=Date.now()-S.catalogAt>7*864e5;
@@ -134,3 +162,5 @@ async function boot(){
  else preloadSetd();
 }
 boot();
+
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});

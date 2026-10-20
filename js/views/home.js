@@ -1,5 +1,6 @@
 /* Tela inicial: expansões. */
-import {visibleSets} from '../catalog.js';
+import {mySets} from '../catalog.js';
+import {logoImg} from '../logos.js';
 import {groupBySet, ownedQty, setStat} from '../collection.js';
 import {S, soft} from '../state.js';
 import {modeSeg, noteHTML} from '../ui.js';
@@ -9,8 +10,8 @@ export function viewHome(){
  S.cur={name:'home',soft:renderHome,refresh:renderHome};
  $('#view').innerHTML=`
   <div class="top">
-   <div><h1>Expansões</h1><p class="lead">Todas as expansões do Pokémon TCG. Abra uma para marcar as cartas que você tem.</p></div>
-   <div class="tools"><input class="field" id="q" type="search" placeholder="Buscar expansão" aria-label="Buscar expansão" value="${esc(S.ui.q)}">${modeSeg()}</div>
+   <div><h1>Expansões</h1><p class="lead">As expansões que você escolheu acompanhar. Abra uma para marcar as cartas que você tem.</p></div>
+   <div class="tools"><input class="field" id="q" type="search" placeholder="Buscar expansão" aria-label="Buscar expansão" value="${esc(S.ui.q)}"><a class="btn" href="#/expansoes">Minhas expansões</a>${modeSeg()}</div>
   </div>
   <div id="homebody"></div>`;
  renderHome();
@@ -19,14 +20,19 @@ export function statusNotes(){
  let h='';
  if(!S.persist)h+=noteHTML('warn','Seu navegador não permitiu salvar dados neste modo de abertura. Abra o app por um servidor local (veja o LEIA-ME) para que a coleção fique guardada.');
  if(S.status.catalog==='error')h+=noteHTML('err',`Não consegui acessar a TCGdex (${esc(S.status.err)}). Verifique a conexão. <button class="btn small" data-act="retry-catalog" type="button">Tentar de novo</button>`);
- if(S.status.pre)h+=noteHTML('',`Carregando detalhes das expansões: ${S.status.pre.done} de ${S.status.pre.total}. Os totais do Master Set aparecem à medida que chegam.`);
+ if(S.status.pre)h+=noteHTML('',`Carregando as expansões escolhidas: ${S.status.pre.done} de ${S.status.pre.total}.`);
+ if(S.status.cl)h+=noteHTML('',`Baixando os detalhes das cartas das suas expansões: ${S.status.cl.done} de ${S.status.cl.total}. Você já pode navegar; o Master Set e as regras completam à medida que chegam.${S.status.cl.fail?` (${S.status.cl.fail} falharam; dá para retomar em Catálogo e ajustes.)`:''}`);
  return h;
 }
 export function renderHome(){
  const body=$('#homebody');if(!body)return;
  const mode=S.settings.mode;
  $$('[data-act=mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===mode)));
- const sets=visibleSets();
+ const sets=mySets();
+ if(S.sets.length&&!sets.length){
+  body.innerHTML=statusNotes()+`<div class="empty"><h3>Escolha as expansões que você quer acompanhar</h3><p>Para não baixar o catálogo inteiro, o app carrega só as expansões que você escolher. Marque uma série inteira ou apenas algumas expansões.</p><a class="btn primary" href="#/expansoes">Escolher expansões</a></div>`;
+  return;
+ }
  if(!sets.length){
   body.innerHTML=statusNotes()+(S.status.catalog==='error'?'':`<div class="sets">${'<div class="skel"></div>'.repeat(12)}</div>`);
   return;
@@ -55,7 +61,7 @@ export function renderHome(){
 }
 export function setTile(s,st,mode){
  const d=S.setd[s.id];
- const logo=s.logo?`<img loading="lazy" decoding="async" alt="" src="${esc(s.logo)}.webp" data-role="logo" data-name="${esc(s.name)}">`:`<span class="noimg">${esc(s.name)}</span>`;
+ const logo=logoImg(s);
  const sym=s.symbol?`<img class="sym" loading="lazy" alt="" src="${esc(s.symbol)}.webp" data-role="sym">`:'';
  let main,sub,own,tot;
  if(mode==='master'){

@@ -3,6 +3,7 @@ import {ensureCard} from '../catalog.js';
 import {COND, FIN, FIN_LABEL, LANGS} from '../constants.js';
 import {H, S} from '../state.js';
 import {imgTag, noteHTML} from '../ui.js';
+import {dexModel} from '../rules.js';
 import {$, esc} from '../util.js';
 
 export function openPanel(id,ctx){
@@ -11,10 +12,18 @@ export function openPanel(id,ctx){
  if(!S.cards[id])ensureCard(id).then(()=>{if(S.ui.panelId===id)renderPanel();if(S.cur&&S.cur.refresh)S.cur.refresh();}).catch(()=>{if(S.ui.panelId===id)renderPanel(true);});
 }
 export function closePanel(){S.ui.panelId=null;renderPanel();}
+/* Carta anterior/seguinte dentro da lista que está na tela, sem fechar o popup. */
+export function panelNav(d){
+ const nav=(S.cur&&S.cur.nav)||[];if(!nav.length||!S.ui.panelId)return;
+ const i=nav.findIndex(x=>x.id===S.ui.panelId);
+ const j=i<0?0:i+d;if(j<0||j>=nav.length)return;
+ const it=nav[j];const ctx=S.ui.panelCtx?{...S.ui.panelCtx,dex:it.dex||null}:null;
+ openPanel(it.id,ctx);
+}
 export function renderPanel(failed){
  const p=$('#panel'),sc=$('#scrim');
  const id=S.ui.panelId;
- if(!id){p.classList.remove('open');sc.classList.remove('on');return;}
+ if(!id){p.classList.remove('open');sc.classList.remove('on');delete p.dataset.id;return;}
  const act=document.activeElement;
  const keep=p.contains(act)&&act.dataset?{a:act.dataset.act,f:act.dataset.fin}:null;
  const b=S.briefs[id]||{};const c=S.cards[id];
@@ -49,18 +58,39 @@ export function renderPanel(failed){
  }).join(''):(failed?noteHTML('err','Não consegui carregar os detalhes desta carta. Verifique a conexão e abra de novo.'):'<div class="skel" style="height:90px;margin-top:10px"></div>');
  const ctx=S.ui.panelCtx;
  const manual=ctx&&ctx.binderId&&(S.binders.find(x=>x.id===ctx.binderId)||{}).mode==='manual';
- p.innerHTML=`<div class="inner"><button class="btn small close" type="button" data-act="close">Fechar</button>
-  <div class="big">${imgTag(image,'high',name)}</div>
-  <h2>${esc(name)}</h2>
+ const nav=(S.cur&&S.cur.nav)||[];const ni=nav.findIndex(x=>x.id===id);
+ const phead=`<div class="phead"><div class="pn"><button class="btn small" type="button" data-act="panel-nav" data-d="-1" ${ni<=0?'disabled':''} aria-label="Carta anterior">‹</button><span aria-live="polite">${ni>=0?`${ni+1} de ${nav.length}`:''}</span><button class="btn small" type="button" data-act="panel-nav" data-d="1" ${ni<0||ni>=nav.length-1?'disabled':''} aria-label="Próxima carta">›</button></div><button class="btn small close" type="button" data-act="close">Fechar</button></div>`;
+ const info=`<h2>${esc(name)}</h2>
   <p class="lead" style="margin-top:2px">${esc(set.name)}, carta ${esc(b.localId||'')}${official?' de '+official:''}</p>
   ${c&&c.illustrator?`<p class="lead" style="margin-top:2px">Ilustração: ${esc(c.illustrator)}</p>`:''}
   <div class="facts">${facts.map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div>
   ${rows}
   <div style="margin-top:14px"><label class="lbl2" for="note">Observações</label><textarea class="field" id="note" rows="3" data-id="${esc(id)}" placeholder="Ex.: comprada em feira, assinatura, ponto de dobra">${esc(e?e.n:'')}</textarea></div>
-  ${manual?`<div style="margin-top:14px"><button class="btn danger" type="button" data-act="unbind" data-id="${esc(id)}">Tirar do fichário</button></div>`:''}</div>`;
+  ${dexPick(ctx,id)}
+  ${manual?`<div style="margin-top:14px"><button class="btn danger" type="button" data-act="unbind" data-id="${esc(id)}">Tirar do fichário</button></div>`:''}`;
+ if(p.dataset.id===id&&$('.pinfo',p)){
+  $('.phead',p).outerHTML=phead;$('.pinfo',p).innerHTML=info;
+ }else{
+  p.dataset.id=id;
+  p.innerHTML=`<div class="inner">${phead}<div class="pgrid"><div class="pcol"><div class="tilt" aria-label="Carta em destaque. Passe o mouse ou arraste para inclinar."><div class="tcard">${imgTag(image,'high',name)}<span class="glare"></span></div></div><p class="phint">Passe o mouse ou arraste a carta.</p></div><div class="pinfo">${info}</div></div></div>`;
+  p.scrollTop=0;
+ }
  p.classList.add('open');sc.classList.add('on');
  if(keep){const t=$(`#panel [data-act="${keep.a}"]${keep.f?`[data-fin="${keep.f}"]`:''}`);if(t)t.focus();}
 }
 
 
 H.renderPanel=renderPanel;
+
+/* No fichário Pokédex: escolher qual carta representa o espaço. */
+function dexPick(ctx,id){
+ if(!ctx||!ctx.dex||!ctx.binderId)return'';
+ const b=S.binders.find(x=>x.id===ctx.binderId);
+ if(!b||b.mode!=='pokedex')return'';
+ const slot=dexModel(b).find(x=>x.dex===ctx.dex);
+ if(!slot||slot.cand.length<2)return'';
+ const auto=!(b.pick&&b.pick[ctx.dex]);
+ return`<div class="fin" style="margin-top:14px"><div class="fin-head"><h3>Carta deste espaço</h3><button type="button" class="btn small" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" ${auto?'disabled':''}>Automática</button></div>
+  <p class="lbl2" style="margin:0 0 8px">${auto?'Hoje vale a melhor carta que você tem. ':''}Toque em uma para fixá-la neste espaço.</p>
+  <div class="dexcand">${slot.cand.slice(0,36).map(cid=>{const c=S.cards[cid]||{};const sel=cid===slot.rep;return`<button type="button" class="cand ${sel?'sel':''}" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" data-id="${esc(cid)}" aria-pressed="${sel}" aria-label="${esc(c.name||cid)}">${imgTag(c.image,'low',c.name)}</button>`;}).join('')}</div></div>`;
+}

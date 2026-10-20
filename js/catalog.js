@@ -14,6 +14,8 @@ export function indexSetd(d){
 export const isPocket=id=>{const s=S.serieOf[id];return !!s&&(s.id==='tcgp'||/pocket/i.test(s.name||''));};
 export const visibleSet=id=>S.settings.showPocket||!isPocket(id);
 export const visibleSets=()=>S.sets.filter(s=>visibleSet(s.id));
+export const mySetIds=()=>new Set(S.settings.mySets||[]);
+export function mySets(){const ids=mySetIds();return visibleSets().filter(s=>ids.has(s.id));}
 
 export async function fetchCatalog(){
  S.status.catalog='loading';S.status.err='';softNow();
@@ -22,7 +24,7 @@ export async function fetchCatalog(){
   if(!pt&&!en)throw new Error('A TCGdex não devolveu a lista de expansões.');
   const ptMap=new Map((pt||[]).map(s=>[s.id,s]));
   const out=[];const seen=new Set();
-  (en||pt).forEach(s=>{const p=ptMap.get(s.id);out.push(p?{...p,lang:'pt'}:{...s,lang:'en'});seen.add(s.id);});
+  (en||pt).forEach(s=>{const p=ptMap.get(s.id);out.push(p?{...p,lang:'pt',logoEn:s.logo}:{...s,lang:'en'});seen.add(s.id);});
   (pt||[]).forEach(s=>{if(!seen.has(s.id))out.push({...s,lang:'pt'});});
   const series=(await getOrNull('/series','pt'))||(await getOrNull('/series','en'))||[];
   const serieOf={};
@@ -49,14 +51,28 @@ export async function ensureSetd(id,force){
 }
 export async function preloadSetd(force){
  if(S.status.pre)return;
- const todo=S.sets.filter(s=>force||!S.setd[s.id]);
- if(!todo.length)return;
+ const todo=mySets().filter(s=>force||!S.setd[s.id]);
+ if(!todo.length){loadSelectedCards();return;}
  S.status.pre={done:0,total:todo.length};S.status.preErr=0;softNow();
  await pool(todo,6,async s=>{
   try{await ensureSetd(s.id,force);}catch(e){S.status.preErr++;}
   S.status.pre.done++;soft();
  });
  S.status.pre=null;softNow();
+ loadSelectedCards();
+}
+/* Baixa os detalhes de todas as cartas das expansões escolhidas (Master Set e regras dependem deles). */
+export async function loadSelectedCards(){
+ if(S.status.cl)return;
+ const ids=[];
+ mySets().forEach(s=>{const d=S.setd[s.id];if(d)(d.cards||[]).forEach(c=>{if(!S.cards[c.id])ids.push(c.id);});});
+ if(!ids.length)return;
+ S.status.cl={done:0,total:ids.length,fail:0};softNow();
+ await pool(ids,8,async id=>{
+  try{await ensureCard(id);}catch(e){S.status.cl.fail++;}
+  S.status.cl.done++;if(S.status.cl.done%10===0)soft();
+ });
+ S.status.cl=null;viewCache.clear();softNow();
 }
 export const trimCard=c=>({
  id:c.id,localId:String(c.localId),name:c.name,image:c.image,category:c.category,illustrator:c.illustrator,rarity:c.rarity,
@@ -93,7 +109,7 @@ export async function ensureSetCards(setId){
 }
 export function syncTargets(){
  const bySet=groupBySet();
- const sets=visibleSets().slice().reverse().sort((a,b)=>(bySet[b.id]?1:0)-(bySet[a.id]?1:0));
+ const sets=mySets().slice().reverse().sort((a,b)=>(bySet[b.id]?1:0)-(bySet[a.id]?1:0));
  const ids=[];
  sets.forEach(s=>{const d=S.setd[s.id];if(d)(d.cards||[]).forEach(c=>{if(!S.cards[c.id])ids.push(c.id);});});
  return ids;
@@ -110,7 +126,29 @@ export async function runSync(){
 }
 export function catalogCoverage(){
  let total=0,have=0;
- visibleSets().forEach(s=>{const d=S.setd[s.id];if(d)(d.cards||[]).forEach(c=>{total++;if(S.cards[c.id])have++;});});
- const setsLoaded=visibleSets().filter(s=>S.setd[s.id]).length;
- return{total,have,setsLoaded,sets:visibleSets().length};
+ mySets().forEach(s=>{const d=S.setd[s.id];if(d)(d.cards||[]).forEach(c=>{total++;if(S.cards[c.id])have++;});});
+ const setsLoaded=mySets().filter(s=>S.setd[s.id]).length;
+ return{total,have,setsLoaded,sets:mySets().length};
+}
+
+/* Carrega a lista de cartas de todas as expansões (leve: um pedido por expansão), para achar um Pokémon em qualquer uma. */
+export async function loadAllSetLists(){
+ if(S.status.all)return;
+ const todo=visibleSets().filter(s=>!S.setd[s.id]);
+ if(!todo.length)return;
+ S.status.all={done:0,total:todo.length,fail:0};softNow();
+ await pool(todo,6,async s=>{
+  try{await ensureSetd(s.id);}catch(e){S.status.all.fail++;}
+  S.status.all.done++;soft();
+ });
+ S.status.all=null;viewCache.clear();softNow();
+}
+export async function loadIds(ids,key='ids'){
+ if(S.status[key]||!ids.length)return;
+ S.status[key]={done:0,total:ids.length,fail:0};softNow();
+ await pool(ids,8,async id=>{
+  try{await ensureCard(id);}catch(e){S.status[key].fail++;}
+  S.status[key].done++;if(S.status[key].done%10===0)soft();
+ });
+ S.status[key]=null;viewCache.clear();softNow();
 }

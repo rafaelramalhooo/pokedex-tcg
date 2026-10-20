@@ -29,6 +29,15 @@ export function renderSettings(){
   ${S.status.catalog==='error'?noteHTML('err',`Falha ao acessar a TCGdex: ${esc(S.status.err)}.`):''}
   <p class="lbl2" style="margin-top:12px">${S.catalogAt?'Lista de expansões atualizada em '+new Date(S.catalogAt).toLocaleString('pt-BR')+'.':'A lista de expansões ainda não foi baixada.'}</p>
  </section>
+ <section class="panel-sec"><h2>Minhas expansões</h2>
+  <p>${fmtN(cov.sets)} ${cov.sets===1?'expansão escolhida':'expansões escolhidas'}. Só elas são baixadas e aparecem na tela inicial.</p>
+  <a class="btn" href="#/expansoes">Escolher expansões</a>
+ </section>
+ <section class="panel-sec"><h2>Logos das expansões</h2>
+  <p>Cada logo é procurado em vários endereços (catálogo, versão em inglês, montado pela série) e, se nada servir, aparece o símbolo ou o nome. O diagnóstico testa todas as expansões e lista as que ficaram sem logo.</p>
+  <div class="row"><button class="btn" type="button" data-act="check-logos" ${S.logoDiag&&S.logoDiag.running?'disabled':''}>${S.logoDiag&&S.logoDiag.running?`Verificando: ${S.logoDiag.done} de ${S.logoDiag.total}`:'Verificar logos'}</button></div>
+  ${logoDiagHTML()}
+ </section>
  <section class="panel-sec"><h2>Marcas legais no Standard</h2>
   <p>A legalidade é decidida pela marca impressa no canto inferior esquerdo de cada carta, nunca pela expansão. Edite a lista quando houver rotação; a regra “Legal no Standard” dos fichários passa a usar a nova lista na hora. Em 20/10/2026 valem H, I e J (e posteriores).</p>
   <div class="chips">${marks.map(m=>`<span class="mark">${esc(m)}<button type="button" data-act="rm-mark" data-v="${esc(m)}" aria-label="Remover marca ${esc(m)}">×</button></span>`).join('')||'<span class="lbl2">Nenhuma marca definida.</span>'}</div>
@@ -50,6 +59,11 @@ export function renderSettings(){
  <section class="panel-sec"><h2>Sobre</h2>
   <p>Aplicativo pessoal de gestão de coleção, não afiliado à The Pokémon Company. Nomes, ilustrações, logos e marcas pertencem aos seus donos. Dados e imagens são carregados da <strong>TCGdex</strong> (tcgdex.dev). Confira as licenças de dados e imagens antes de qualquer uso público ou comercial. Preços não são exibidos.</p>
  </section>`;
+}
+function logoDiagHTML(){
+ const d=S.logoDiag;if(!d||d.running||!d.total)return '';
+ if(!d.missing.length)return noteHTML('',`Todos os ${d.total} logos foram encontrados${d.viaAlt?`; ${d.viaAlt} só por um endereço alternativo`:''}.`);
+ return noteHTML('warn',`${d.missing.length} de ${d.total} expansões ficaram sem logo${d.viaAlt?` (${d.viaAlt} outras foram resolvidas por endereço alternativo)`:''}. Elas aparecem com o símbolo ou o nome:<br>${d.missing.map(m=>esc(m.name)+(m.hasSymbol?'':' (sem símbolo)')).join(' · ')}`);
 }
 export function exportBackup(){
  const data={app:'pokedex-tcg',version:1,exportedAt:new Date().toISOString(),collection:S.collection,binders:S.binders,settings:S.settings};
