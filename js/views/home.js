@@ -4,7 +4,7 @@ import {hueOf, logoImg} from '../logos.js';
 import {groupBySet, ownedQty, setStat} from '../collection.js';
 import {S, soft} from '../state.js';
 import {modeSeg, noteHTML} from '../ui.js';
-import {$, $$, esc, fmtDate, fmtN, nz, pct} from '../util.js';
+import {$, $$, live, esc, fmtDate, fmtN, nz, pct} from '../util.js';
 
 export function viewHome(){
  S.cur={name:'home',soft:renderHome,refresh:renderHome};
@@ -25,7 +25,7 @@ export function statusNotes(){
  return h;
 }
 export function renderHome(){
- const body=$('#homebody');if(!body)return;
+ const body=live($('#homebody'));if(!body)return;
  const mode=S.settings.mode;
  $$('[data-act=mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===mode)));
  const sets=mySets();

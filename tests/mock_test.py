@@ -48,6 +48,8 @@ hits = {"cards": 0, "sets": 0}
 def handle(route):
     url = route.request.url
     h = {"access-control-allow-origin": "*"}
+    if url.endswith("/js/config.js"):
+        return route.fulfill(status=200, content_type="text/javascript", body="export const SUPABASE={url:'',key:''};")
     if "fonts.g" in url:
         return route.abort()
     if url.startswith("https://assets.tcgdex.net") and ("/sv02/logo" in url or "/sv02/symbol" in url):
@@ -675,6 +677,28 @@ with sync_playwright() as p:
     page.locator('[data-act="scope"][data-v="all"]').click(); page.wait_for_timeout(300)
     check(page.locator(".set").count() >= tot, "'Todas as escolhidas' mostra todas")
     page.screenshot(path=str(ROOT/"tests/26_home_scope.png"))
+
+    # ---- telas guardadas: voltar sem recarregar ----
+    page.set_viewport_size({"width": 700, "height": 420})
+    page.evaluate("location.hash='#/set/sv01'"); page.wait_for_selector("#grid .slot", timeout=8000)
+    off_id = page.evaluate("document.querySelector('#grid .slot').dataset.id")
+    was_on = page.evaluate("document.querySelector('#grid .slot').classList.contains('on')")
+    page.evaluate("document.querySelector('#grid .slot').__keep=1; document.querySelector('#grid').__keepg=1")
+    page.evaluate("window.scrollTo(0,250)"); page.wait_for_timeout(200)
+    y0 = page.evaluate("window.scrollY")
+    page.evaluate("location.hash='#/'"); page.wait_for_selector(".set", timeout=5000)
+    sid = page.evaluate("(()=>{const e=document.querySelector('#view');return null})()")
+    page.evaluate("import('./js/collection.js').then(m=>m.toggleOwn(%r))" % off_id); page.wait_for_timeout(200)
+    page.evaluate("location.hash='#/set/sv01'"); page.wait_for_timeout(500)
+    check(page.evaluate("!!document.querySelector('#grid .slot') && document.querySelector('#grid .slot').__keep===1"), "voltar: as cartas são as mesmas (não recriadas)")
+    check(abs(page.evaluate("window.scrollY") - y0) < 4 and y0 > 0, f"voltar: a rolagem é restaurada ({y0})")
+    check(page.evaluate("id=>document.querySelector('#grid .slot[data-id=\"'+id+'\"]').classList.contains('on')", off_id) != was_on, "voltar: mudança feita em outra tela aparece")
+    page.evaluate("location.hash='#/ajustes'"); page.wait_for_selector("#sbody .panel-sec")
+    page.evaluate("location.hash='#/set/sv01'"); page.wait_for_timeout(400)
+    check(page.evaluate("document.querySelector('#grid .slot').__keep===1"), "voltar de Ajustes também reaproveita a tela")
+    page.evaluate("location.hash='#/'"); page.wait_for_selector(".set")
+    page.evaluate("(window.__H||0)")
+    page.screenshot(path=str(ROOT/"tests/27_keepalive.png"))
     b.close()
 
 SERVER.terminate()

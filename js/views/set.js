@@ -9,11 +9,11 @@ import {imgTag, modeSeg, noteHTML, sizeCtl} from '../ui.js';
 import {modeOf} from '../modes.js';
 import {capRight} from '../cardlabel.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
-import {$, $$, ICON, esc, fmtDate, fmtN, nz, pct} from '../util.js';
+import {$, $$, live, ICON, esc, fmtDate, fmtN, nz, pct} from '../util.js';
 import {matchQuery, parseQuery} from './dex.js';
 
 export async function viewSet(id){
- S.cur={name:'set',id,soft:()=>{renderSetHero();renderSetGrid();},refresh:()=>{renderSetHero();renderSetGrid();}};
+ S.cur={name:'set',id,ready:false,soft:()=>{renderSetHero();renderSetGrid();},refresh:()=>{renderSetHero();renderSetGrid();}};
  S.ui.setFilter='all';S.ui.setQ='';
  $('#view').innerHTML=`<a class="back" href="#/">${ICON.back} Todas as coleções</a><div id="sethero"><div class="skel" style="height:130px"></div></div><div id="settools"></div><div id="grid"></div>`;
  try{await ensureSetd(id);}
@@ -27,11 +27,11 @@ export async function viewSet(id){
   <input class="field" id="sq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar carta">
   <span class="grow"></span><span class="bookctl" id="bookctl"></span></div><div id="setnote"></div>`;
  renderBookCtl();
- renderSetHero();renderSetGrid();
+ renderSetHero();renderSetGrid();S.cur.ready=true;
  if(modeOf(id)==='master')ensureSetCards(id);
 }
 export function renderSetHero(){
- const el=$('#sethero');if(!el||!S.cur||S.cur.name!=='set')return;
+ const el=live($('#sethero'));if(!el||!S.cur||S.cur.name!=='set')return;
  const id=S.cur.id;const set=S.setMap[id]||{id,name:id};const d=S.setd[id];if(!d)return;
  const st=setStat(set,groupBySet());
  const se=S.serieOf[id]||(d.serie&&{name:d.serie.name});
@@ -45,7 +45,7 @@ export function renderSetHero(){
   <div class="hstats">${stat('set','Set (cartas numeradas)',st.own,st.tot)}${stat('master','Master Set',st.ownM,st.masterTot)}</div></div>`;
 }
 export function renderSetGrid(){
- const g=$('#grid');if(!g||!S.cur||S.cur.name!=='set')return;
+ const g=live($('#grid'));if(!g||!S.cur||S.cur.name!=='set')return;
  const id=S.cur.id;const d=S.setd[id];if(!d)return;
  const mode=modeOf(id);
  $$('[data-act=mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===mode)));

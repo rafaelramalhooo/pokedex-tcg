@@ -22,13 +22,13 @@ export function imgTag(base,q,name,role,id){
  if(own)return `<img decoding="async" alt="" src="${esc(own)}" data-role="own">`;
  if(!base&&id){
   const dv=derivedImage(id);
-  if(dv)return `<img loading="lazy" decoding="async" alt="" src="${esc(dv.url)}/${q}.webp" data-b="${esc(dv.url)}" data-q="${q}" data-name="${esc(name||'')}" data-id="${esc(id)}" data-derived="${dv.kind}"${role?` data-role="${role}"`:''}>`;
+  if(dv)return `<img class="lz" decoding="async" alt="" data-src="${esc(dv.url)}/${q}.webp" data-b="${esc(dv.url)}" data-q="${q}" data-name="${esc(name||'')}" data-id="${esc(id)}" data-derived="${dv.kind}"${role?` data-role="${role}"`:''}>`;
  }
  if(!base){
   const b=id&&S.briefs[id];
   return `<div class="ph" data-noimg="1"><b>${esc(name||'')}</b>${b&&b.localId?`<small>${esc(b.localId)}</small>`:''}</div>`;
  }
- return `<img loading="lazy" decoding="async" alt="" src="${esc(base)}/${q}.webp" data-b="${esc(base)}" data-q="${q}" data-name="${esc(name||'')}"${id?` data-id="${esc(id)}"`:''}${role?` data-role="${role}"`:''}>`;
+ return `<img class="lz" decoding="async" alt="" data-src="${esc(base)}/${q}.webp" data-b="${esc(base)}" data-q="${q}" data-name="${esc(name||'')}"${id?` data-id="${esc(id)}"`:''}${role?` data-role="${role}"`:''}>`;
 }
 document.addEventListener('error',e=>{
  const t=e.target;

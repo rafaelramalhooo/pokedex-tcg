@@ -417,3 +417,6 @@ body.locked{overflow:hidden}
 .aerr.ok{color:#1E7A4C}
 .linkbtn{background:none;border:0;padding:6px;font:inherit;color:var(--ink-2);text-decoration:underline;cursor:pointer}
 .afoot{margin:8px 0 0;font-size:12px;color:var(--ink-3);text-align:center}
+
+/* imagens das cartas: aparecem com um fade quando carregam */
+.pocket img.lz{opacity:0}

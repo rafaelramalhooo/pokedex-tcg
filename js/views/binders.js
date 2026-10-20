@@ -7,7 +7,7 @@ import {coverHTML} from '../covers.js';
 import {saveBinders} from '../db.js';
 import {S, soft} from '../state.js';
 import {imgTag, noteHTML, sizeCtl} from '../ui.js';
-import {$, $$, ICON, esc, fmtN, pct} from '../util.js';
+import {$, $$, live, ICON, esc, fmtN, pct} from '../util.js';
 import {slotHTML} from './set.js';
 import {dexArt, dexName, loadDexNames, matchQuery, pad4, parseQuery} from './dex.js';
 import {nz} from '../util.js';
@@ -22,7 +22,7 @@ export function viewBinders(){
  renderBinders();
 }
 export function renderBinders(){
- const el=$('#bbody');if(!el)return;
+ const el=live($('#bbody'));if(!el)return;
  if(!S.binders.length){
   el.innerHTML=`<div class="empty"><h3>Você ainda não tem fichários</h3><p>Crie o primeiro. Por exemplo: todas as cartas de Fogo ilustradas por um artista que você gosta, ou só as cartas legais no Standard.</p><button class="btn primary" type="button" data-act="new-binder">Criar fichário</button></div>`;
   return;
@@ -110,8 +110,8 @@ export function renderBinderBody(){
  }else if(cov.setsLoaded<cov.sets&&!r.dex)notes+=noteHTML('',`Só ${cov.setsLoaded} de ${cov.sets} coleções foram carregadas até agora; o fichário cresce conforme chegam.`);
  if(r.dex)loadDexNames();
  if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas coleções: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
- $('#bsum').innerHTML=notes+statsHTML(r,own,tot);
- const g=$('#bgrid');
+ live($('#bsum')).innerHTML=notes+statsHTML(r,own,tot);
+ const g=live($('#bgrid'));
  if(r.dex){
   const q=parseQuery(S.ui.binderQ);
   const list=r.dex.filter(x=>(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned))&&slotMatches(x,q));

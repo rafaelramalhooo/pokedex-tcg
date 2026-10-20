@@ -5,6 +5,7 @@ import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl} from './views/book.
 import {setCfg} from './modes.js';
 import {checkLogos} from './logos.js';
 import {pickImage, removeCustom} from './custom.js';
+import './lazyimg.js';
 import {initCloud, onCloud, startSession} from './cloud.js';
 import {showAuth, updateAcct} from './views/auth.js';
 import {pickSave, pickSerie, pickToggle, renderPicker, viewPicker} from './views/picker.js';
@@ -58,7 +59,7 @@ const ACT={
  dec:t=>{const e=S.collection[t.dataset.id];const q=e&&e.f[t.dataset.fin]?e.f[t.dataset.fin].q:0;if(q>0)setFin(t.dataset.id,t.dataset.fin,{q:q-1});},
  unbind:t=>{const ctx=S.ui.panelCtx;const b=ctx&&S.binders.find(x=>x.id===ctx.binderId);if(!b)return;b.cardIds=b.cardIds.filter(x=>x!==t.dataset.id);saveBinders();closePanel();refreshAll();},
  'retry-catalog':()=>fetchCatalog(),
- 'reload-set':()=>route(),
+ 'reload-set':()=>route(true),
  'load-set-cards':()=>{if(S.cur&&S.cur.name==='set')ensureSetCards(S.cur.id);},
  'new-binder':()=>openEditor(null),
  'edit-binder':t=>openEditor(t.dataset.id),
@@ -153,13 +154,43 @@ function noteSoon(id,v){clearTimeout(noteTimers[id]);noteTimers[id]=setTimeout((
 $('#scrim').addEventListener('click',()=>closePanel());
 
 
-function route(){
+/* Telas guardadas: ao sair de uma tela com cartas, o app guarda a tela pronta (com as imagens
+   já carregadas) e a posição da rolagem, e a recoloca na hora quando você volta. */
+const KEEP=new Map();const KEEP_MAX=6;const KEEP_UI=['page','pageKey','q','serie','scope','setFilter','setQ','binderFilter','binderShown','binderQ'];
+let curKey=null;
+function keepLeave(){
+ if(curKey===null)return;
+ const v=$('#view');const c=S.cur;
+ if(!c||c.ready===false||!['home','set','binders','binder'].includes(c.name)||!v.firstChild){KEEP.delete(curKey);return;}
+ const y=window.scrollY;const frag=document.createDocumentFragment();
+ while(v.firstChild)frag.appendChild(v.firstChild);
+ const ui={};KEEP_UI.forEach(k=>ui[k]=S.ui[k]);
+ KEEP.delete(curKey);KEEP.set(curKey,{frag,cur:c,y,ui});
+ while(KEEP.size>KEEP_MAX)KEEP.delete(KEEP.keys().next().value);
+}
+function keepEnter(key){
+ const e=KEEP.get(key);if(!e)return false;
+ KEEP.delete(key);
+ const v=$('#view');v.textContent='';v.appendChild(e.frag);
+ S.cur=e.cur;KEEP_UI.forEach(k=>{S.ui[k]=e.ui[k];});
+ try{if(S.cur.refresh)S.cur.refresh();}catch(err){return false;}
+ window.scrollTo(0,e.y);
+ return true;
+}
+H.keepClear=()=>KEEP.clear();
+function route(fresh){
  closePanel();
  const h=(location.hash||'#/').slice(1);const parts=h.split('/').filter(Boolean);
+ const key=h||'/';
+ if(fresh===true)KEEP.clear();
+ if(key!==curKey)keepLeave();
+ const same=key===curKey;
+ curKey=key;
  const nav=parts[0]==='binders'||parts[0]==='binder'?'binders':parts[0]==='ajustes'?'ajustes':'home';
  $$('.rail a.nav').forEach(a=>a.classList.toggle('on',a.dataset.nav===nav));
- window.scrollTo(0,0);
  document.documentElement.style.setProperty('--tile',S.settings.tile+'px');
+ if(!same&&keepEnter(key))return;
+ window.scrollTo(0,0);
  if(parts[0]==='set'&&parts[1])viewSet(decodeURIComponent(parts[1]));
  else if(parts[0]==='binders')viewBinders();
  else if(parts[0]==='binder'&&parts[1])viewBinder(parts[1]);
@@ -167,8 +198,8 @@ function route(){
  else if(parts[0]==='ajustes')viewSettings();
  else viewHome();
 }
-window.addEventListener('hashchange',route);
-H.route=route;
+window.addEventListener('hashchange',()=>route());
+H.route=()=>route(true);
 H.renderDex=()=>{if(S.ui.dexdlg)renderDexGrid();};
 
 
