@@ -1,7 +1,7 @@
 /* Eventos, rotas e início do app. */
 import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
-import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl} from './views/book.js';
+import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl, setImmersive} from './views/book.js';
 import {setCfg} from './modes.js';
 import {checkLogos} from './logos.js';
 import {pickImage, removeCustom} from './custom.js';
@@ -47,6 +47,7 @@ const ACT={
  'dex-retry':()=>retryDex(),
  'panel-nav':t=>panelNav(+t.dataset.d),
  'book-go':t=>bookGo(+t.dataset.d),
+ 'immerse':()=>setImmersive(!S.ui.immersive),
  'dex-pick':t=>{const b=S.binders.find(x=>x.id===t.dataset.binder);if(!b)return;b.pick=b.pick||{};if(t.dataset.id)b.pick[t.dataset.dex]=t.dataset.id;else delete b.pick[t.dataset.dex];saveBinders();viewCache.clear();refreshAll();},
  bsortdir:()=>{const b=S.cur&&S.binders.find(x=>x.id===S.cur.id);setBinderSort({dir:b&&b.sort&&b.sort.dir==='desc'?'asc':'desc'});},
  'retry-remote':()=>retryRemote(),
@@ -101,6 +102,7 @@ document.addEventListener('keydown',e=>{
  if(S.ui.panelId&&!$('#modal').classList.contains('on')&&(e.key==='ArrowLeft'||e.key==='ArrowRight')&&!(e.target.tagName&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))){e.preventDefault();panelNav(e.key==='ArrowRight'?1:-1);return;}
  if(bookKey(e)){e.preventDefault();return;}
  if(e.key==='Escape'){
+  if(S.ui.immersive&&!S.ui.panelId&&!$('#modal').classList.contains('on')){setImmersive(false);return;}
   if(S.ui.panelId)closePanel();else if($('#modal').classList.contains('on')){const was=!!S.ui.dexdlg;closeModal();if(was){viewCache.clear();refreshAll();}}
   return;
  }
@@ -183,6 +185,7 @@ function route(fresh){
  const h=(location.hash||'#/').slice(1);const parts=h.split('/').filter(Boolean);
  const key=h||'/';
  if(fresh===true)KEEP.clear();
+ if(key!==curKey&&S.ui.immersive)setImmersive(false,true);
  if(key!==curKey)keepLeave();
  const same=key===curKey;
  curKey=key;

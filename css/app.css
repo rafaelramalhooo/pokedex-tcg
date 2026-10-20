@@ -420,3 +420,33 @@ body.locked{overflow:hidden}
 
 /* imagens das cartas: aparecem com um fade quando carregam */
 .pocket img.lz{opacity:0}
+
+/* ---------- Tela cheia (só as cartas) ---------- */
+body.immersive{overflow:hidden}
+.immersive .rail,.immersive #view>*:not(#grid):not(#bgrid){display:none!important}
+.immersive main{padding:0}
+.immersive .app{display:block;min-height:100dvh}
+.immersive #view{min-height:100dvh;display:flex;align-items:center;justify-content:center}
+.immersive #grid,.immersive #bgrid{width:100%}
+.immersive .bookwrap{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:10px}
+.immersive .spread{width:auto}
+.immersive .bpage{--cw:min(calc((100vw - 28px - 24px - (var(--cols) - 1)*8px)/var(--cols)/var(--sp)),calc((100dvh - 20px - 24px - (var(--rows) - 1)*8px - var(--rows)*34px)/var(--rows)*.727));flex:none;max-width:none;width:calc(var(--cols)*var(--cw) + (var(--cols) - 1)*8px + 24px);align-content:center}
+.immersive .bpage .tg{width:30px;height:30px}
+.immersive .booknav{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;margin:0;padding:8px 12px;border-radius:14px;background:rgba(18,26,43,.88);color:#fff;backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100vw - 20px)}
+.immersive .booknav .booklbl{color:#fff}
+.immersive .booknav .imsel{height:40px;width:auto;min-width:0;padding:0 8px}
+.immersive.ui-on .booknav{opacity:1;pointer-events:auto}
+.bside{display:none}
+.immersive .bside{display:flex;position:fixed;top:50%;transform:translateY(-50%);z-index:55;width:46px;height:96px;align-items:center;justify-content:center;border:0;border-radius:12px;background:rgba(18,26,43,.7);color:#fff;font-size:34px;line-height:1;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .2s}
+.immersive .bside.l{left:6px}.immersive .bside.r{right:6px}
+.immersive.ui-on .bside{opacity:1;pointer-events:auto}
+.immersive .bside:disabled{opacity:.25!important}
+.immersive .booknav .btn,.immersive .booknav .imsel{background:#2B3650;color:#fff;border:1px solid #4A5675}
+.immersive .booknav .btn:disabled{opacity:.4}
+.immersive .toast{bottom:auto;top:calc(14px + env(safe-area-inset-top));max-width:min(92vw,520px)}
+.immersive .toast{width:max-content}
+@media (max-width:700px){
+ .immersive .booknav{width:calc(100vw - 20px);justify-content:space-between;gap:8px;flex-wrap:nowrap}
+ .immersive .booknav .bookrange,.immersive .booknav [data-act=book-go]{display:none}
+ .immersive .booknav .booklbl{flex:1;font-size:14px}
+}
