@@ -45,7 +45,7 @@ async function fetchDexCards(n){
   if(!S.briefs[c.id])S.briefs[c.id]=b;
   out.push(b);
  });
- /* mais nova primeiro (a lista de expansões vem da mais antiga para a mais nova) */
+ /* mais nova primeiro (a lista de coleções vem da mais antiga para a mais nova) */
  out.sort((a,b)=>((S.setIdx[b.setId]??-1)-(S.setIdx[a.setId]??-1))||natCmp(a.localId,b.localId));
  return out;
 }
@@ -66,7 +66,7 @@ export function renderDex(){
  const d=$('#dialog');
  const name=titleOf(st.dex);
  d.innerHTML=`<div class="dexhead"><div class="dexart"><img alt="" src="${dexArt(st.dex)}" data-role="dexart"></div><div><h2>${esc(name||'Pokémon')} <small>#${pad4(st.dex)}</small></h2><p class="lead" id="dexsum" style="margin:0"></p></div></div>
-  <div class="row" style="margin:12px 0"><input class="field" id="dq" type="search" placeholder="Nome, número ou expansão. Ex.: bulbasaur (001/132)" aria-label="Buscar carta" value="${esc(st.q)}" style="flex:1 1 200px">
+  <div class="row" style="margin:12px 0"><input class="field" id="dq" type="search" placeholder="Nome, número ou coleção. Ex.: bulbasaur (001/132)" aria-label="Buscar carta" value="${esc(st.q)}" style="flex:1 1 200px">
    <label class="size"><input type="checkbox" data-dexonly ${st.only?'checked':''}> Só as que tenho</label></div>
   <div id="dexgrid"></div>
   <div class="actions"><span class="lbl2">Toque numa carta para colocá-la neste espaço. Toque de novo para tirá-la; ela continua na sua coleção.</span><button class="btn primary" type="button" data-act="dex-close">Concluir</button></div>`;
@@ -97,7 +97,7 @@ export function renderDexGrid(){
    <button type="button" class="btn small dd" data-act="open" data-id="${esc(c.id)}" data-binder="${esc(st.binderId)}" data-dex="${st.dex}">Detalhes</button></div>`;}).join('')}</div>`;
 }
 
-/* Busca estilo Liga Pokémon: "bulbasaur (001/132)", "bulbasaur 1", "151/165", "mew ex", nome da expansão. */
+/* Busca estilo Liga Pokémon: "bulbasaur (001/132)", "bulbasaur 1", "151/165", "mew ex", nome da coleção. */
 export function parseQuery(raw){
  let t=String(raw||'');let num=null,tot=null;
  const m=t.match(/(\d+)\s*\/\s*(\d+)/);

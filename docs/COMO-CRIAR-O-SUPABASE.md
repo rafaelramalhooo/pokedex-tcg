@@ -1,6 +1,6 @@
 # Como criar o Supabase (para o login)
 
-**Esta etapa só será necessária quando formos ligar o login e a sincronização na nuvem.** Pode deixar para depois das melhorias de tela, como combinamos. Quando chegar a hora, siga este guia.
+**Este guia liga o login e a sincronização na nuvem (versão 1.0).** Siga na ordem.
 
 Você precisa fazer, porque eu não posso criar contas ou digitar senhas em seu nome. Os nomes de menus podem mudar; procure o equivalente e me avise.
 
@@ -24,6 +24,14 @@ Você precisa fazer, porque eu não posso criar contas ou digitar senhas em seu 
 
 1. No menu da esquerda, abra **Authentication**.
 2. Procure a área de provedores (**Providers**, dentro de **Sign In / Providers**) e confirme que **Email** está ligado.
+
+## Parte 3b: configurar o endereço do site
+
+Isso faz o e-mail de confirmação e o de recuperação de senha abrirem o seu app.
+
+1. Em **Authentication**, abra **URL Configuration**.
+2. Em **Site URL**, cole: `https://rafaelramalhooo.github.io/pokedex-tcg/`
+3. Em **Redirect URLs**, clique em **Add URL**, cole o mesmo endereço e salve.
 
 ## Parte 4: copiar os dados para me enviar
 

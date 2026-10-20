@@ -19,7 +19,7 @@ export function openEditor(id){
  setTimeout(()=>{const n=$('#bn');if(n)n.focus();},30);
 }
 export function closeModal(){$('#modal').classList.remove('on');S.ui.edit=null;S.ui.adding=null;S.ui.dexdlg=null;}
-const QUICK=[['pokemon','Pokémon'],['set','Expansão'],['types','Tipo'],['illustrator','Ilustrador'],['rarity','Raridade'],['standard','Standard'],['category','Categoria'],['generation','Geração']];
+const QUICK=[['pokemon','Pokémon'],['set','Coleção'],['types','Tipo'],['illustrator','Ilustrador'],['rarity','Raridade'],['standard','Standard'],['category','Categoria'],['generation','Geração']];
 const ORD=['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª','9ª'];
 export function genChips(sel,attr){
  const set=new Set(sel.map(String));
@@ -54,7 +54,7 @@ export function renderEditor(){
  const rules=b.mode==='rule'?`
   <div class="row" style="margin-bottom:10px"><span>Incluir cartas que combinam com</span>
    <div class="seg" role="group" aria-label="Combinar regras"><button type="button" data-ed-act="match" data-v="all" aria-pressed="${b.match==='all'}">todas as regras</button><button type="button" data-ed-act="match" data-v="any" aria-pressed="${b.match==='any'}">qualquer regra</button></div></div>
-  <p class="lbl2" style="margin:-4px 0 10px">${b.match==='all'?'A carta precisa combinar com cada regra ao mesmo tempo. Ex.: Pokémon Pikachu e Expansão Celebração de 30 Anos.':'Basta a carta combinar com uma das regras. Ex.: Pokémon Pikachu ou Pokémon Raichu.'}</p>
+  <p class="lbl2" style="margin:-4px 0 10px">${b.match==='all'?'A carta precisa combinar com cada regra ao mesmo tempo. Ex.: Pokémon Pikachu e Coleção Celebração de 30 Anos.':'Basta a carta combinar com uma das regras. Ex.: Pokémon Pikachu ou Pokémon Raichu.'}</p>
   ${b.conds.map((c,i)=>{const F=FM[c.f];return`<div class="rule">
    <select class="field" data-ed="f" data-i="${i}" aria-label="Campo">${FIELDS.map(x=>`<option value="${x.k}" ${c.f===x.k?'selected':''}>${x.label}</option>`).join('')}</select>
    ${F.t==='gen'||F.t==='poke'?'<span class="opfix">'+(F.t==='gen'?'é uma de':'é um destes')+'</span>':`<select class="field" data-ed="op" data-i="${i}" aria-label="Condição">${opsFor(F).map(o=>`<option value="${o}" ${c.op===o?'selected':''}>${OPS[o]}</option>`).join('')}</select>`}
@@ -64,7 +64,7 @@ export function renderEditor(){
   <p class="preview" id="edprev" style="margin-top:14px"></p>`
   :b.mode==='pokedex'?`<p class="lead">Um espaço para cada Pokémon, na ordem da Pokédex Nacional. Cada espaço mostra a carta que você escolher para representá-lo ou, se não escolher, a melhor que você tiver. Espaços sem carta ficam cinza, com número e nome.</p>
   <label class="lbl2">Gerações incluídas (sem marcar nenhuma, entram todas)</label>${genChips(b.gens||[],'data-ed-act="bgen"')}
-  <p class="lbl2" style="margin-top:8px">A lista usa as cartas das suas expansões carregadas; o nome do Pokémon aparece quando alguma carta dele já foi baixada.</p>`
+  <p class="lbl2" style="margin-top:8px">A lista usa as cartas das suas coleções carregadas; o nome do Pokémon aparece quando alguma carta dele já foi baixada.</p>`
   :`<p class="lead">Neste modo você escolhe as cartas uma a uma depois de salvar, com “Adicionar cartas”.</p>`;
  $('#dialog').innerHTML=`<h2>${st.isNew?'Novo fichário':'Editar fichário'}</h2>
   <label class="lbl2" for="bn">Nome do fichário</label>

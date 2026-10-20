@@ -1,4 +1,4 @@
--- Pokédex TCG: esquema dos dados do usuário no Supabase (RASCUNHO para o item 2).
+-- Pokédex TCG: esquema dos dados do usuário no Supabase (versão 1.0).
 -- Como usar: no painel do Supabase, abra "SQL Editor", crie uma consulta nova, cole este arquivo e clique em "Run".
 -- O catálogo de cartas NÃO fica aqui: ele vem da TCGdex e é guardado em cada aparelho.
 -- Cada linha pertence a um usuário e só ele consegue ler ou alterar (regras de segurança por linha, RLS).
@@ -33,6 +33,17 @@ create table if not exists public.user_settings (
   updated_at timestamptz not null default now()
 );
 
+-- Imagens próprias (logos de coleção, fotos de carta, capas de fichário), já reduzidas pelo app.
+-- kind: 'logos' | 'cards' | 'covers'; data: a imagem como texto (data URL).
+create table if not exists public.custom_images (
+  user_id    uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  kind       text        not null,
+  id         text        not null,
+  data       text        not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, kind, id)
+);
+
 -- Atualiza updated_at a cada alteração (útil para sincronizar vários aparelhos).
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
@@ -49,6 +60,10 @@ drop trigger if exists binders_touch on public.binders;
 create trigger binders_touch before update on public.binders
   for each row execute function public.touch_updated_at();
 
+drop trigger if exists custom_images_touch on public.custom_images;
+create trigger custom_images_touch before update on public.custom_images
+  for each row execute function public.touch_updated_at();
+
 drop trigger if exists user_settings_touch on public.user_settings;
 create trigger user_settings_touch before update on public.user_settings
   for each row execute function public.touch_updated_at();
@@ -57,6 +72,7 @@ create trigger user_settings_touch before update on public.user_settings
 alter table public.collection    enable row level security;
 alter table public.binders       enable row level security;
 alter table public.user_settings enable row level security;
+alter table public.custom_images enable row level security;
 
 drop policy if exists "collection: só o dono" on public.collection;
 create policy "collection: só o dono" on public.collection
@@ -70,10 +86,15 @@ create policy "binders: só o dono" on public.binders
   using      ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+drop policy if exists "custom_images: só o dono" on public.custom_images;
+create policy "custom_images: só o dono" on public.custom_images
+  for all to authenticated
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
 drop policy if exists "user_settings: só o dono" on public.user_settings;
 create policy "user_settings: só o dono" on public.user_settings
   for all to authenticated
   using      ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
--- Mais adiante (envio de logos próprios para expansões sem logo) entrará um bucket de Storage com regras semelhantes.

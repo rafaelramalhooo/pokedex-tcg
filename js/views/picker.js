@@ -1,4 +1,4 @@
-/* Tela "Minhas expansões": escolher quais expansões carregar e mostrar. */
+/* Tela "Minhas coleções": escolher quais coleções carregar e mostrar. */
 import {preloadSetd, visibleSets} from '../catalog.js';
 import {groupBySet} from '../collection.js';
 import {logoImg} from '../logos.js';
@@ -12,9 +12,9 @@ const KB_PER_CARD=3;   /* estimativa grosseira do tamanho do detalhe de cada car
 export function viewPicker(){
  S.cur={name:'picker',soft:renderPicker,refresh:renderPicker};
  S.ui.pick={q:'',draft:[...(S.settings.mySets||[])],groups:[]};
- $('#view').innerHTML=`<a class="back" href="#/">Voltar às expansões</a>
-  <div class="top"><div><h1>Minhas expansões</h1><p class="lead">Escolha as expansões que você quer acompanhar. A tela inicial mostra só elas, e cada uma é carregada completa (Master Set e regras de fichário incluídos). O que não for escolhido não é baixado.</p></div>
-  <div class="tools"><input class="field" id="pq" type="search" placeholder="Buscar expansão" aria-label="Buscar expansão"></div></div>
+ $('#view').innerHTML=`<a class="back" href="#/">Voltar às coleções</a>
+  <div class="top"><div><h1>Minhas coleções</h1><p class="lead">Escolha as coleções que você quer acompanhar. A tela inicial mostra só elas, e cada uma é carregada completa (Master Set e regras de fichário incluídos). O que não for escolhido não é baixado.</p></div>
+  <div class="tools"><input class="field" id="pq" type="search" placeholder="Buscar coleção" aria-label="Buscar coleção"></div></div>
   <div id="pickbody"></div><div class="pickbar" id="pickbar"></div>`;
  renderPicker();
 }
@@ -57,7 +57,7 @@ export function renderPicker(){
      <span class="sdate">${cardsOf(s)?fmtN(cardsOf(s))+' cartas':'—'}${s.lang==='en'?' · nome em inglês':''}</span>
      ${own?`<span class="badge gold">Você tem ${own} carta${own>1?'s':''}</span>`:''}
     </button>`;}).join('')}</div></section>`;
- }).join('')||`<div class="empty"><h3>Nenhuma expansão encontrada</h3><p>Tente outro nome.</p></div>`;
+ }).join('')||`<div class="empty"><h3>Nenhuma coleção encontrada</h3><p>Tente outro nome.</p></div>`;
  updatePickBar();
 }
 export function updatePickBar(){
@@ -66,7 +66,7 @@ export function updatePickBar(){
  let cards=0;visibleSets().forEach(s=>{if(draft.has(s.id))cards+=cardsOf(s);});
  const mb=cards*KB_PER_CARD/1024;
  const changed=JSON.stringify([...draft].sort())!==JSON.stringify([...(S.settings.mySets||[])].sort());
- bar.innerHTML=`<div class="pickinfo"><b>${draft.size}</b> ${draft.size===1?'expansão':'expansões'} · <b>${fmtN(cards)}</b> cartas · cerca de <b>${mb<1?'menos de 1':fmtN(Math.round(mb))} MB</b> de dados <small>(estimativa; as imagens só carregam quando você olha)</small></div>
+ bar.innerHTML=`<div class="pickinfo"><b>${draft.size}</b> ${draft.size===1?'coleção':'coleções'} · <b>${fmtN(cards)}</b> cartas · cerca de <b>${mb<1?'menos de 1':fmtN(Math.round(mb))} MB</b> de dados <small>(estimativa; as imagens só carregam quando você olha)</small></div>
   <div class="row"><a class="btn" href="#/">Cancelar</a><button class="btn primary" type="button" data-act="pick-save" ${changed?'':'disabled'}>Salvar e carregar</button></div>`;
 }
 export function pickToggle(id){
@@ -86,7 +86,7 @@ export function pickSave(){
  const withCards=removed.filter(id=>(bySet[id]||[]).length);
  if(withCards.length){
   const names=withCards.map(id=>(S.setMap[id]||{}).name||id).join(', ');
-  if(!confirm(`Você está tirando da lista ${withCards.length===1?'uma expansão que tem':'expansões que têm'} cartas marcadas: ${names}.\n\nElas deixam de aparecer na tela inicial, mas as cartas continuam salvas e voltam se você escolher a expansão de novo. Continuar?`))return;
+  if(!confirm(`Você está tirando da lista ${withCards.length===1?'uma coleção que tem':'coleções que têm'} cartas marcadas: ${names}.\n\nElas deixam de aparecer na tela inicial, mas as cartas continuam salvas e voltam se você escolher a coleção de novo. Continuar?`))return;
  }
  S.settings.mySets=[...draft];saveSettings();viewCache.clear();C.opt=null;
  location.hash='#/';

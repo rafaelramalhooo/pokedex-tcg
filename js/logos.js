@@ -1,4 +1,4 @@
-/* Logos das expansões: cadeia de alternativas e diagnóstico. */
+/* Logos das coleções: cadeia de alternativas e diagnóstico. */
 import {pool} from './api.js';
 import {saveKV} from './db.js';
 import {S, softNow} from './state.js';
@@ -10,7 +10,7 @@ const saveLogoOk=debounce(()=>saveKV('logoOk',S.logoOk),600);
 const isSym=u=>/\/symbol(\.|$)/.test(u||'');
 
 /* Endereços possíveis, do mais provável ao menos: o que já funcionou, o do catálogo (webp e png),
-   o da versão em inglês, o montado pela série e, por último, o símbolo da expansão. */
+   o da versão em inglês, o montado pela série e, por último, o símbolo da coleção. */
 export function logoCandidates(s){
  const out=[];const add=u=>{if(u&&!out.includes(u))out.push(u);};
  add(customLogo(s.id));
@@ -57,7 +57,7 @@ function probe(url){
   im.src=url;
  });
 }
-/* Diagnóstico: testa a cadeia de cada expansão e lista as que ficaram sem logo. */
+/* Diagnóstico: testa a cadeia de cada coleção e lista as que ficaram sem logo. */
 export async function checkLogos(sets){
  if(S.logoDiag&&S.logoDiag.running)return;
  const d=S.logoDiag={running:true,done:0,total:sets.length,missing:[],viaAlt:0};
@@ -74,7 +74,7 @@ export async function checkLogos(sets){
   else d.missing.push({id:s.id,name:s.name,hasSymbol:!!s.symbol});
   d.done++;if(d.done%6===0)softNow();
  });
- /* expansões cujas cartas vieram sem imagem da TCGdex (só as que já têm a lista baixada) */
+ /* coleções cujas cartas vieram sem imagem da TCGdex (só as que já têm a lista baixada) */
  d.noCards=[];d.unknownCards=0;
  for(const s of sets){
   const sd=S.setd[s.id];if(!sd||!sd.cards){d.unknownCards++;continue;}

@@ -135,29 +135,29 @@ with sync_playwright() as p:
     page.on("console", lambda m: logs.append(m.type + ": " + m.text) if m.type == "error" and "404" not in m.text and "ERR_FAILED" not in m.text else None)
     page.route("**/*", handle)
     page.goto(APP)
-    # primeira vez: nada escolhido, a home pede para escolher expansões
+    # primeira vez: nada escolhido, a home pede para escolher coleções
     page.wait_for_selector(".empty .btn.primary", timeout=8000)
-    check(page.locator(".set").count() == 0, "home vazia antes de escolher expansões")
+    check(page.locator(".set").count() == 0, "home vazia antes de escolher coleções")
     n0 = hits["sets"]
     page.locator(".empty .btn.primary").click()
     page.wait_for_selector(".pk", timeout=5000)
     names = page.locator(".pk .sname").all_inner_texts()
-    check("Ilha Lendária" not in names, "picker: expansão do Pocket escondida por padrão")
-    check("English Only Set" in names, "picker: expansão só em inglês aparece")
+    check("Ilha Lendária" not in names, "picker: coleção do Pocket escondida por padrão")
+    check("English Only Set" in names, "picker: coleção só em inglês aparece")
     check(hits["sets"] == n0, "nada foi baixado antes de escolher")
     page.screenshot(path=str(ROOT/"tests/00_picker.png"))
     page.fill("#pq", "paldea")
     check(page.locator(".pk").count() == 1, "busca no picker filtra")
     page.fill("#pq", "")
     page.locator('[data-act="pick-toggle"]', has_text="Espada e Escudo").click()
-    check(page.locator('.pk.on').count() == 1, "marcar uma expansão")
+    check(page.locator('.pk.on').count() == 1, "marcar uma coleção")
     bar = page.locator("#pickbar").inner_text()
-    check("1 expansão" in bar and "5 cartas" in bar, f"estimativa na barra: {bar[:60]!r}")
+    check("1 coleção" in bar and "5 cartas" in bar, f"estimativa na barra: {bar[:60]!r}")
     page.locator('[data-act="pick-serie"][data-on="0"]').first.click()
     check(page.locator('.pk.on').count() == 0 or page.locator('.pk.on').count() == 1, "limpar série age só na série")
     page.locator('[data-act="pick-serie"][data-on="1"]').nth(0).click()
     page.locator('[data-act="pick-serie"][data-on="1"]').nth(1).click()
-    check(page.locator('.pk.on').count() == 4, "selecionar séries inteiras marca as 4 expansões")
+    check(page.locator('.pk.on').count() == 4, "selecionar séries inteiras marca as 4 coleções")
     page.locator('[data-act="pick-save"]').click()
     page.wait_for_selector(".set", timeout=8000)
     page.wait_for_function("!document.body.innerText.includes('Baixando os detalhes')", timeout=15000)
@@ -165,16 +165,16 @@ with sync_playwright() as p:
     check(hits["sets"] >= 4 and hits["cards"] >= 26, f"só as escolhidas carregam completas (sets {hits['sets']}, cartas {hits['cards']})")
 
     names = page.locator(".set .sname").all_inner_texts()
-    check("Ilha Lendária" not in names, "expansão do Pocket escondida por padrão")
-    check("English Only Set" in names, "expansão só em inglês aparece (fallback)")
-    check(set(["Escarlate e Violeta","Evoluções em Paldea","Espada e Escudo"]) <= set(names), "expansões em português listadas")
+    check("Ilha Lendária" not in names, "coleção do Pocket escondida por padrão")
+    check("English Only Set" in names, "coleção só em inglês aparece (fallback)")
+    check(set(["Escarlate e Violeta","Evoluções em Paldea","Espada e Escudo"]) <= set(names), "coleções em português listadas")
     check(page.locator(".series-head h2").count() == 2, "agrupado em 2 séries")
     page.screenshot(path=str(ROOT/"tests/01_home.png"))
 
-    # abrir expansão
+    # abrir coleção
     page.locator(".set", has=page.locator(".sname", has_text="Escarlate e Violeta")).first.click()
     page.wait_for_selector(".slot", timeout=5000)
-    check(page.locator(".slot").count() == 10, "expansão sv01 mostra 10 cartas")
+    check(page.locator(".slot").count() == 10, "coleção sv01 mostra 10 cartas")
     check(page.locator(".divider").count() == 1, "cartas secretas separadas")
     check(page.locator(".slot.off").count() == 10, "todas cinza no começo")
     # marcar 3 cartas pelo botão
@@ -224,7 +224,7 @@ with sync_playwright() as p:
     # sincronizar catálogo
     page.goto(APP + "#/ajustes"); page.wait_for_selector("#sbody .panel-sec")
     page.wait_for_function("document.body.innerText.includes('Catálogo completo')", timeout=20000)
-    check(True, "detalhes das expansões escolhidas já vieram completos (sem sincronização manual)")
+    check(True, "detalhes das coleções escolhidas já vieram completos (sem sincronização manual)")
     page.screenshot(path=str(ROOT/"tests/04_ajustes.png"))
 
     # fichário por regra: tipo Fogo E standard
@@ -450,11 +450,11 @@ with sync_playwright() as p:
     # tradução incompleta: pt devolve só 2 cartas de 5, o app completa com o inglês
     page.goto(APP + "#/set/swsh1"); page.wait_for_selector(".slot")
     page.wait_for_timeout(500)
-    check(page.locator(".slot").count() == 5, f"expansão com tradução incompleta mostra as 5 cartas ({page.locator('.slot').count()})")
+    check(page.locator(".slot").count() == 5, f"coleção com tradução incompleta mostra as 5 cartas ({page.locator('.slot').count()})")
 
     # pt-only fallback: cartas da set em inglês carregam imagem
     page.goto(APP + "#/set/xx9"); page.wait_for_selector(".slot")
-    check(page.locator(".slot").count() == 3, "expansão só em inglês abre com 3 cartas")
+    check(page.locator(".slot").count() == 3, "coleção só em inglês abre com 3 cartas")
 
     page.set_viewport_size({"width": 390, "height": 800})
     page.goto(APP + "#/"); page.wait_for_selector(".set")
@@ -472,7 +472,7 @@ with sync_playwright() as p:
         check(w[0] <= w[1] + 1, f"sem rolagem horizontal: {name} ({w[0]} x {w[1]})")
     page.keyboard.press("Escape")
     no_scroll("painel da carta")
-    for rota, nome in (("#/", "início"), ("#/expansoes", "minhas expansões"), ("#/binders", "fichários"), ("#/ajustes", "ajustes"), ("#/set/sv01", "expansão")):
+    for rota, nome in (("#/", "início"), ("#/expansoes", "minhas coleções"), ("#/binders", "fichários"), ("#/ajustes", "ajustes"), ("#/set/sv01", "coleção")):
         page.goto(APP + rota); page.wait_for_timeout(500); no_scroll(nome)
     small = page.evaluate("Array.from(document.querySelectorAll('.btn:not(.small), .rail a.nav, .seg button')).filter(e=>e.offsetParent&&e.getBoundingClientRect().height<40).length")
     check(small == 0, f"botões principais com altura de toque >= 40px ({small} menores)")
@@ -516,11 +516,11 @@ with sync_playwright() as p:
     page.wait_for_timeout(600)
     if page.locator('[data-act="scope"][data-v="all"]').count(): page.locator('[data-act="scope"][data-v="all"]').click(); page.wait_for_timeout(300)
     fb = page.locator(".set .lgfb", has_text="Evoluções em Paldea")
-    check(fb.count() >= 1, "expansão sem logo mostra bloco com nome e cor da série")
+    check(fb.count() >= 1, "coleção sem logo mostra bloco com nome e cor da série")
     check(page.locator(".set .lgfb small").first.inner_text().strip() != "", "bloco mostra o nome da série")
     page.screenshot(path=str(ROOT/"tests/19_logo_fallback.png"))
     page.goto(APP + "#/set/sv02"); page.wait_for_selector(".hero")
-    check(page.locator('.hero [data-act="upload"]').count() == 0 and "Enviar logo" not in page.locator(".hero").inner_text(), "expansão não tem botão Enviar logo")
+    check(page.locator('.hero [data-act="upload"]').count() == 0 and "Enviar logo" not in page.locator(".hero").inner_text(), "coleção não tem botão Enviar logo")
     # carta sem imagem na fonte
     page.evaluate("""import('./js/state.js').then(m=>{const S=m.S;const d=S.setd['sv02'];d.cards.forEach((c,i)=>{if(i<2){delete c.image;if(S.cards[c.id])delete S.cards[c.id].image;}});d.cards.slice(0,2).forEach(c=>{if(S.briefs[c.id])delete S.briefs[c.id].image;});m.viewCache.clear();})""")
     page.goto(APP + "#/binders"); page.goto(APP + "#/set/sv02"); page.wait_for_selector(".slot"); page.wait_for_timeout(500)
@@ -539,7 +539,7 @@ with sync_playwright() as p:
     page.locator('[data-act="check-logos"]').click()
     page.wait_for_function("document.querySelector('[data-act=check-logos]').innerText.includes('Verificar logos') && document.querySelector('#sbody .note')", timeout=15000)
     txt = page.locator("#sbody").inner_text()
-    check("Evoluções em Paldea" in txt and "sem imagem" in txt, "diagnóstico lista expansões sem logo e com cartas sem imagem")
+    check("Evoluções em Paldea" in txt and "sem imagem" in txt, "diagnóstico lista coleções sem logo e com cartas sem imagem")
     page.screenshot(path=str(ROOT/"tests/21_diagnostico.png"), full_page=True)
     PNG.unlink()
     # --- regras resolvidas no servidor (sem baixar detalhes) e ordenação ---
@@ -572,7 +572,7 @@ with sync_playwright() as p:
     check(nums == sorted(nums) and len(nums) > 1, f"ordenar por número crescente ({nums[:5]})")
     page.reload(); page.wait_for_selector("#bgrid .slot")
     check(page.locator('select[data-bsort="f"]').input_value() == "number", "ordem guardada no fichário")
-    # --- configuração própria de cada expansão/fichário, busca, logotipo e imagens derivadas ---
+    # --- configuração própria de cada coleção/fichário, busca, logotipo e imagens derivadas ---
     page.goto(APP + "#/set/sv01"); page.wait_for_selector(".slot")
     page.locator('[data-act="view"][data-v="list"]').click(); page.wait_for_timeout(200)
     page.locator('.toolbar [data-act="mode"][data-v="master"]').click(); page.wait_for_timeout(300)
@@ -585,13 +585,13 @@ with sync_playwright() as p:
     check(page.locator(".bpage").count() == 0, "sv01 continua em lista (config de swsh1 não vazou)")
     check(page.locator('.toolbar [data-act="mode"][data-v="master"][aria-pressed="true"]').count() == 1, "sv01 guarda o Master Set só para ela")
     page.goto(APP + "#/set/sv02"); page.wait_for_selector(".slot")
-    check(page.locator('.toolbar [data-act="mode"][data-v="set"][aria-pressed="true"]').count() == 1, "outra expansão segue no padrão (Set)")
+    check(page.locator('.toolbar [data-act="mode"][data-v="set"][aria-pressed="true"]').count() == 1, "outra coleção segue no padrão (Set)")
     page.goto(APP + "#/"); page.wait_for_selector(".set")
     check(page.locator('[data-act="mode"][aria-pressed="true"]').count() >= 1, "tela inicial mantém o próprio Set/Master Set")
     page.reload(); page.goto(APP + "#/set/swsh1"); page.wait_for_selector(".bpage")
-    check(page.locator('[data-bk="preset"]').input_value() == "5x4", "grade da expansão persiste ao recarregar")
+    check(page.locator('[data-bk="preset"]').input_value() == "5x4", "grade da coleção persiste ao recarregar")
     page.goto(APP + "#/binders"); page.locator(".binder").first.click(); page.wait_for_selector("#bgrid .slot, #bgrid .empty, #bgrid .bpage")
-    check(page.locator('[data-bk="preset"]').count() == 0 or page.locator('[data-bk="preset"]').input_value() != "5x4", "fichário não herda a grade 5x4 da expansão")
+    check(page.locator('[data-bk="preset"]').count() == 0 or page.locator('[data-bk="preset"]').input_value() != "5x4", "fichário não herda a grade 5x4 da coleção")
     # busca nos fichários
     page.goto(APP + "#/binders"); page.locator(".binder", has_text="Minha Pokédex").click(); page.wait_for_selector("#bq")
     page.locator('[data-act="view"][data-v="list"]').click(); page.wait_for_timeout(200)
@@ -605,7 +605,7 @@ with sync_playwright() as p:
     page.goto(APP + "#/set/sv01"); page.wait_for_selector("#sq")
     page.locator('.toolbar [data-act="mode"][data-v="set"]').click(); page.wait_for_timeout(200)
     page.fill("#sq", "carta sv01 (3/8)")
-    check(page.locator(".slot").count() == 1, "busca na expansão no estilo Liga Pokémon")
+    check(page.locator(".slot").count() == 1, "busca na coleção no estilo Liga Pokémon")
     # logotipo e imagem derivada
     check("Minha coleção" not in page.locator(".brand").inner_text(), "texto Minha coleção removido do logo")
     page.goto(APP + "#/binders"); page.wait_for_timeout(300)
@@ -626,7 +626,7 @@ with sync_playwright() as p:
     page.locator('[data-ed-act="addf"][data-f="pokemon"]').click()
     check(page.locator('.rule').count() == 1 and page.locator('select[data-ed="f"]').input_value() == "pokemon", "atalho '+ Pokémon' troca a regra vazia")
     page.locator('[data-ed-act="addf"][data-f="set"]').click()
-    check(page.locator('.rule').count() == 2, "atalho '+ Expansão' acrescenta uma segunda regra")
+    check(page.locator('.rule').count() == 2, "atalho '+ Coleção' acrescenta uma segunda regra")
     page.fill('input[data-ed="v"] >> nth=0', "Gengar")
     page.locator('[data-ed-act="cover"][data-v="dex"]').click()
     page.fill('input[data-edcover="q"]', "bulbasaur"); page.keyboard.press("Tab"); page.wait_for_timeout(200)
@@ -671,7 +671,7 @@ with sync_playwright() as p:
     tot = page.locator(".set").count()
     own_sets = page.evaluate("""import('./js/collection.js').then(m=>{const g=m.groupBySet();return Object.keys(g).filter(k=>g[k].length||Object.keys(g[k]).length).length;})""")
     check(page.locator('[data-act="scope"][aria-pressed="true"][data-v="mine"]').count() == 1, "tela inicial abre em 'Com cartas minhas' quando há cartas")
-    check(0 < tot, "mostra ao menos uma expansão com carta minha")
+    check(0 < tot, "mostra ao menos uma coleção com carta minha")
     page.locator('[data-act="scope"][data-v="all"]').click(); page.wait_for_timeout(300)
     check(page.locator(".set").count() >= tot, "'Todas as escolhidas' mostra todas")
     page.screenshot(path=str(ROOT/"tests/26_home_scope.png"))

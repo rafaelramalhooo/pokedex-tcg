@@ -1,4 +1,4 @@
-/* Coleção do usuário e contagem por expansão. */
+/* Coleção do usuário e contagem por coleção. */
 import {FIN} from './constants.js';
 import {DB} from './db.js';
 import {S, refreshAll} from './state.js';
@@ -50,7 +50,7 @@ export function saveNote(id,text){
  e.n=text;persistEntry(id);
 }
 
-/* contagem por expansão */
+/* contagem por coleção */
 export const isOfficialNo=(lid,official)=>/^\d+$/.test(lid)?parseInt(lid,10)<=official:true;
 export function setStat(set,bySet){
  const d=S.setd[set.id];

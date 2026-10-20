@@ -26,7 +26,7 @@ export const FIELDS=[
  {k:'dexId',label:'Pokémon (nº da Pokédex)',t:'num',d:true,def:'eq',hint:'Agrupa todas as cartas do mesmo Pokémon, em qualquer forma.'},
  {k:'pokemon',label:'Pokémon (por nome)',t:'poke',d:false,def:'in',hint:'Um ou vários Pokémon, separados por vírgula. Pega todas as formas (ex, V, VMAX, Mega…) pelo nome da carta.'},
  {k:'generation',label:'Geração',t:'gen',d:true,def:'in',hint:'Pelo número da Pokédex Nacional (1ª: 1–151, 2ª: 152–251… 9ª: 906–1025). Faixas aplicadas de conhecimento prévio; não conferidas em fonte oficial.'},
- {k:'set',label:'Expansão',t:'text',d:false,def:'eq'},
+ {k:'set',label:'Coleção',t:'text',d:false,def:'eq'},
  {k:'serie',label:'Série',t:'text',d:false,def:'eq'},
  {k:'types',label:'Tipo',t:'enum',opts:TYPES,d:true,def:'eq'},
  {k:'category',label:'Categoria',t:'enum',opts:CATS,d:true,def:'eq'},

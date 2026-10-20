@@ -17,7 +17,7 @@ import {bookHTML, isBook, renderBookCtl} from './book.js';
 
 export function viewBinders(){
  S.cur={name:'binders',soft:renderBinders,refresh:renderBinders};
- $('#view').innerHTML=`<div class="top"><div><h1>Fichários</h1><p class="lead">Coleções suas, montadas por regras (tipo, Pokémon, ilustrador, raridade, expansão, Standard e outras) ou escolhidas carta a carta.</p></div>
+ $('#view').innerHTML=`<div class="top"><div><h1>Fichários</h1><p class="lead">Coleções suas, montadas por regras (tipo, Pokémon, ilustrador, raridade, coleção, Standard e outras) ou escolhidas carta a carta.</p></div>
   <div class="tools"><button class="btn primary" type="button" data-act="new-binder">Novo fichário</button></div></div><div id="bbody"></div>`;
  renderBinders();
 }
@@ -101,15 +101,15 @@ export function renderBinderBody(){
   const all=S.status.all,ids=S.status.ids;
   const missingSets=visibleSets().filter(s=>!S.setd[s.id]).length;
   const need=scopeIds(b);
-  if(all)notes+=noteHTML('',`Procurando em todas as expansões: ${all.done} de ${all.total}.`);
+  if(all)notes+=noteHTML('',`Procurando em todas as coleções: ${all.done} de ${all.total}.`);
   else if(ids)notes+=noteHTML('',`Baixando os detalhes das cartas deste Pokémon: ${ids.done} de ${ids.total}.`);
   else{
-   if(missingSets)notes+=noteHTML('warn',`Este fichário só enxerga as ${visibleSets().length-missingSets} expansões já carregadas. <button class="btn small" data-act="load-all-lists" type="button">Procurar em todas as expansões (${fmtN(missingSets)} pedidos leves)</button>`);
+   if(missingSets)notes+=noteHTML('warn',`Este fichário só enxerga as ${visibleSets().length-missingSets} coleções já carregadas. <button class="btn small" data-act="load-all-lists" type="button">Procurar em todas as coleções (${fmtN(missingSets)} pedidos leves)</button>`);
    if(need.length)notes+=noteHTML('warn',`${fmtN(need.length)} cartas deste Pokémon ainda não têm detalhes (acabamentos, ilustrador…). <button class="btn small" data-act="load-scope" data-id="${esc(b.id)}" type="button">Baixar só estas ${fmtN(need.length)}</button>`);
   }
- }else if(cov.setsLoaded<cov.sets&&!r.dex)notes+=noteHTML('',`Só ${cov.setsLoaded} de ${cov.sets} expansões foram carregadas até agora; o fichário cresce conforme chegam.`);
+ }else if(cov.setsLoaded<cov.sets&&!r.dex)notes+=noteHTML('',`Só ${cov.setsLoaded} de ${cov.sets} coleções foram carregadas até agora; o fichário cresce conforme chegam.`);
  if(r.dex)loadDexNames();
- if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas expansões: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
+ if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas coleções: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
  $('#bsum').innerHTML=notes+statsHTML(r,own,tot);
  const g=$('#bgrid');
  if(r.dex){

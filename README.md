@@ -1,6 +1,6 @@
 # Pokédex TCG
 
-App web para gerir a coleção de Pokémon Estampas Ilustradas (TCG): expansões, Set e Master Set, fichários por regras e, em breve, login e sincronização na nuvem.
+App web para gerir a coleção de Pokémon Estampas Ilustradas (TCG): coleções, Set e Master Set, fichários por regras e, em breve, login e sincronização na nuvem.
 
 Não é afiliado à The Pokémon Company. Dados e imagens vêm da TCGdex (tcgdex.dev).
 
@@ -12,14 +12,14 @@ Não é afiliado à The Pokémon Company. Dados e imagens vêm da TCGdex (tcgdex
     js/state.js           estado global
     js/db.js              armazenamento local (IndexedDB); será complementado pelo Supabase
     js/api.js             acesso à TCGdex
-    js/catalog.js         expansões, cartas, sincronização
+    js/catalog.js         coleções, cartas, sincronização
     js/collection.js      coleção e contagens
     js/rules.js           regras dos fichários
     js/ui.js              peças de interface compartilhadas
     js/logos.js           logos com alternativas e diagnóstico
     js/tilt.js            efeito 3D da carta
     sw.js, manifest.webmanifest, icons/   app instalável (PWA) e abertura sem internet
-    js/views/             telas (início, minhas expansões, expansão, popup da carta, fichários, editor, visual de fichário, ajustes)
+    js/views/             telas (início, minhas coleções, coleção, popup da carta, fichários, editor, visual de fichário, ajustes)
     supabase/schema.sql   esquema do banco na nuvem (rascunho)
     docs/                 guias: abrir o app, publicar no GitHub, criar o Supabase
     Abrir Pokedex.command atalho para abrir o app no Mac
@@ -46,9 +46,9 @@ Requer Python com Playwright instalado:
 
 ## O que o app faz hoje
 
-- **Minhas expansões:** você escolhe quais carregar; só elas aparecem e são baixadas.
+- **Minhas coleções:** você escolhe quais carregar; só elas aparecem e são baixadas.
 - **Set e Master Set**, com cartas cinza (faltam) e coloridas (tenho), quantidade, acabamento, condição e idioma.
-- **Fichários** por regras (tipo, Pokémon por nome, geração, ilustrador, raridade, expansão, Standard…), manuais ou no modo **Pokédex**.
+- **Fichários** por regras (tipo, Pokémon por nome, geração, ilustrador, raridade, coleção, Standard…), manuais ou no modo **Pokédex**.
 - **Visual de fichário:** grades 2×2, 3×3, 3×4, 4×4, 5×4 ou personalizada, páginas, setas, teclado, deslize e página dupla no computador.
 - **Popup da carta:** centralizado, com inclinação 3D e brilho (respeita "reduzir movimento"), carta anterior/próxima.
 - **Celular:** menu embaixo, botões maiores, instalável na tela inicial.
@@ -57,8 +57,18 @@ Requer Python com Playwright instalado:
 
 - As faixas de geração (1ª: 1–151 … 9ª: 906–1025) vêm de conhecimento prévio, não de fonte oficial.
 - Na Pokédex, o nome do Pokémon só aparece depois de baixar alguma carta dele; espaços sem carta mostram só o número.
-- Logos de expansões novas dependem do que a TCGdex publica; use "Verificar logos" em Catálogo e ajustes.
+- Logos de coleções novas dependem do que a TCGdex publica; use "Verificar logos" em Catálogo e ajustes.
 
 ## Situação
 
 Hoje a coleção fica no navegador (IndexedDB), com exportação e importação de backup. O login e a sincronização com o Supabase são o próximo passo; veja `docs/COMO-CRIAR-O-SUPABASE.md`.
+
+
+## Login e sincronização (versão 1.0)
+
+- O login usa o Supabase (e-mail e senha). A conexão fica em `js/config.js` (só a Project URL e a chave pública). Enquanto o arquivo estiver vazio, o app funciona só no aparelho, sem login.
+- O que sincroniza: coleção, fichários, ajustes e imagens próprias. O catálogo de cartas continua vindo da TCGdex em cada aparelho.
+- Funciona offline: as alterações ficam guardadas e sobem quando a conexão volta.
+- Ao sair da conta, os dados do aparelho são apagados (continuam na nuvem).
+- Guia de configuração: `docs/COMO-CRIAR-O-SUPABASE.md`. Tabelas e regras de segurança: `supabase/schema.sql`.
+- Testes: `python3 tests/mock_test.py` (app) e `python3 tests/cloud_test.py` (login e sincronização, com Supabase simulado).

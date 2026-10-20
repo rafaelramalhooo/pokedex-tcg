@@ -1,4 +1,4 @@
-/* Set / Master Set: cada expansão guarda o seu; a tela inicial tem o próprio (S.settings.mode). */
+/* Set / Master Set: cada coleção guarda o seu; a tela inicial tem o próprio (S.settings.mode). */
 import {saveSettings} from './db.js';
 import {S} from './state.js';
 
@@ -12,7 +12,7 @@ export function setSetMode(id,m){
  saveSettings();
 }
 
-/* Cada expansão e cada fichário guarda a sua própria forma de exibir (lista/fichário, grade, página dupla).
+/* Cada coleção e cada fichário guarda a sua própria forma de exibir (lista/fichário, grade, página dupla).
    Quem nunca foi ajustado usa o padrão geral (S.settings.view/grid/spread). */
 export const ctxKey=()=>S.cur&&(S.cur.name==='set'||S.cur.name==='binder')&&S.cur.id?S.cur.name+':'+S.cur.id:'';
 export function cfg(){

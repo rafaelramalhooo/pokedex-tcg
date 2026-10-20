@@ -12,6 +12,7 @@ export const S={
  status:{catalog:'idle',pre:null,cl:null,all:null,ids:null,rule:null,preErr:0,err:''},
  sync:{running:false,stop:false,done:0,total:0,fail:0},
  setLoad:{},
+ cloud:{enabled:false,state:'off',email:'',last:0,msg:''},
  cur:null
 };
 export const viewCache=new Map();

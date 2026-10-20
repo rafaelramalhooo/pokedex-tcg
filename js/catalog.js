@@ -1,4 +1,4 @@
-/* Catálogo: expansões, cartas, sincronização. */
+/* Catálogo: coleções, cartas, sincronização. */
 import {getFB, getOrNull, pool} from './api.js';
 import {groupBySet} from './collection.js';
 import {DB, saveKV} from './db.js';
@@ -21,7 +21,7 @@ export async function fetchCatalog(){
  S.status.catalog='loading';S.status.err='';softNow();
  try{
   const [pt,en]=await Promise.all([getOrNull('/sets','pt'),getOrNull('/sets','en')]);
-  if(!pt&&!en)throw new Error('A TCGdex não devolveu a lista de expansões.');
+  if(!pt&&!en)throw new Error('A TCGdex não devolveu a lista de coleções.');
   const ptMap=new Map((pt||[]).map(s=>[s.id,s]));
   const out=[];const seen=new Set();
   (en||pt).forEach(s=>{const p=ptMap.get(s.id);out.push(p?{...p,lang:'pt',logoEn:s.logo}:{...s,lang:'en'});seen.add(s.id);});
@@ -42,7 +42,7 @@ export async function fetchCatalog(){
  softNow();
  if(S.status.catalog==='ok')preloadSetd();
 }
-/* A TCGdex às vezes devolve a expansão em português com a lista de cartas incompleta (tradução pela metade).
+/* A TCGdex às vezes devolve a coleção em português com a lista de cartas incompleta (tradução pela metade).
    Nesse caso completamos com a lista em inglês, mantendo o nome em português onde existir. */
 async function fetchSetFull(id){
  const path=`/sets/${encodeURIComponent(id)}`;
@@ -84,7 +84,7 @@ export async function preloadSetd(force){
  S.status.pre=null;softNow();
  loadSelectedCards();
 }
-/* Baixa os detalhes de todas as cartas das expansões escolhidas (Master Set e regras dependem deles). */
+/* Baixa os detalhes de todas as cartas das coleções escolhidas (Master Set e regras dependem deles). */
 export async function loadSelectedCards(){
  if(S.status.cl)return;
  const ids=[];
@@ -154,7 +154,7 @@ export function catalogCoverage(){
  return{total,have,setsLoaded,sets:mySets().length};
 }
 
-/* Carrega a lista de cartas de todas as expansões (leve: um pedido por expansão), para achar um Pokémon em qualquer uma. */
+/* Carrega a lista de cartas de todas as coleções (leve: um pedido por coleção), para achar um Pokémon em qualquer uma. */
 export async function loadAllSetLists(){
  if(S.status.all)return;
  const todo=visibleSets().filter(s=>!S.setd[s.id]);

@@ -147,8 +147,8 @@ export function evalBinder(b){
  }
  return{ids:sortBinder(ids,b),pending:pendingIds.length,pendingIds,loading,failed,empty:false};
 }
-/* Ordem escolhida no fichário: {f, dir}. Sem escolha, vale expansão e número. */
-export const SORTS=[['default','Expansão e número'],['name','Nome'],['number','Número da carta'],['dex','Número da Pokédex'],['set','Expansão'],['date','Data de lançamento'],['rarity','Raridade'],['type','Tipo'],['hp','PS'],['illustrator','Ilustrador']];
+/* Ordem escolhida no fichário: {f, dir}. Sem escolha, vale coleção e número. */
+export const SORTS=[['default','Coleção e número'],['name','Nome'],['number','Número da carta'],['dex','Número da Pokédex'],['set','Coleção'],['date','Data de lançamento'],['rarity','Raridade'],['type','Tipo'],['hp','PS'],['illustrator','Ilustrador']];
 export function sortBinder(ids,b){
  const sp=b&&b.sort;
  if(!sp||!sp.f||sp.f==='default'){sortIds(ids);if(sp&&sp.dir==='desc')ids.reverse();return ids;}
@@ -181,7 +181,7 @@ export function sortBinder(ids,b){
    else c=typeof ka==='number'?ka-kb:String(ka).localeCompare(String(kb),'pt');
   }
   if(c)return c*dir;
-  /* desempate estável: nome e depois expansão/número */
+  /* desempate estável: nome e depois coleção/número */
   const n=sp.f==='name'?0:String((S.briefs[a]||{}).name||'').localeCompare(String((S.briefs[b2]||{}).name||''),'pt');
   if(n)return n;
   const s=setx(a)-setx(b2);

@@ -5,6 +5,8 @@ import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl} from './views/book.
 import {setCfg} from './modes.js';
 import {checkLogos} from './logos.js';
 import {pickImage, removeCustom} from './custom.js';
+import {initCloud, onCloud, startSession} from './cloud.js';
+import {showAuth, updateAcct} from './views/auth.js';
 import {pickSave, pickSerie, pickToggle, renderPicker, viewPicker} from './views/picker.js';
 import {visibleSets} from './catalog.js';
 import {saveNote, setFin, toggleOwn} from './collection.js';
@@ -78,7 +80,7 @@ const ACT={
   if(!confirm('Apagar o catálogo baixado? A coleção e os fichários ficam.'))return;
   await DB.clear('setd');await DB.clear('cards');
   S.setd={};S.cards={};S.briefs={};viewCache.clear();C.opt=null;
-  toast('Catálogo apagado. Atualizando a lista de expansões…');fetchCatalog();
+  toast('Catálogo apagado. Atualizando a lista de coleções…');fetchCatalog();
  }
 };
 function imagesChanged(msg){
@@ -118,7 +120,7 @@ document.addEventListener('change',e=>{
  if(t.classList&&t.classList.contains('bookrange')){bookTo(+t.value);return;}
  if(t.dataset.ch){setFin(t.dataset.id,t.dataset.fin,{[t.dataset.ch]:t.value});return;}
  if(t.dataset.set){S.settings[t.dataset.set]=t.checked;saveSettings();viewCache.clear();
-  if(t.dataset.set==='showPocket'&&t.checked)toast('Expansões do Pocket incluídas na lista.');
+  if(t.dataset.set==='showPocket'&&t.checked)toast('Coleções do Pocket incluídas na lista.');
   refreshAll();return;}
  if(t.id==='imp'&&t.files[0]){importBackup(t.files[0]);t.value='';return;}
  const ed=t.dataset.ed;
@@ -182,13 +184,26 @@ async function boot(){
   S.logoOk=(await DB.get('kv','logoOk'))||{};
   S.dexNames=(await DB.get('kv','dexNames'))||{};
   S.custom=Object.assign({logos:{},cards:{},covers:{}},(await DB.get('kv','custom'))||{});
-  /* primeira vez com a seleção de expansões: começa pelas que já têm cartas marcadas */
+  /* primeira vez com a seleção de coleções: começa pelas que já têm cartas marcadas */
   if(!Array.isArray(S.settings.mySets)){
    S.settings.mySets=[...new Set(Object.values(S.collection).map(e=>e.s).filter(Boolean))];
    await saveSettings();
   }
  }else if(!Array.isArray(S.settings.mySets))S.settings.mySets=[];
  indexSets();Object.values(S.setd).forEach(indexSetd);
+ const st=await initCloud();
+ onCloud(c=>{if(c.recovery&&!document.querySelector('#auth.on'))showAuth();});
+ if(S.cloud.recovery){showAuth(startApp);return;}
+ if(st==='out'||(st==='offline'&&!(await DB.get('kv','cloud')))){showAuth(startApp);return;}
+ if(st==='in'){
+  await Promise.race([startSession(null),new Promise(r=>setTimeout(r,8000))]);
+  /* a sincronização pode ter trazido seleção de coleções e ajustes */
+  if(!Array.isArray(S.settings.mySets))S.settings.mySets=[];
+ }
+ startApp();
+}
+function startApp(){
+ updateAcct();
  route();
  const stale=Date.now()-S.catalogAt>7*864e5;
  if(!S.sets.length||stale)fetchCatalog();

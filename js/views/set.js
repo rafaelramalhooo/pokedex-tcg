@@ -1,4 +1,4 @@
-/* Tela de uma expansão. */
+/* Tela de uma coleção. */
 import {ensureSetCards, ensureSetd} from '../catalog.js';
 import {groupBySet, isOfficialNo, isOwned, ownedQty, setStat} from '../collection.js';
 import {FIN_LABEL} from '../constants.js';
@@ -15,10 +15,10 @@ import {matchQuery, parseQuery} from './dex.js';
 export async function viewSet(id){
  S.cur={name:'set',id,soft:()=>{renderSetHero();renderSetGrid();},refresh:()=>{renderSetHero();renderSetGrid();}};
  S.ui.setFilter='all';S.ui.setQ='';
- $('#view').innerHTML=`<a class="back" href="#/">${ICON.back} Todas as expansões</a><div id="sethero"><div class="skel" style="height:130px"></div></div><div id="settools"></div><div id="grid"></div>`;
+ $('#view').innerHTML=`<a class="back" href="#/">${ICON.back} Todas as coleções</a><div id="sethero"><div class="skel" style="height:130px"></div></div><div id="settools"></div><div id="grid"></div>`;
  try{await ensureSetd(id);}
  catch(e){
-  $('#sethero').innerHTML=noteHTML('err',`Não consegui carregar esta expansão (${esc(e.message||'erro')}). <button class="btn small" data-act="reload-set" type="button">Tentar de novo</button>`);
+  $('#sethero').innerHTML=noteHTML('err',`Não consegui carregar esta coleção (${esc(e.message||'erro')}). <button class="btn small" data-act="reload-set" type="button">Tentar de novo</button>`);
   return;
  }
  if(!S.cur||S.cur.id!==id)return;
@@ -82,7 +82,7 @@ export function renderSetGrid(){
   if(S.ui.setFilter==='miss'&&own)return false;
   return true;
  });
- if(!filtered.length){g.innerHTML=`<div class="empty"><h3>Nenhuma carta aqui</h3><p>${S.ui.setFilter==='have'?'Você ainda não marcou cartas desta expansão.':'Ajuste o filtro ou a busca.'}</p></div>`;return;}
+ if(!filtered.length){g.innerHTML=`<div class="empty"><h3>Nenhuma carta aqui</h3><p>${S.ui.setFilter==='have'?'Você ainda não marcou cartas desta coleção.':'Ajuste o filtro ou a busca.'}</p></div>`;return;}
  S.cur.nav=filtered.filter((x,i)=>!i||x.c.id!==filtered[i-1].c.id).map(x=>({id:x.c.id}));
  if(isBook()&&!hasQ){g.innerHTML=bookHTML(filtered.map(({c,f})=>slotHTML(c,f)),'set:'+id+':'+mode);return;}
  let html=`<div class="cards"${hasQ?' style="--tile:230px"':''}>`;let secShown=false;

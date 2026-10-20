@@ -1,4 +1,4 @@
-/* Imagens enviadas por você (logo de expansão e foto de carta). Ficam neste navegador, reduzidas, e entram no backup. */
+/* Imagens enviadas por você (logo de coleção e foto de carta). Ficam neste navegador, reduzidas, e entram no backup. */
 import {saveKV} from './db.js';
 import {S} from './state.js';
 
