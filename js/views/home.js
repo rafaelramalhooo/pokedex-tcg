@@ -50,8 +50,16 @@ export function renderHome(){
  });
  const q=nz(S.ui.q);
  const serieSel=S.ui.serie;
- const shown=groups.filter(g=>serieSel==='all'||g.name===serieSel).map(g=>({name:g.name,sets:g.sets.filter(s=>!q||nz(s.name).includes(q)||nz(s.id).includes(q))})).filter(g=>g.sets.length);
- const tabs=`<div class="tabs" role="group" aria-label="Filtrar por série"><button type="button" data-act="serie" data-v="all" aria-pressed="${serieSel==='all'}">Todas</button>${groups.map(g=>`<button type="button" data-act="serie" data-v="${esc(g.name)}" aria-pressed="${serieSel===g.name}">${esc(g.name)}</button>`).join('')}</div>`;
+ const hasOwn=s=>{const t=stats[s.id];return t&&(t.own>0||t.ownM>0);};
+ const anyOwn=sets.some(hasOwn);
+ const scope=S.ui.scope==='auto'?(anyOwn?'mine':'all'):S.ui.scope;
+ const pool=scope==='mine'?sets.filter(hasOwn):sets;
+ const nHidden=sets.length-pool.length;
+ const gl=[];const gmm={};
+ sets.slice().reverse().forEach(s=>{if(!pool.includes(s))return;const se=S.serieOf[s.id];const name=se?se.name:'Outras';if(!gmm[name]){gmm[name]={name,sets:[]};gl.push(gmm[name]);}gmm[name].sets.push(s);});
+ const shown=gl.filter(g=>serieSel==='all'||g.name===serieSel).map(g=>({name:g.name,sets:g.sets.filter(s=>!q||nz(s.name).includes(q)||nz(s.id).includes(q))})).filter(g=>g.sets.length);
+ const scopeSeg=anyOwn?`<div class="tabs scope" role="group" aria-label="Quais expansões mostrar"><button type="button" data-act="scope" data-v="mine" aria-pressed="${scope==='mine'}">Com cartas minhas</button><button type="button" data-act="scope" data-v="all" aria-pressed="${scope==='all'}">Todas as escolhidas${nHidden&&scope==='mine'?` (+${nHidden})`:''}</button></div>`:'';
+ const tabs=scopeSeg+`<div class="tabs" role="group" aria-label="Filtrar por série"><button type="button" data-act="serie" data-v="all" aria-pressed="${serieSel==='all'}">Todas</button>${gl.map(g=>`<button type="button" data-act="serie" data-v="${esc(g.name)}" aria-pressed="${serieSel===g.name}">${esc(g.name)}</button>`).join('')}</div>`;
  const summary=`<div class="summary"><div><b>${fmtN(diff)}</b><span>cartas diferentes</span></div><div><b>${fmtN(copies)}</b><span>exemplares</span></div><div><b>${fmtN(done)}</b><span>expansões completas (Set)</span></div></div>`;
  const grid=shown.length?shown.map(g=>`
   <section class="series"><div class="series-head"><h2>${esc(g.name)}</h2><small>${g.sets.length} ${g.sets.length===1?'expansão':'expansões'}</small></div>

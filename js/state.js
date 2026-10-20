@@ -8,7 +8,7 @@ export const S={
  collection:{},binders:[],
  settings:{legalMarks:['H','I','J'],masterReverse:true,showPocket:false,mode:'set',tile:150,mySets:null,view:'list',grid:{p:'3x3'},spread:false},
  remote:{},logoOk:{},logoDiag:null,custom:{logos:{},cards:{},covers:{}},
- ui:{dexdlg:null,page:0,pageKey:'',q:'',serie:'all',setFilter:'all',setQ:'',binderFilter:'all',binderShown:240,panelId:null,panelCtx:null,edit:null,pick:{q:'',draft:[],groups:[]}},
+ ui:{dexdlg:null,page:0,pageKey:'',q:'',serie:'all',scope:'auto',setFilter:'all',setQ:'',binderFilter:'all',binderShown:240,panelId:null,panelCtx:null,edit:null,pick:{q:'',draft:[],groups:[]}},
  status:{catalog:'idle',pre:null,cl:null,all:null,ids:null,rule:null,preErr:0,err:''},
  sync:{running:false,stop:false,done:0,total:0,fail:0},
  setLoad:{},

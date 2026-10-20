@@ -32,6 +32,7 @@ const ACT={
   else{S.settings.mode=t.dataset.v;saveSettings();}
   refreshAll();},
  serie:t=>{S.ui.serie=t.dataset.v;renderHome();},
+ scope:t=>{S.ui.scope=t.dataset.v;S.ui.serie='all';renderHome();},
  sfilter:t=>{S.ui.setFilter=t.dataset.v;renderSetGrid();},
  bfilter:t=>{S.ui.binderFilter=t.dataset.v;S.ui.binderShown=240;renderBinderBody();},
  more:()=>{S.ui.binderShown+=240;renderBinderBody();},
