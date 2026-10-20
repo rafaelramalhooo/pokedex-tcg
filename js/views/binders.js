@@ -6,6 +6,7 @@ import {S, soft} from '../state.js';
 import {imgTag, noteHTML, sizeCtl} from '../ui.js';
 import {$, $$, ICON, esc, fmtN, pct} from '../util.js';
 import {slotHTML} from './set.js';
+import {dexArt, dexName, loadDexNames, pad4} from './dex.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
 
 export function viewBinders(){
@@ -65,6 +66,7 @@ export function renderBinderBody(){
    if(need.length)notes+=noteHTML('warn',`${fmtN(need.length)} cartas deste Pokémon ainda não têm detalhes (acabamentos, ilustrador…). <button class="btn small" data-act="load-scope" data-id="${esc(b.id)}" type="button">Baixar só estas ${fmtN(need.length)}</button>`);
   }
  }else if(cov.setsLoaded<cov.sets&&!r.dex)notes+=noteHTML('',`Só ${cov.setsLoaded} de ${cov.sets} expansões foram carregadas até agora; o fichário cresce conforme chegam.`);
+ if(r.dex)loadDexNames();
  if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas expansões: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
  $('#bsum').innerHTML=notes+`<div class="summary"><div><b>${fmtN(own)}</b><span>${r.dex?'espaços preenchidos':'cartas que você tem'}</span></div><div><b>${fmtN(Math.max(0,tot-own))}</b><span>faltam</span></div><div><b>${pct(own,tot)}%</b><span>concluído</span></div></div>`;
  const g=$('#bgrid');
@@ -91,15 +93,16 @@ export function renderBinderBody(){
   return slotHTMLCtx(br,b.id);
  }).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`;
 }
-const pad=n=>String(n).padStart(4,'0');
 export function dexSlotHTML(x,binderId){
- const label=`Pokédex ${pad(x.dex)}${x.name?', '+x.name:''}`;
- if(!x.rep)return`<div class="slot off dexempty" aria-label="${esc(label)}, sem carta"><div class="pocket"><div class="ph"><b>#${pad(x.dex)}</b></div></div><div class="num"><b>${esc(x.name||'—')}</b><span>#${pad(x.dex)}</span></div></div>`;
- const br=S.briefs[x.rep]||{id:x.rep,name:(S.cards[x.rep]||{}).name||x.rep,localId:(S.cards[x.rep]||{}).localId||'',image:(S.cards[x.rep]||{}).image};
+ const nm=x.name||dexName(x.dex);
+ const label=`Pokédex ${pad4(x.dex)}${nm?', '+nm:''}`;
+ const attrs=`data-act="dex-open" data-dex="${x.dex}" data-binder="${esc(binderId)}" role="button" tabindex="0"`;
+ if(!x.rep)return`<div class="slot off dexempty" ${attrs} aria-label="${esc(label)}, sem carta. Abrir a lista de cartas"><div class="pocket"><div class="dexph"><img alt="" loading="lazy" decoding="async" src="${dexArt(x.dex)}" data-role="dexart"><b>#${pad4(x.dex)}</b></div></div><div class="num dexname"><b>${esc(nm||'—')}</b></div></div>`;
+ const c=S.cards[x.rep]||{};const br=S.briefs[x.rep]||{id:x.rep,name:c.name||x.rep,image:c.image};
  const on=x.owned;
- return`<div class="slot ${on?'on':'off'}" data-act="open" data-id="${esc(x.rep)}" data-binder="${esc(binderId)}" data-dex="${x.dex}" role="button" tabindex="0" aria-label="${esc(label)}, ${on?'tenho':'não tenho'}">
-  <div class="pocket">${imgTag(br.image,'low',br.name)}<span class="dexno">#${pad(x.dex)}</span></div>
-  <div class="num"><b>${esc(x.name||br.name)}</b><span>#${pad(x.dex)}</span></div></div>`;
+ return`<div class="slot ${on?'on':'off'}" ${attrs} aria-label="${esc(label)}, ${on?'tenho':'não tenho'}. Abrir a lista de cartas">
+  <div class="pocket">${imgTag(br.image,'low',br.name)}<span class="dexno">#${pad4(x.dex)}</span></div>
+  <div class="num"><b>${esc(nm||br.name)}</b><span>#${pad4(x.dex)}</span></div></div>`;
 }
 export function slotHTMLCtx(c,binderId){
  return slotHTML(c,null).replace('data-act="open"',`data-act="open" data-binder="${esc(binderId)}"`);

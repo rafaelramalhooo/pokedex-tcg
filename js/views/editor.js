@@ -16,7 +16,7 @@ export function openEditor(id){
  $('#modal').classList.add('on');
  setTimeout(()=>{const n=$('#bn');if(n)n.focus();},30);
 }
-export function closeModal(){$('#modal').classList.remove('on');S.ui.edit=null;S.ui.adding=null;}
+export function closeModal(){$('#modal').classList.remove('on');S.ui.edit=null;S.ui.adding=null;S.ui.dexdlg=null;}
 const ORD=['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª','9ª'];
 export function genChips(sel,attr){
  const set=new Set(sel.map(String));

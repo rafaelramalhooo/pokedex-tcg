@@ -21,7 +21,7 @@ document.addEventListener('error',e=>{
  const t=e.target;
  if(!t||t.tagName!=='IMG')return;
  if(t.dataset.role==='logo'){logoFail(t);return;}
- if(t.dataset.role==='sym'){t.remove();return;}
+ if(t.dataset.role==='sym'||t.dataset.role==='dexart'){t.remove();return;}
  const n=+t.dataset.t||0,b=t.dataset.b||'';
  if(n===0&&b.includes('/pt/')){t.dataset.t=1;t.src=`${b.replace('/pt/','/en/')}/${t.dataset.q}.webp`;return;}
  const d=document.createElement('div');d.className='ph';d.textContent=t.dataset.name||'';t.replaceWith(d);

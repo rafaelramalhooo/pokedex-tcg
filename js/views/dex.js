@@ -1,0 +1,110 @@
+/* Pokédex: arte e nome dos Pokémon, e a janela com as cartas de um Pokémon para marcar as que você tem. */
+import {getOrNull} from '../api.js';
+import {ensureCard, visibleSet} from '../catalog.js';
+import {defaultFin, isOwned, ownedQty, persistEntry, toggleOwn} from '../collection.js';
+import {saveKV} from '../db.js';
+import {S, viewCache, refreshAll} from '../state.js';
+import {imgTag} from '../ui.js';
+import {$, esc, fmtN, natCmp, nz} from '../util.js';
+
+export const pad4=n=>String(n).padStart(4,'0');
+export const dexArt=n=>`https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/${n}.png`;
+export const dexName=n=>S.dexNames[n]||'';
+
+/* ---------- nomes (PokeAPI, em inglês) ---------- */
+const EXC={'nidoran-f':'Nidoran ♀','nidoran-m':'Nidoran ♂','mr-mime':'Mr. Mime','mime-jr':'Mime Jr.','mr-rime':'Mr. Rime','farfetchd':"Farfetch'd",'sirfetchd':"Sirfetch'd",'flabebe':'Flabébé','type-null':'Type: Null','porygon-z':'Porygon-Z','ho-oh':'Ho-Oh','jangmo-o':'Jangmo-o','hakamo-o':'Hakamo-o','kommo-o':'Kommo-o','wo-chien':'Wo-Chien','chien-pao':'Chien-Pao','ting-lu':'Ting-Lu','chi-yu':'Chi-Yu'};
+const pretty=slug=>EXC[slug]||slug.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+let namesTried=false;
+export async function loadDexNames(){
+ if(namesTried||Object.keys(S.dexNames).length)return;
+ namesTried=true;
+ try{
+  const r=await fetch('https://pokeapi.co/api/v2/pokemon-species?limit=2000');
+  if(!r.ok)throw new Error('http');
+  const d=await r.json();const m={};
+  (d.results||[]).forEach(x=>{const id=+((String(x.url).match(/species\/(\d+)/)||[])[1]);if(id)m[id]=pretty(x.name);});
+  if(Object.keys(m).length){S.dexNames=m;saveKV('dexNames',m);if(S.cur&&S.cur.refresh)S.cur.refresh();}
+ }catch(e){/* sem nomes: o espaço mostra só a arte e o número */}
+}
+
+/* ---------- cartas de um Pokémon (TCGdex, filtro por número da Pokédex) ---------- */
+async function fetchDexCards(n){
+ const p=`/cards?dexId=eq:${n}`;
+ const [pt,en]=await Promise.all([getOrNull(p,'pt'),getOrNull(p,'en')]);
+ const ptM=new Map((pt||[]).map(c=>[c.id,c]));
+ const base=(en&&en.length>=(pt||[]).length)?en:(pt||[]);
+ const seen=new Set();const out=[];
+ [...base.map(c=>ptM.get(c.id)||c),...(pt||[])].forEach(c=>{
+  if(seen.has(c.id))return;seen.add(c.id);
+  const localId=String(c.localId);
+  const setId=c.id.slice(0,c.id.length-localId.length-1);
+  const b={id:c.id,localId,name:c.name,image:c.image,setId};
+  if(!S.briefs[c.id])S.briefs[c.id]=b;
+  out.push(b);
+ });
+ /* mais nova primeiro (a lista de expansões vem da mais antiga para a mais nova) */
+ out.sort((a,b)=>((S.setIdx[b.setId]??-1)-(S.setIdx[a.setId]??-1))||natCmp(a.localId,b.localId));
+ return out;
+}
+export async function openDex(n,binderId){
+ S.ui.dexdlg={dex:n,binderId,q:'',only:false,err:false};
+ $('#modal').classList.add('on');
+ renderDex();
+ if(!S.dexCards[n]){
+  try{S.dexCards[n]=await fetchDexCards(n);}catch(e){if(S.ui.dexdlg&&S.ui.dexdlg.dex===n)S.ui.dexdlg.err=true;}
+  if(S.ui.dexdlg&&S.ui.dexdlg.dex===n)renderDex();
+ }
+}
+const titleOf=n=>dexName(n);
+export function renderDex(){
+ const st=S.ui.dexdlg;if(!st)return;
+ const d=$('#dialog');
+ const name=titleOf(st.dex);
+ d.innerHTML=`<div class="dexhead"><div class="dexart"><img alt="" src="${dexArt(st.dex)}" data-role="dexart"></div><div><h2>${esc(name||'Pokémon')} <small>#${pad4(st.dex)}</small></h2><p class="lead" id="dexsum" style="margin:0"></p></div></div>
+  <div class="row" style="margin:12px 0"><input class="field" id="dq" type="search" placeholder="Buscar por nome ou expansão" aria-label="Buscar carta" value="${esc(st.q)}" style="flex:1 1 200px">
+   <label class="size"><input type="checkbox" data-dexonly ${st.only?'checked':''}> Só as que tenho</label></div>
+  <div id="dexgrid"></div>
+  <div class="actions"><span class="lbl2">Toque numa carta para marcar ou desmarcar.</span><button class="btn primary" type="button" data-act="dex-close">Concluir</button></div>`;
+ renderDexGrid();
+}
+export function renderDexGrid(){
+ const st=S.ui.dexdlg;const g=$('#dexgrid');if(!st||!g)return;
+ const all=S.dexCards[st.dex]&&S.dexCards[st.dex].filter(c=>visibleSet(c.setId));
+ const sum=$('#dexsum');
+ if(st.err){g.innerHTML=`<div class="note err">Não consegui buscar as cartas na TCGdex. <button class="btn small" type="button" data-act="dex-retry">Tentar de novo</button></div>`;if(sum)sum.textContent='';return;}
+ if(!all){g.innerHTML='<p class="lead">Buscando as cartas na TCGdex…</p>';if(sum)sum.textContent='';return;}
+ const own=all.filter(c=>isOwned(c.id)).length;
+ if(sum)sum.textContent=`${fmtN(all.length)} cartas encontradas, você tem ${fmtN(own)}.`;
+ const q=nz(st.q);
+ const list=all.filter(c=>{
+  if(st.only&&!isOwned(c.id))return false;
+  if(!q)return true;
+  const set=S.setMap[c.setId];
+  return nz(c.name).includes(q)||nz(set?set.name:c.setId).includes(q)||nz(c.setId).includes(q);
+ });
+ if(!all.length){g.innerHTML='<div class="empty"><h3>Nenhuma carta encontrada</h3><p>A TCGdex não tem cartas catalogadas para este Pokémon.</p></div>';return;}
+ if(!list.length){g.innerHTML='<div class="empty"><h3>Nada por aqui</h3><p>Ajuste a busca ou o filtro.</p></div>';return;}
+ g.innerHTML=`<div class="dgrid">${list.map(c=>{
+  const q2=ownedQty(c.id);const on=q2>0;const set=S.setMap[c.setId];
+  return`<div class="dtile ${on?'on':'off'}" data-act="dex-toggle" data-id="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(c.name)}, ${esc(set?set.name:c.setId)}, ${on?'tenho':'não tenho'}">
+   <div class="pocket">${imgTag(c.image,'low',c.name)}${q2>1?`<span class="qty">×${q2}</span>`:''}<span class="dchk" aria-hidden="true">✓</span></div>
+   <div class="num"><b>${esc(c.name)}</b></div><div class="num"><span>${esc(set?set.name:c.setId)} · ${esc(c.localId)}</span></div>
+   <button type="button" class="btn small dd" data-act="open" data-id="${esc(c.id)}" data-binder="${esc(st.binderId)}" data-dex="${st.dex}">Detalhes</button></div>`;}).join('')}</div>`;
+}
+export function dexToggle(id){
+ toggleOwn(id);
+ if(!isOwned(id))return;
+ /* baixa os detalhes para a Pokédex reconhecer a carta; corrige o acabamento se "normal" não existir nela */
+ ensureCard(id).then(c=>{
+  const e=S.collection[id];
+  if(e&&c&&c.variants){
+   const fins=Object.keys(e.f);
+   if(fins.length===1&&fins[0]==='normal'&&!c.variants.normal){const f=defaultFin(id);e.f={[f]:e.f.normal};persistEntry(id);}
+  }
+  viewCache.clear();refreshAll();
+ }).catch(()=>{});
+}
+export function retryDex(){
+ const st=S.ui.dexdlg;if(!st)return;
+ st.err=false;delete S.dexCards[st.dex];openDex(st.dex,st.binderId);
+}

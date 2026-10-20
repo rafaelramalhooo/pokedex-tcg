@@ -55,6 +55,14 @@ def handle(route):
         hue = (sum(map(ord, url)) * 37) % 360
         svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="245" height="337"><rect width="245" height="337" fill="hsl({hue},70%,55%)"/><text x="20" y="180" font-size="28" fill="#fff">{n}</text></svg>'
         return route.fulfill(status=200, body=svg, headers={**h, "content-type": "image/svg+xml"})
+    if url.startswith("https://pokeapi.co/api/v2/pokemon-species"):
+        names = {1: "bulbasaur", 2: "ivysaur", 3: "venusaur", 4: "charmander", 5: "charmeleon", 6: "charizard", 25: "pikachu", 122: "mr-mime"}
+        body = json.dumps({"count": 8, "results": [{"name": v, "url": f"https://pokeapi.co/api/v2/pokemon-species/{k}/"} for k, v in names.items()]})
+        return route.fulfill(status=200, body=body, headers={**h, "content-type": "application/json"})
+    if url.startswith("https://cdn.jsdelivr.net/gh/PokeAPI"):
+        hits["art"] = hits.get("art", 0) + 1
+        svg = '<svg xmlns="http://www.w3.org/2000/svg" width="475" height="475"><circle cx="237" cy="237" r="200" fill="#e0a030"/></svg>'
+        return route.fulfill(status=200, body=svg, headers={**h, "content-type": "image/svg+xml"})
     m = re.match(r"https://api\.tcgdex\.net/v2/(\w+)(/.*)", url)
     if not m: return route.continue_()
     lang, path = m.groups()
@@ -66,6 +74,14 @@ def handle(route):
         return ok([{"id": k, "name": v[0], "logo": f"https://assets.tcgdex.net/{lang}/x/{k}/logo",
                     "symbol": f"https://assets.tcgdex.net/univ/x/{k}/symbol",
                     "cardCount": {"official": v[3], "total": v[4]}} for k, v in allsets.items()])
+    md = re.match(r"/cards\?dexId=eq:(\d+)$", path)
+    if md:
+        n = int(md.group(1)); hits["dexq"] = hits.get("dexq", 0) + 1; res = []
+        for sid, d in {**SETS, **(EN_ONLY if lang == "en" else {})}.items():
+            i = n - 150 if sid == "xx9" else n
+            if 1 <= i <= d[4]:
+                res.append({"id": f"{sid}-{i}", "localId": str(i), "name": cname(sid, i, lang), "image": f"https://assets.tcgdex.net/{lang}/x/{sid}/{i}"})
+        return ok(res)
     if path == "/series":
         return ok([{"id": "sv", "name": "Escarlate e Violeta"}, {"id": "swsh", "name": "Espada e Escudo"}, {"id": "tcgp", "name": "Pokémon TCG Pocket"}])
     ms = re.match(r"/series/(\w+)", path)
@@ -267,17 +283,46 @@ with sync_playwright() as p:
     check(page.locator("#bgrid .slot.on").count() == 4, "4 espaços preenchidos com cartas que tenho")
     check("espaços preenchidos" in page.locator("#bsum").inner_text(), "resumo fala em espaços")
     page.screenshot(path=str(ROOT/"tests/08_pokedex.png"))
-    # trocar a carta do espaço 2 (Gengar)
+    # arte, nome e número nos espaços vazios
+    check(page.locator("#bgrid .slot.dexempty .dexph img").count() == 140, "cada espaço vazio tem a arte do Pokémon")
+    empty25 = page.locator('#bgrid .slot.dexempty[data-dex="25"]')
+    empty25.scroll_into_view_if_needed()
+    check("Pikachu" in empty25.inner_text() and "#0025" in empty25.inner_text(), f"espaço vazio mostra nome e número ({empty25.inner_text().strip()!r})")
+    box = empty25.locator(".dexph").bounding_box(); img = empty25.locator(".dexph img").bounding_box(); pk = empty25.locator(".pocket").bounding_box()
+    check(abs((img["x"] + img["width"]/2) - (pk["x"] + pk["width"]/2)) < 3 and img["y"] < box["y"] + box["height"]/2, "arte centralizada, acima do número")
+    # janela de cartas do Pokémon
     page.locator('#bgrid .slot[data-dex="2"]').click()
+    page.wait_for_selector("#dexgrid .dtile", timeout=5000)
+    check(page.locator("#dexgrid .dtile").count() == 3, "janela lista as 3 cartas do Pokémon #2 (Pocket escondido, como no resto do app)")
+    check("Você tem" not in page.locator("#dexsum").inner_text() and "você tem 1" in page.locator("#dexsum").inner_text(), f"resumo: {page.locator('#dexsum').inner_text()}")
+    page.screenshot(path=str(ROOT/"tests/17_dex_janela.png"))
+    page.fill("#dq", "gengar")
+    check(page.locator("#dexgrid .dtile").count() == 1, "busca na janela filtra por nome")
+    page.fill("#dq", "")
+    page.locator('#dexgrid .dtile').nth(0).locator(".dd").click()
     page.wait_for_selector("#panel.open .cand", timeout=5000)
-    check(page.locator("#panel .cand").count() == 3, "painel oferece as 3 cartas do espaço #2")
+    check(page.locator("#panel .cand").count() == 3, "detalhes abrem o popup com as 3 cartas do espaço #2")
     page.locator('#panel .cand').nth(0).click(); page.wait_for_timeout(300)
     check(page.locator('#panel .cand[aria-pressed="true"]').count() == 1, "carta fixada no espaço")
-    page.keyboard.press("Escape")
-    saved = page.evaluate("JSON.parse(JSON.stringify(Array.from(document.querySelectorAll('.slot[data-dex]')).length))")
+    page.keyboard.press("Escape"); page.wait_for_timeout(300)
+    check(page.locator("#panel.open").count() == 0 and page.locator("#modal.on").count() == 1, "Esc fecha só o popup; a janela continua")
+    page.keyboard.press("Escape"); page.wait_for_timeout(200)
+    check(page.locator("#modal.on").count() == 0, "Esc fecha a janela")
+    # marcar cartas pela janela (dex 9: sv01-9)
+    page.locator('#bgrid .slot[data-dex="9"]').click(); page.wait_for_selector("#dexgrid .dtile")
+    check(page.locator("#dexgrid .dtile.on").count() == 0, "dex 9: nenhuma marcada")
+    page.locator("#dexgrid .dtile").first.click(); page.wait_for_timeout(500)
+    check(page.locator("#dexgrid .dtile.on").count() == 1 and "você tem 1" in page.locator("#dexsum").inner_text(), "tocar marca a carta como tenho")
+    page.locator('[data-act="dex-close"]').click(); page.wait_for_timeout(300)
+    check(page.locator("#bgrid .slot.on").count() == 5, "espaço #9 passou a preenchido (5 espaços)")
     page.reload(); page.wait_for_selector("#bgrid .slot")
-    page.locator('#bgrid .slot[data-dex="2"]').click(); page.wait_for_selector("#panel.open .cand")
-    check(page.locator('#panel .cand[aria-pressed="true"]').count() == 1, "carta fixada persiste após recarregar")
+    check(page.locator("#bgrid .slot.on").count() == 5, "marcação feita na janela persiste")
+    check(page.locator("#bgrid .slot.dexempty").first.inner_text().strip() != "", "nomes vindos da PokeAPI guardados")
+    # janela sem cartas
+    page.locator('#bgrid .slot.dexempty[data-dex="25"]').scroll_into_view_if_needed()
+    page.locator('#bgrid .slot.dexempty[data-dex="25"]').click(); page.wait_for_timeout(500)
+    check("Nenhuma carta" in page.locator("#dexgrid").inner_text(), "Pokémon sem cartas na TCGdex mostra aviso")
+    page.screenshot(path=str(ROOT/"tests/16_dex_vazia.png"))
     page.keyboard.press("Escape")
 
     # --- visual de fichário ---
@@ -401,6 +446,13 @@ with sync_playwright() as p:
     page.screenshot(path=str(ROOT/"tests/14_mobile_binders.png"))
     page.goto(APP + "#/expansoes"); page.wait_for_selector(".pk"); page.wait_for_timeout(300)
     page.screenshot(path=str(ROOT/"tests/15_mobile_picker.png"))
+    page.goto(APP + "#/binders"); page.locator(".binder", has_text="Minha Pokédex").click(); page.wait_for_selector(".slot[data-dex]")
+    page.locator('.slot[data-dex="2"]').first.click(); page.wait_for_selector("#dexgrid .dtile"); page.wait_for_timeout(300)
+    no_scroll("janela de cartas do Pokémon")
+    db = page.locator("#dialog").bounding_box()
+    check(db["x"] >= 0 and db["x"] + db["width"] <= 390.5, "janela de cartas cabe na tela do celular")
+    page.screenshot(path=str(ROOT/"tests/18_mobile_dex.png"))
+    page.keyboard.press("Escape")
     # instalável: manifesto e ícones
     mf = page.evaluate("fetch('manifest.webmanifest').then(r=>r.json())")
     check(mf["display"] == "standalone" and len(mf["icons"]) >= 3, "manifesto do app instalável")

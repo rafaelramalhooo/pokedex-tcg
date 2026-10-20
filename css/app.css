@@ -138,7 +138,7 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .lbl2{font-size:12.5px;color:var(--ink-2);display:block;margin-bottom:3px}
 .chk{display:flex;gap:10px;align-items:center;padding:6px 0}
 .chk input{width:18px;height:18px;accent-color:var(--red)}
-.scrim{position:fixed;inset:0;background:rgba(18,26,43,.35);z-index:25;display:none}
+.scrim{position:fixed;inset:0;background:rgba(18,26,43,.35);z-index:48;display:none}
 .scrim.on{display:block}
 
 .binders{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
@@ -238,7 +238,7 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 @media (max-width:899px){.wide-only{display:none!important}.booklbl{min-width:0}}
 
 /* Popup centralizado da carta */
-.panel{position:fixed;left:50%;top:50%;width:min(940px,94vw);max-height:92vh;background:var(--sheet);border:1px solid var(--line);border-radius:20px;transform:translate(-50%,-48%) scale(.97);opacity:0;visibility:hidden;transition:opacity .18s ease,transform .18s ease,visibility 0s .18s;z-index:30;overflow-y:auto;overscroll-behavior:contain;box-shadow:0 30px 80px -20px rgba(18,26,43,.5)}
+.panel{position:fixed;left:50%;top:50%;width:min(940px,94vw);max-height:92vh;background:var(--sheet);border:1px solid var(--line);border-radius:20px;transform:translate(-50%,-48%) scale(.97);opacity:0;visibility:hidden;transition:opacity .18s ease,transform .18s ease,visibility 0s .18s;z-index:52;overflow-y:auto;overscroll-behavior:contain;box-shadow:0 30px 80px -20px rgba(18,26,43,.5)}
 .panel.open{transform:translate(-50%,-50%);opacity:1;visibility:visible;transition-delay:0s}
 .panel .inner{padding:18px 24px 26px}
 .phead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
@@ -280,3 +280,27 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
   .pickbar{bottom:calc(72px + env(safe-area-inset-bottom))}
   .modal .dialog{max-height:92vh;overflow:auto}
 }
+
+/* Pokédex: arte nos espaços vazios e janela de cartas do Pokémon */
+.slot.dexempty{cursor:pointer}
+.slot.dexempty:hover .pocket{border-color:var(--ink-3)}
+.dexph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;height:100%;padding:8% 6%;text-align:center}
+.dexph img{width:76%;aspect-ratio:1;object-fit:contain;filter:none!important;opacity:1!important}
+.dexph b{font-size:clamp(11px,1.4vw,15px);color:var(--ink-2);font-weight:800}
+.slot.dexempty .dexname{justify-content:center;text-align:center}
+.slot.dexempty .dexname b{color:var(--ink-2)}
+.dexhead{display:flex;align-items:center;gap:14px}
+.dexart{width:72px;height:72px;flex:none}
+.dexart img{width:100%;height:100%;object-fit:contain}
+.dexhead h2{margin:0}.dexhead h2 small{font-weight:600;color:var(--ink-3);font-size:.6em}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+.dtile{position:relative;display:flex;flex-direction:column;gap:3px;cursor:pointer;min-width:0;outline-offset:3px}
+.dtile.off .pocket img{filter:grayscale(1) contrast(.9);opacity:.4}
+.dtile.on .pocket{border-color:var(--ok);border-width:2px}
+.dtile .num{display:flex;font-size:11.5px;color:var(--ink-2);line-height:1.2;padding:0 2px}
+.dtile .num b{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dtile .num span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dchk{position:absolute;right:6px;top:6px;width:26px;height:26px;border-radius:99px;border:1.5px solid var(--ink-3);background:rgba(255,255,255,.92);display:grid;place-items:center;font-weight:800;color:transparent}
+.dtile.on .dchk{background:var(--ok);border-color:var(--ok);color:#fff}
+.dtile .dd{margin-top:4px;height:30px;font-size:12.5px;justify-content:center}
+.dialog .actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}

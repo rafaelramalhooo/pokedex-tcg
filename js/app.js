@@ -16,6 +16,7 @@ import {closeModal, editorAct, openAddCards, openEditor, renderAddResults, rende
 import {renderHome, viewHome} from './views/home.js';
 import {closePanel, openPanel, panelNav} from './views/panel.js';
 import './tilt.js';
+import {dexToggle, openDex, renderDex, renderDexGrid, retryDex} from './views/dex.js';
 import {renderSetGrid, viewSet} from './views/set.js';
 import {exportBackup, importBackup, renderSettings, viewSettings} from './views/settings.js';
 
@@ -29,6 +30,10 @@ const ACT={
  more:()=>{S.ui.binderShown+=240;renderBinderBody();},
  open:t=>{openPanel(t.dataset.id,t.dataset.binder?{binderId:t.dataset.binder,dex:t.dataset.dex?+t.dataset.dex:null}:null);},
  view:t=>{S.settings.view=t.dataset.v;S.ui.page=0;saveSettings();renderBookCtl();if(S.cur&&S.cur.refresh)S.cur.refresh();},
+ 'dex-open':t=>openDex(+t.dataset.dex,t.dataset.binder),
+ 'dex-toggle':t=>dexToggle(t.dataset.id),
+ 'dex-close':()=>{closeModal();viewCache.clear();refreshAll();},
+ 'dex-retry':()=>retryDex(),
  'panel-nav':t=>panelNav(+t.dataset.d),
  'book-go':t=>bookGo(+t.dataset.d),
  'dex-pick':t=>{const b=S.binders.find(x=>x.id===t.dataset.binder);if(!b)return;b.pick=b.pick||{};if(t.dataset.id)b.pick[t.dataset.dex]=t.dataset.id;else delete b.pick[t.dataset.dex];saveBinders();viewCache.clear();refreshAll();},
@@ -75,17 +80,18 @@ document.addEventListener('keydown',e=>{
  if(S.ui.panelId&&!$('#modal').classList.contains('on')&&(e.key==='ArrowLeft'||e.key==='ArrowRight')&&!(e.target.tagName&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))){e.preventDefault();panelNav(e.key==='ArrowRight'?1:-1);return;}
  if(bookKey(e)){e.preventDefault();return;}
  if(e.key==='Escape'){
-  if($('#modal').classList.contains('on'))closeModal();else if(S.ui.panelId)closePanel();
+  if(S.ui.panelId)closePanel();else if($('#modal').classList.contains('on')){const was=!!S.ui.dexdlg;closeModal();if(was){viewCache.clear();refreshAll();}}
   return;
  }
- if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('slot')){
+ if((e.key==='Enter'||e.key===' ')&&e.target.classList&&(e.target.classList.contains('slot')||e.target.classList.contains('dtile'))){
   e.preventDefault();
   const a=e.target.dataset.edAct;
-  if(a)editorAct(e.target);else ACT.open(e.target);
+  if(a)editorAct(e.target);else if(ACT[e.target.dataset.act])ACT[e.target.dataset.act](e.target);else ACT.open(e.target);
  }
 });
 document.addEventListener('change',e=>{
  const t=e.target;
+ if(t.dataset.dexonly!==undefined&&S.ui.dexdlg){S.ui.dexdlg.only=t.checked;renderDexGrid();return;}
  if(t.dataset.bk){bookSetting(t);return;}
  if(t.classList&&t.classList.contains('bookrange')){bookTo(+t.value);return;}
  if(t.dataset.ch){setFin(t.dataset.id,t.dataset.fin,{[t.dataset.ch]:t.value});return;}
@@ -105,6 +111,7 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('input',e=>{
  const t=e.target;
+ if(t.id==='dq'&&S.ui.dexdlg){S.ui.dexdlg.q=t.value;renderDexGrid();return;}
  if(t.id==='q'){S.ui.q=t.value;renderHome();return;}
  if(t.id==='pq'){S.ui.pick.q=t.value;renderPicker();return;}
  if(t.id==='sq'){S.ui.setQ=t.value;renderSetGrid();return;}
@@ -137,6 +144,7 @@ function route(){
 }
 window.addEventListener('hashchange',route);
 H.route=route;
+H.renderDex=()=>{if(S.ui.dexdlg)renderDexGrid();};
 
 
 async function boot(){
@@ -149,6 +157,7 @@ async function boot(){
   Object.assign(S.settings,(await DB.get('kv','settings'))||{});
   if(!Array.isArray(S.settings.legalMarks))S.settings.legalMarks=['H','I','J'];
   S.logoOk=(await DB.get('kv','logoOk'))||{};
+  S.dexNames=(await DB.get('kv','dexNames'))||{};
   /* primeira vez com a seleção de expansões: começa pelas que já têm cartas marcadas */
   if(!Array.isArray(S.settings.mySets)){
    S.settings.mySets=[...new Set(Object.values(S.collection).map(e=>e.s).filter(Boolean))];
