@@ -4,6 +4,7 @@ import {isOwned, setIdOf} from './collection.js';
 import {BOOL, CAT_ALIAS, FIN, FM, GENS, OPS, STAGE_ALIAS, TYPE_ALIAS, genOf} from './constants.js';
 import {C, S, viewCache} from './state.js';
 import {canon, esc, natCmp, nz} from './util.js';
+import {remoteFor} from './remote.js';
 
 export function viewOf(id){
  let v=viewCache.get(id);if(v)return v;
@@ -122,20 +123,71 @@ export function evalBinder(b){
  }
  if(b.mode==='manual'){
   const ids=b.cardIds.filter(id=>S.briefs[id]||S.cards[id]);
-  return{ids:sortIds(ids),pending:0,empty:false};
+  return{ids:sortBinder(ids,b),pending:0,empty:false};
  }
  const conds=(b.conds||[]).filter(c=>String(c.v).trim()!=='');
  if(!conds.length)return{ids:[],pending:0,empty:true};
- const needD=conds.some(c=>FM[c.f].d);
- const ids=[];let pending=0;
+ /* regras que precisam de detalhes: o servidor diz quais cartas combinam; cartas com detalhes baixados usam o teste local */
+ const rms=conds.map(c=>FM[c.f].d?remoteFor(c):null);
+ const loading=rms.some(r=>r&&r.status==='loading'),failed=rms.some(r=>r&&r.status==='err');
+ const any=b.match==='any';
+ const ids=[],pendingIds=[];
  for(const id in S.briefs){
   if(!visibleSet(S.briefs[id].setId))continue;
   const v=viewOf(id);
-  if(needD&&!v.full){pending++;continue;}
-  const res=conds.map(c=>testCond(v,c));
-  if(b.match==='any'?res.some(Boolean):res.every(Boolean))ids.push(id);
+  let t=false,f=false,u=false;
+  for(let i=0;i<conds.length;i++){
+   const c=conds[i];let r;
+   if(!FM[c.f].d||v.full)r=testCond(v,c);
+   else{const rm=rms[i];if(rm&&rm.status==='ok')r=rm.ids.has(id)!==rm.neg;}
+   if(r===undefined)u=true;else if(r)t=true;else f=true;
+  }
+  const ok=any?(t?true:(u?null:false)):(f?false:(u?null:true));
+  if(ok===true)ids.push(id);else if(ok===null)pendingIds.push(id);
  }
- return{ids:sortIds(ids),pending,empty:false};
+ return{ids:sortBinder(ids,b),pending:pendingIds.length,pendingIds,loading,failed,empty:false};
+}
+/* Ordem escolhida no fichário: {f, dir}. Sem escolha, vale expansão e número. */
+export const SORTS=[['default','Expansão e número'],['name','Nome'],['number','Número da carta'],['dex','Número da Pokédex'],['set','Expansão'],['date','Data de lançamento'],['rarity','Raridade'],['type','Tipo'],['hp','PS'],['illustrator','Ilustrador']];
+export function sortBinder(ids,b){
+ const sp=b&&b.sort;
+ if(!sp||!sp.f||sp.f==='default'){sortIds(ids);if(sp&&sp.dir==='desc')ids.reverse();return ids;}
+ const dir=sp.dir==='desc'?-1:1;
+ const num=id=>(S.briefs[id]||{}).localId||'';
+ const setx=id=>S.setIdx[setIdOf(id)]??1e9;
+ const key=id=>{
+  const v=viewOf(id);
+  switch(sp.f){
+   case 'name':return v.name||null;
+   case 'number':return num(id);
+   case 'dex':return v.full&&v.dex.length?Math.min(...v.dex):null;
+   case 'set':return setx(id);
+   case 'date':{const d=S.setd[setIdOf(id)];return d&&d.releaseDate?d.releaseDate:null;}
+   case 'rarity':return v.rarity||null;
+   case 'type':return v.types[0]||null;
+   case 'hp':return v.hp;
+   case 'illustrator':return v.illus||null;
+  }
+  return null;
+ };
+ const keys=new Map(ids.map(id=>[id,key(id)]));
+ ids.sort((a,b2)=>{
+  const ka=keys.get(a),kb=keys.get(b2);
+  if(ka==null&&kb!=null)return 1;
+  if(kb==null&&ka!=null)return -1;
+  let c=0;
+  if(ka!=null&&kb!=null){
+   if(sp.f==='number')c=natCmp(ka,kb);
+   else c=typeof ka==='number'?ka-kb:String(ka).localeCompare(String(kb),'pt');
+  }
+  if(c)return c*dir;
+  /* desempate estável: nome e depois expansão/número */
+  const n=sp.f==='name'?0:String((S.briefs[a]||{}).name||'').localeCompare(String((S.briefs[b2]||{}).name||''),'pt');
+  if(n)return n;
+  const s=setx(a)-setx(b2);
+  return s||natCmp(num(a),num(b2));
+ });
+ return ids;
 }
 export function sortIds(ids){
  return ids.sort((a,b)=>{

@@ -25,12 +25,13 @@ export async function shrinkImage(file,maxW,maxH){
  return out;
 }
 const save=()=>saveKV('custom',S.custom);
+const store=kind=>kind==='logo'?S.custom.logos:kind==='cover'?(S.custom.covers=S.custom.covers||{}):S.custom.cards;
 export function setCustom(kind,id,url){
- (kind==='logo'?S.custom.logos:S.custom.cards)[id]=url;
+ store(kind)[id]=url;
  return save();
 }
 export function removeCustom(kind,id){
- delete (kind==='logo'?S.custom.logos:S.custom.cards)[id];
+ delete store(kind)[id];
  return save();
 }
 /* Abre o seletor de arquivo; ao escolher, reduz, guarda e chama done(). */
@@ -41,7 +42,7 @@ export function pickImage(kind,id,done,fail){
   const f=inp.files&&inp.files[0];inp.remove();
   if(!f)return;
   try{
-   const url=await shrinkImage(f,...(kind==='logo'?[520,260]:[640,900]));
+   const url=await shrinkImage(f,...(kind==='logo'?[520,260]:kind==='cover'?[480,480]:[640,900]));
    await setCustom(kind,id,url);done&&done();
   }catch(e){fail&&fail(e);}
  });

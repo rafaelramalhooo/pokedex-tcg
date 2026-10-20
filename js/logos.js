@@ -22,7 +22,7 @@ export function logoCandidates(s){
  if(s.symbol)add(s.symbol+'.webp');
  return out;
 }
-const hueOf=t=>{let h=0;for(const ch of String(t))h=(h*31+ch.charCodeAt(0))%360;return h;};
+export const hueOf=t=>{let h=0;for(const ch of String(t))h=(h*31+ch.charCodeAt(0))%360;return h;};
 /* Quando nenhuma imagem existe: um bloco com o nome e a cor da série, em vez de só texto. */
 export function logoFallback(name,sid){
  const se=S.serieOf[sid];

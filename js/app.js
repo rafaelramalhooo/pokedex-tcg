@@ -13,7 +13,10 @@ import {DB, saveBinders, saveSettings} from './db.js';
 import {C, H, S, refreshAll, viewCache} from './state.js';
 import {toast} from './ui.js';
 import {$, $$, debounce} from './util.js';
-import {renderBinderBody, viewBinder, viewBinders} from './views/binders.js';
+import {renderBinderBody, setBinderSort, viewBinder, viewBinders} from './views/binders.js';
+import {retryRemote} from './remote.js';
+import {coverHTML, dexFromInput} from './covers.js';
+import {evalBinder} from './rules.js';
 import {closeModal, editorAct, openAddCards, openEditor, renderAddResults, renderEditor, updatePreviewSoon} from './views/editor.js';
 import {renderHome, viewHome} from './views/home.js';
 import {closePanel, openPanel, panelNav} from './views/panel.js';
@@ -41,6 +44,9 @@ const ACT={
  'panel-nav':t=>panelNav(+t.dataset.d),
  'book-go':t=>bookGo(+t.dataset.d),
  'dex-pick':t=>{const b=S.binders.find(x=>x.id===t.dataset.binder);if(!b)return;b.pick=b.pick||{};if(t.dataset.id)b.pick[t.dataset.dex]=t.dataset.id;else delete b.pick[t.dataset.dex];saveBinders();viewCache.clear();refreshAll();},
+ bsortdir:()=>{const b=S.cur&&S.binders.find(x=>x.id===S.cur.id);setBinderSort({dir:b&&b.sort&&b.sort.dir==='desc'?'asc':'desc'});},
+ 'retry-remote':()=>retryRemote(),
+ 'load-pending':t=>{const b=S.binders.find(x=>x.id===t.dataset.id);if(b)loadIds(evalBinder(b).pendingIds||[],'rule');},
  'load-all-lists':()=>loadAllSetLists(),
  'load-scope':t=>{const b=S.binders.find(x=>x.id===t.dataset.id);if(b)loadIds(scopeIds(b));},
  tog:t=>{toggleOwn(t.dataset.id,t.dataset.fin||null);},
@@ -75,6 +81,7 @@ const ACT={
  }
 };
 function imagesChanged(msg){
+ if(S.ui.edit)renderEditor();
  viewCache.clear();const p=$('#panel');if(p)delete p.dataset.id;
  refreshAll();if(S.cur&&S.cur.soft)S.cur.soft();toast(msg);
 }
@@ -99,8 +106,12 @@ document.addEventListener('keydown',e=>{
   if(a)editorAct(e.target);else if(ACT[e.target.dataset.act])ACT[e.target.dataset.act](e.target);else ACT.open(e.target);
  }
 });
+document.addEventListener('remote-done',()=>{if(S.ui.edit)updatePreviewSoon();});
 document.addEventListener('change',e=>{
  const t=e.target;
+ if(t.dataset.edcover&&S.ui.edit){const b=S.ui.edit.b;b.cover={...(b.cover||{kind:'dex'}),kind:'dex',q:t.value,dex:dexFromInput(t.value)};const th=$('#dialog .cover.sm');if(th)th.innerHTML=coverHTML(b);return;}
+ if(t.dataset.bsort!==undefined){setBinderSort({f:t.value});return;}
+ if(t.dataset.edsort&&S.ui.edit){S.ui.edit.b.sort={f:'default',dir:'asc',...(S.ui.edit.b.sort||{}),[t.dataset.edsort]:t.value};return;}
  if(t.dataset.dexonly!==undefined&&S.ui.dexdlg){S.ui.dexdlg.only=t.checked;renderDexGrid();return;}
  if(t.dataset.bk){bookSetting(t);return;}
  if(t.classList&&t.classList.contains('bookrange')){bookTo(+t.value);return;}
@@ -169,7 +180,7 @@ async function boot(){
   if(!Array.isArray(S.settings.legalMarks))S.settings.legalMarks=['H','I','J'];
   S.logoOk=(await DB.get('kv','logoOk'))||{};
   S.dexNames=(await DB.get('kv','dexNames'))||{};
-  S.custom=Object.assign({logos:{},cards:{}},(await DB.get('kv','custom'))||{});
+  S.custom=Object.assign({logos:{},cards:{},covers:{}},(await DB.get('kv','custom'))||{});
   /* primeira vez com a seleção de expansões: começa pelas que já têm cartas marcadas */
   if(!Array.isArray(S.settings.mySets)){
    S.settings.mySets=[...new Set(Object.values(S.collection).map(e=>e.s).filter(Boolean))];

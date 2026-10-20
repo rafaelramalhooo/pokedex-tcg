@@ -87,7 +87,7 @@ export async function importBackup(file){
   for(const id in S.collection)await DB.put('coll',id,S.collection[id]);
   S.binders=d.binders||[];await saveBinders();
   Object.assign(S.settings,d.settings||{});await saveSettings();
-  if(d.custom){S.custom=Object.assign({logos:{},cards:{}},d.custom);await saveKV('custom',S.custom);}
+  if(d.custom){S.custom=Object.assign({logos:{},cards:{},covers:{}},d.custom);await saveKV('custom',S.custom);}
   toast('Backup importado.');H.route();
  }catch(e){toast('Esse arquivo não parece ser um backup deste app.');}
 }

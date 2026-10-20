@@ -1,6 +1,6 @@
 /* Tela inicial: expansões. */
 import {mySets} from '../catalog.js';
-import {logoImg} from '../logos.js';
+import {hueOf, logoImg} from '../logos.js';
 import {groupBySet, ownedQty, setStat} from '../collection.js';
 import {S, soft} from '../state.js';
 import {modeSeg, noteHTML} from '../ui.js';
@@ -74,7 +74,7 @@ export function setTile(s,st,mode){
   sub=st.masterTot==null?'Master Set: …':`Master Set: ${st.ownM} de ${st.masterTot}`;
  }
  const complete=tot>0&&own>=tot;
- return `<a class="set ${complete?'done':''}" href="#/set/${encodeURIComponent(s.id)}" aria-label="${esc(s.name)}: ${own} de ${tot==null?'?':tot}">
+ return `<a class="set ${complete?'done':''}" style="--h:${hueOf((S.serieOf[s.id]||{}).id||s.id)}" href="#/set/${encodeURIComponent(s.id)}" aria-label="${esc(s.name)}: ${own} de ${tot==null?'?':tot}">
   <div class="logo">${logo}</div>
   <div class="meta">${sym}<div><span class="sname">${esc(s.name)}</span><span class="sdate">${d&&d.releaseDate?fmtDate(d.releaseDate):''}${s.lang==='en'?(d&&d.releaseDate?' · ':'')+'nome em inglês':''}</span></div></div>
   <div class="count">${main}</div>

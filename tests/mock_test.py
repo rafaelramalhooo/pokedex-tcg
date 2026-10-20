@@ -70,6 +70,7 @@ def handle(route):
     m = re.match(r"https://api\.tcgdex\.net/v2/(\w+)(/.*)", url)
     if not m: return route.continue_()
     lang, path = m.groups()
+    def ok_json(o): return route.fulfill(status=200, body=json.dumps(o), headers={**h, "content-type": "application/json"})
     def ok(o): return route.fulfill(status=200, body=json.dumps(o), headers={**h, "content-type": "application/json"})
     def nf(): return route.fulfill(status=404, body="{}", headers={**h, "content-type": "application/json"})
     if path == "/sets":
@@ -86,6 +87,20 @@ def handle(route):
             if 1 <= i <= d[4]:
                 res.append({"id": f"{sid}-{i}", "localId": str(i), "name": cname(sid, i, lang), "image": f"https://assets.tcgdex.net/{lang}/x/{sid}/{i}"})
         return ok(res)
+    mq = re.match(r"/cards\?(\w+)=(.+)$", path)
+    if mq and not path.startswith("/cards?dexId"):
+        field, val = mq.groups(); hits["rq"] = hits.get("rq", 0) + 1
+        EN_T = {"Fogo": "Fire", "Água": "Water", "Planta": "Grass"}
+        res = []
+        for sid, d in {**SETS, **EN_ONLY}.items():
+            for i in range(1, d[4] + 1):
+                c = card_detail(f"{sid}-{i}", "en"); ok = False
+                if field == "types": ok = val == "eq:" + EN_T[c["types"][0]]
+                elif field == "regulationMark": ok = val == "eq:" + (c["regulationMark"] or "")
+                elif field == "illustrator": ok = val.replace("eq:", "").replace("%20", " ") == c["illustrator"]
+                elif field == "hp": ok = val.startswith("gte:") and c["hp"] >= int(val[4:])
+                if ok: res.append({"id": c["id"], "localId": c["localId"], "name": c["name"]})
+        return ok_json(res)
     if path == "/series":
         return ok([{"id": "sv", "name": "Escarlate e Violeta"}, {"id": "swsh", "name": "Espada e Escudo"}, {"id": "tcgp", "name": "Pokémon TCG Pocket"}])
     ms = re.match(r"/series/(\w+)", path)
@@ -523,6 +538,36 @@ with sync_playwright() as p:
     check("Evoluções em Paldea" in txt and "sem imagem" in txt, "diagnóstico lista expansões sem logo e com cartas sem imagem")
     page.screenshot(path=str(ROOT/"tests/21_diagnostico.png"), full_page=True)
     PNG.unlink()
+    # --- regras resolvidas no servidor (sem baixar detalhes) e ordenação ---
+    page.goto(APP + "#/binders"); page.wait_for_selector("#bbody")
+    page.evaluate("""import('./js/state.js').then(m=>{m.S.cards={};m.S.status.cl=null;m.viewCache.clear();})""")
+    page.evaluate("""import('./js/db.js').then(d=>d.DB.clear('cards'))""")
+    page.locator('[data-act="new-binder"]').click(); page.wait_for_selector("#bn")
+    page.fill("#bn", "Fogo servidor")
+    page.select_option('select[data-ed="f"]', "types"); page.select_option('select[data-ed="v"]', "fogo")
+    page.wait_for_function("document.querySelector('#edprev').innerText.includes('cartas combinam')", timeout=8000)
+    page.wait_for_timeout(800)
+    prev = page.locator("#edprev").inner_text()
+    check("sincronize" not in prev and "Faltam detalhes" not in prev, f"prévia sem pedir sincronização ({prev})")
+    check(hits.get("rq", 0) >= 1, "regra de tipo foi perguntada ao servidor")
+    page.locator('[data-ed-act="save"]').click(); page.wait_for_selector("#bgrid")
+    page.wait_for_timeout(800)
+    n_fire = page.locator("#bgrid .slot").count()
+    check(n_fire > 0, f"fichário de Fogo montado pelo servidor ({n_fire} cartas)")
+    check("sem detalhes" not in page.locator("#bsum").inner_text() and "ainda não têm detalhes" not in page.locator("#bsum").inner_text(), "sem aviso de cartas sem detalhes")
+    # ordenar
+    page.locator('[data-act="view"][data-v="list"]').click(); page.wait_for_timeout(200)
+    page.select_option('select[data-bsort="f"]', "name"); page.wait_for_timeout(300)
+    names = page.locator("#bgrid .slot .num b").all_inner_texts()
+    check(names == sorted(names, key=lambda x: x.lower()) or names == sorted(names), f"ordenar por nome, crescente ({names[:3]})")
+    page.locator('[data-act="bsortdir"]').click(); page.wait_for_timeout(300)
+    names2 = page.locator("#bgrid .slot .num b").all_inner_texts()
+    check(names2 == list(reversed(names)) or names2 == sorted(names2, reverse=True), f"decrescente inverte a ordem ({names2[:3]})")
+    page.select_option('select[data-bsort="f"]', "number"); page.locator('[data-act="bsortdir"]').click(); page.wait_for_timeout(300)
+    nums = [int(x) for x in page.locator("#bgrid .slot .num span").all_inner_texts() if x.isdigit()]
+    check(nums == sorted(nums) and len(nums) > 1, f"ordenar por número crescente ({nums[:5]})")
+    page.reload(); page.wait_for_selector("#bgrid .slot")
+    check(page.locator('select[data-bsort="f"]').input_value() == "number", "ordem guardada no fichário")
     # --- configuração própria de cada expansão/fichário, busca, logotipo e imagens derivadas ---
     page.goto(APP + "#/set/sv01"); page.wait_for_selector(".slot")
     page.locator('[data-act="view"][data-v="list"]').click(); page.wait_for_timeout(200)
@@ -565,6 +610,33 @@ with sync_playwright() as p:
     page.evaluate("""import('./js/state.js').then(m=>{const d=m.S.setd['swsh1'];delete d.cards[0].image;delete m.S.briefs[d.cards[0].id].image;m.viewCache.clear();})""")
     page.goto(APP + "#/binders"); page.goto(APP + "#/set/swsh1"); page.wait_for_selector(".slot"); page.wait_for_timeout(400)
     check(page.locator('img[data-derived="pattern"]').count() >= 1, "carta sem 'image' tenta o endereço padrão da TCGdex")
+    # --- capas, regras rápidas, visual ---
+    page.set_viewport_size({"width": 1360, "height": 900})
+    page.goto(APP + "#/binders"); page.wait_for_selector("#bbody")
+    page.locator('[data-act="new-binder"]').click(); page.wait_for_selector("#bn")
+    page.fill("#bn", "Gengar capa")
+    page.locator('[data-ed-act="addf"][data-f="pokemon"]').click()
+    check(page.locator('.rule').count() == 1 and page.locator('select[data-ed="f"]').input_value() == "pokemon", "atalho '+ Pokémon' troca a regra vazia")
+    page.locator('[data-ed-act="addf"][data-f="set"]').click()
+    check(page.locator('.rule').count() == 2, "atalho '+ Expansão' acrescenta uma segunda regra")
+    page.fill('input[data-ed="v"] >> nth=0', "Gengar")
+    page.locator('[data-ed-act="cover"][data-v="dex"]').click()
+    page.fill('input[data-edcover="q"]', "bulbasaur"); page.keyboard.press("Tab"); page.wait_for_timeout(200)
+    check(page.locator('#dialog .cover.sm img[data-role="dexart"]').count() == 1, "capa com arte de Pokémon pelo nome")
+    page.locator('[data-ed-act="cover"][data-v="preset"]').click()
+    check(page.locator('.covp').count() == 3, "3 imagens do app para a capa")
+    page.locator('.covp').nth(2).click()
+    page.screenshot(path=str(ROOT/"tests/22_editor_capa.png"))
+    page.locator('[data-ed-act="save"]').click(); page.wait_for_selector("#bgrid")
+    page.goto(APP + "#/binders"); page.wait_for_selector(".binder .cover")
+    check(page.locator('.binder', has_text="Gengar capa").locator(".cover svg").count() == 1, "lista de fichários mostra a capa escolhida")
+    check(page.locator('.binder .cover').count() == page.locator('.binder').count(), "todo fichário tem capa")
+    page.screenshot(path=str(ROOT/"tests/23_fichario_lista.png"))
+    page.locator(".binder", has_text="Minha Pokédex").click(); page.wait_for_selector(".stats")
+    check(page.locator(".stat .rg").count() == 1, "cartões de resumo com anel de progresso")
+    page.screenshot(path=str(ROOT/"tests/24_fichario_resumo.png"))
+    page.goto(APP + "#/"); page.wait_for_selector(".set"); page.wait_for_timeout(500)
+    page.screenshot(path=str(ROOT/"tests/25_expansoes.png"))
     # instalável: manifesto e ícones
     mf = page.evaluate("fetch('manifest.webmanifest').then(r=>r.json())")
     check(mf["display"] == "standalone" and len(mf["icons"]) >= 3, "manifesto do app instalável")

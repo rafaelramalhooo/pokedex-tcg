@@ -1,7 +1,10 @@
 /* Telas de fichários. */
 import {catalogCoverage, visibleSets} from '../catalog.js';
 import {isOwned} from '../collection.js';
-import {evalBinder, ruleChips, scopeIds} from '../rules.js';
+import {SORTS, evalBinder, ruleChips, scopeIds} from '../rules.js';
+import {AUTO_MAX, autoResolve} from '../remote.js';
+import {coverHTML} from '../covers.js';
+import {saveBinders} from '../db.js';
 import {S, soft} from '../state.js';
 import {imgTag, noteHTML, sizeCtl} from '../ui.js';
 import {$, $$, ICON, esc, fmtN, pct} from '../util.js';
@@ -24,11 +27,10 @@ export function renderBinders(){
  }
  el.innerHTML=`<div class="binders">${S.binders.map(b=>{
   const r=evalBinder(b);const own=r.dex?r.dex.filter(x=>x.owned).length:r.ids.filter(isOwned).length;const tot=r.dex?r.dex.length:r.ids.length;
-  return`<a class="binder" href="#/binder/${esc(b.id)}"><div><h3>${esc(b.name)}</h3></div>
+  return`<a class="binder" href="#/binder/${esc(b.id)}"><span class="cover">${coverHTML(b)}</span><div class="bmeta"><h3>${esc(b.name)}</h3>
    <div class="chips" style="margin:0">${ruleChips(b)}</div>
    <div class="count"><strong>${fmtN(own)}</strong><span>de ${fmtN(tot)} ${r.dex?'espaços':'cartas'}</span></div>
-   <div class="bar ${tot>0&&own>=tot?'done':''}"><i style="width:${pct(own,tot)}%"></i></div>
-   ${r.pending?`<p>${fmtN(r.pending)} cartas ainda sem detalhes baixados.</p>`:''}</a>`;
+   <div class="bar ${tot>0&&own>=tot?'done':''}"><i style="width:${pct(own,tot)}%"></i></div></div></a>`;
  }).join('')}</div>`;
 }
 export function viewBinder(id){
@@ -40,10 +42,41 @@ export function viewBinder(id){
   <div class="top"><div><h1 id="bname"></h1><div class="chips" id="bchips"></div></div>
   <div class="tools"><button class="btn" type="button" data-act="edit-binder" data-id="${esc(id)}">Editar regras</button>${b.mode==='manual'?`<button class="btn" type="button" data-act="add-cards" data-id="${esc(id)}">Adicionar cartas</button>`:''}<button class="btn danger" type="button" data-act="del-binder" data-id="${esc(id)}">Excluir</button></div></div>
   <div id="bsum"></div>
-  <div class="toolbar"><div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="bfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="bfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="bfilter" data-v="miss" aria-pressed="false">Faltam</button></div><input class="field" id="bq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar no fichário"><span class="grow"></span><span class="bookctl" id="bookctl"></span></div>
+  <div class="toolbar"><div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="bfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="bfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="bfilter" data-v="miss" aria-pressed="false">Faltam</button></div><input class="field" id="bq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar no fichário"><span class="sortctl" id="bsortctl"></span><span class="grow"></span><span class="bookctl" id="bookctl"></span></div>
   <div id="bgrid"></div>`;
  renderBookCtl();
+ renderSortCtl(b);
  renderBinderBody();
+}
+/* Cartões de resumo: progresso com anel e, quando há detalhes, divisão por tipo e por raridade. */
+function breakdown(ids,keyFn,limit){
+ const m=new Map();
+ ids.forEach(id=>{const k=keyFn(id);if(!k)return;const e=m.get(k)||{own:0,tot:0};e.tot++;if(isOwned(id))e.own++;m.set(k,e);});
+ return[...m.entries()].sort((a,b)=>b[1].tot-a[1].tot).slice(0,limit);
+}
+const barsHTML=rows=>rows.map(([k,e])=>`<div class="mini"><span class="mk">${esc(k)}</span><span class="mb"><i style="width:${pct(e.own,e.tot)}%"></i></span><span class="mv">${fmtN(e.own)}/${fmtN(e.tot)}</span></div>`).join('');
+function statsHTML(r,own,tot){
+ const p=pct(own,tot);
+ let h=`<div class="stats"><div class="stat ring"><div class="rg" style="--p:${p}"><b>${p}%</b></div><div><b class="big">${fmtN(own)}</b><span>${r.dex?'espaços preenchidos':'tenho'} de ${fmtN(tot)}</span><span>${fmtN(Math.max(0,tot-own))} faltam</span></div></div>`;
+ if(!r.dex&&r.ids.length){
+  const tp=breakdown(r.ids,id=>{const c=S.cards[id];return c&&c.types&&c.types[0];},6);
+  const rr=breakdown(r.ids,id=>{const c=S.cards[id];return c&&c.rarity;},5);
+  if(tp.length)h+=`<div class="stat"><span class="lbl2">Por tipo</span>${barsHTML(tp)}</div>`;
+  if(rr.length)h+=`<div class="stat"><span class="lbl2">Por raridade</span>${barsHTML(rr)}</div>`;
+ }
+ return h+'</div>';
+}
+export function sortCtlHTML(b){
+ if(b.mode==='pokedex')return'';
+ const sp=b.sort||{f:'default',dir:'asc'};
+ return`<label class="size">Ordenar <select class="field" data-bsort="f" aria-label="Ordenar por">${SORTS.map(([k,l])=>`<option value="${k}" ${sp.f===k||(!sp.f&&k==='default')?'selected':''}>${l}</option>`).join('')}</select></label><button type="button" class="btn small" data-act="bsortdir" aria-label="Direção: ${sp.dir==='desc'?'decrescente':'crescente'}" title="${sp.dir==='desc'?'Decrescente':'Crescente'}">${sp.dir==='desc'?'↓ Decrescente':'↑ Crescente'}</button>`;
+}
+export function renderSortCtl(b){const el=$('#bsortctl');if(el)el.innerHTML=sortCtlHTML(b);}
+export function setBinderSort(patch){
+ if(!S.cur||S.cur.name!=='binder')return;
+ const b=S.binders.find(x=>x.id===S.cur.id);if(!b)return;
+ b.sort={f:'default',dir:'asc',...(b.sort||{}),...patch};
+ saveBinders();S.ui.page=0;renderSortCtl(b);renderBinderBody();
 }
 const hasPoke=b=>b.mode==='rule'&&(b.conds||[]).some(c=>c.f==='pokemon'&&String(c.v).trim());
 export function renderBinderBody(){
@@ -55,7 +88,13 @@ export function renderBinderBody(){
  const own=r.dex?r.dex.filter(x=>x.owned).length:r.ids.filter(isOwned).length,tot=r.dex?r.dex.length:r.ids.length;
  const cov=catalogCoverage();
  let notes='';
- if(r.pending)notes+=noteHTML('warn',`${fmtN(r.pending)} cartas ainda não têm detalhes baixados e ficam de fora desta regra. <a href="#/ajustes"><strong>Sincronizar o catálogo</strong></a> para completar.`);
+ if(b.mode==='rule'){
+  autoResolve(r);
+  if(r.loading)notes+=noteHTML('','Consultando a TCGdex para montar o fichário…');
+  else if(r.failed)notes+=noteHTML('warn','Não consegui consultar a TCGdex agora, então algumas cartas podem faltar. <button class="btn small" type="button" data-act="retry-remote">Tentar de novo</button>');
+  if(S.status.rule)notes+=noteHTML('',`Conferindo os detalhes de ${fmtN(S.status.rule.total)} cartas… ${fmtN(S.status.rule.done)} prontas.`);
+  else if(r.pending>AUTO_MAX)notes+=noteHTML('warn',`Esta regra depende de detalhes que ainda não foram baixados para ${fmtN(r.pending)} cartas, e elas ficam de fora por enquanto. <button class="btn small" type="button" data-act="load-pending" data-id="${esc(b.id)}">Baixar esses detalhes</button>`);
+ }
  if(hasPoke(b)){
   const all=S.status.all,ids=S.status.ids;
   const missingSets=visibleSets().filter(s=>!S.setd[s.id]).length;
@@ -69,7 +108,7 @@ export function renderBinderBody(){
  }else if(cov.setsLoaded<cov.sets&&!r.dex)notes+=noteHTML('',`Só ${cov.setsLoaded} de ${cov.sets} expansões foram carregadas até agora; o fichário cresce conforme chegam.`);
  if(r.dex)loadDexNames();
  if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas expansões: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
- $('#bsum').innerHTML=notes+`<div class="summary"><div><b>${fmtN(own)}</b><span>${r.dex?'espaços preenchidos':'cartas que você tem'}</span></div><div><b>${fmtN(Math.max(0,tot-own))}</b><span>faltam</span></div><div><b>${pct(own,tot)}%</b><span>concluído</span></div></div>`;
+ $('#bsum').innerHTML=notes+statsHTML(r,own,tot);
  const g=$('#bgrid');
  if(r.dex){
   const q=parseQuery(S.ui.binderQ);
