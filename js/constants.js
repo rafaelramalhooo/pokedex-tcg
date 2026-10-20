@@ -42,3 +42,22 @@ export const FIELDS=[
  {k:'owned',label:'Eu tenho a carta',t:'bool',d:false,def:'eq'}
 ];
 export const FM=Object.fromEntries(FIELDS.map(f=>[f.k,f]));
+
+/* Nomes que a TCGdex devolve em inglês ou português para a mesma coisa: tudo vira o nome em português.
+   Raridades sem equivalente confirmado em português ficam com o nome original. */
+const _nz=x=>String(x==null?'':x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const RAR=[
+ ['Comum','Common'],['Incomum','Uncommon'],['Rara','Rare'],['Rara Holo','Holo Rare','Rare Holo'],['Ultra Rara','Ultra Rare'],
+ ['Rara Dupla','Double rare'],['Hiper rara','Hyper rare'],['Mega Hiper Raro','Mega Hyper Rare'],
+ ['Ilustração Rara','Illustration rare'],['Ilustração Rara Especial','Special illustration rare'],
+ ['Rara Secreta','Secret Rare','Rare Secreta'],['ACE SPEC Raro','ACE SPEC Rare'],
+ ['Arte Completa de Treinador','Full Art Trainer'],['Rara Radiante','Radiant Rare'],['Raras Incríveis','Amazing Rare'],
+ ['Rara Preto e Branco','Black White Rare'],['Brilhante Ultra Rara','Shiny Ultra Rare'],
+ ['Shiny rara','Shiny rare'],['Shiny rara V','Shiny rare V'],['Shiny rara VMAX','Shiny rare VMAX'],
+ ['Rara Holo V','Holo Rare V'],['Rara Holo VMAX','Holo Rare VMAX'],['Rara Holo VSTAR','Holo Rare VSTAR'],['Promo','Promo']
+];
+const RAR_PT=new Map(),RAR_EN=new Map();
+RAR.forEach(([pt,en,...alt])=>{[pt,en,...alt].forEach(n=>RAR_PT.set(_nz(n),pt));RAR_EN.set(_nz(pt),en);});
+export const rarityPt=r=>r?(RAR_PT.get(_nz(r))||r):r;
+export const rarityEn=r=>{const p=rarityPt(r);return p?(RAR_EN.get(_nz(p))||p):p;};
+export const typePt=t=>{if(!t)return t;const k=TYPE_ALIAS[_nz(t)];const e=k&&TYPES.find(x=>x[0]===k);return e?e[1]:t;};

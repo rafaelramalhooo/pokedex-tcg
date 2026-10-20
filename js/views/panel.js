@@ -1,6 +1,7 @@
 /* Painel de detalhes da carta. */
 import {ensureCard} from '../catalog.js';
-import {COND, FIN, FIN_LABEL, LANGS} from '../constants.js';
+import {COND, FIN, FIN_LABEL, LANGS, rarityPt, typePt} from '../constants.js';
+import {numLabel} from '../cardlabel.js';
 import {H, S} from '../state.js';
 import {imgTag, noteHTML} from '../ui.js';
 import {dexModel} from '../rules.js';
@@ -44,10 +45,10 @@ export function renderPanel(failed){
  }
  const facts=[];
  if(c){
-  if(c.rarity)facts.push(c.rarity);
+  if(c.rarity)facts.push(rarityPt(c.rarity));
   if(c.regulationMark)facts.push('Marca '+c.regulationMark);
   if(c.hp)facts.push(c.hp+' PS');
-  (c.types||[]).forEach(t=>facts.push(t));
+  (c.types||[]).forEach(t=>facts.push(typePt(t)));
   if(c.category)facts.push(c.category);
   if(c.stage)facts.push(c.stage);
  }
@@ -63,7 +64,7 @@ export function renderPanel(failed){
  const nav=(S.cur&&S.cur.nav)||[];const ni=nav.findIndex(x=>x.id===id);
  const phead=`<div class="phead"><div class="pn"><button class="btn small" type="button" data-act="panel-nav" data-d="-1" ${ni<=0?'disabled':''} aria-label="Carta anterior">‹</button><span aria-live="polite">${ni>=0?`${ni+1} de ${nav.length}`:''}</span><button class="btn small" type="button" data-act="panel-nav" data-d="1" ${ni<0||ni>=nav.length-1?'disabled':''} aria-label="Próxima carta">›</button></div><button class="btn small close" type="button" data-act="close">Fechar</button></div>`;
  const info=`<h2>${esc(name)}</h2>
-  <p class="lead" style="margin-top:2px">${esc(set.name)}, carta ${esc(b.localId||'')}${official?' de '+official:''}</p>
+  <p class="lead" style="margin-top:2px">${esc(set.name)} · carta ${esc(numLabel({...b,id,setId:b.setId||(c&&c.set)||''}))}</p>
   ${c&&c.illustrator?`<p class="lead" style="margin-top:2px">Ilustração: ${esc(c.illustrator)}</p>`:''}
   <div class="facts">${facts.map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div>
   ${rows}

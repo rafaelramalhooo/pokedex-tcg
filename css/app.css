@@ -380,3 +380,6 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .qty.here{background:var(--ok);color:#fff}
 .slot.dexempty.hashave .pocket{border-color:var(--ink-3)}
 .slot.dexempty .pocket .qty{left:50%;right:auto;transform:translateX(-50%);bottom:8px;top:auto;white-space:nowrap}
+
+/* realce mais grosso ao passar o mouse (sem mexer no tamanho do cartão) */
+.set:hover,.set:focus-visible,.binder:hover,.binder:focus-visible{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink)}

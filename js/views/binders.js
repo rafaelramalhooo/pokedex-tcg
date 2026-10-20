@@ -12,6 +12,7 @@ import {slotHTML} from './set.js';
 import {dexArt, dexName, loadDexNames, matchQuery, pad4, parseQuery} from './dex.js';
 import {nz} from '../util.js';
 import {capRight, numLabel} from '../cardlabel.js';
+import {rarityPt, typePt} from '../constants.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
 
 export function viewBinders(){
@@ -60,8 +61,8 @@ function statsHTML(r,own,tot){
  const p=pct(own,tot);
  let h=`<div class="stats"><div class="stat ring"><div class="rg" style="--p:${p}"><b>${p}%</b></div><div><b class="big">${fmtN(own)}</b><span>${r.dex?'espaços preenchidos':'tenho'} de ${fmtN(tot)}</span><span>${fmtN(Math.max(0,tot-own))} faltam</span></div></div>`;
  if(!r.dex&&r.ids.length){
-  const tp=breakdown(r.ids,id=>{const c=S.cards[id];return c&&c.types&&c.types[0];},6);
-  const rr=breakdown(r.ids,id=>{const c=S.cards[id];return c&&c.rarity;},5);
+  const tp=breakdown(r.ids,id=>{const c=S.cards[id];return c&&c.types&&typePt(c.types[0]);},6);
+  const rr=breakdown(r.ids,id=>{const c=S.cards[id];return c&&rarityPt(c.rarity);},5);
   if(tp.length)h+=`<div class="stat"><span class="lbl2">Por tipo</span>${barsHTML(tp)}</div>`;
   if(rr.length)h+=`<div class="stat"><span class="lbl2">Por raridade</span>${barsHTML(rr)}</div>`;
  }

@@ -660,6 +660,12 @@ with sync_playwright() as p:
     page.fill("#sq", "2"); page.wait_for_timeout(400)
     check(page.locator(".slot").count() >= 1 and page.locator(".slot").first.bounding_box()["width"] >= max(tile0, 200), "ao buscar, a carta abre maior")
     page.screenshot(path=str(ROOT/"tests/27_busca_grande.png"))
+    # tradução de tipos/raridades e número no painel
+    tr = page.evaluate("""import('./js/constants.js').then(m=>[m.rarityPt('Rare'),m.rarityPt('Rara'),m.rarityPt('Holo Rare'),m.rarityPt('Rare Holo'),m.rarityPt('Double rare'),m.rarityPt('Crown'),m.rarityEn('Ultra Rara'),m.typePt('Psychic'),m.typePt('Psíquico'),m.typePt('Darkness')])""")
+    check(tr == ["Rara","Rara","Rara Holo","Rara Holo","Rara Dupla","Crown","Ultra Rare","Psíquico","Psíquico","Escuridão"], f"tradução de raridades e tipos ({tr})")
+    page.goto(APP + "#/set/sv01"); page.wait_for_selector(".slot"); page.locator(".slot").first.click(); page.wait_for_selector("#panel.open .lead")
+    check(" · carta " in page.locator("#panel .lead").first.inner_text() and "/" in page.locator("#panel .lead").first.inner_text() and " de 8" not in page.locator("#panel .lead").first.inner_text(), f"painel mostra número como 001/008 ({page.locator('#panel .lead').first.inner_text()!r})")
+    page.keyboard.press("Escape")
     # filtro "Com cartas minhas"
     page.goto(APP + "#/"); page.wait_for_selector(".set"); page.wait_for_timeout(500)
     tot = page.locator(".set").count()

@@ -1,7 +1,7 @@
 /* Regras dos fichários: avaliação e descrição. */
 import {visibleSet} from './catalog.js';
 import {isOwned, setIdOf} from './collection.js';
-import {BOOL, CAT_ALIAS, FIN, FM, GENS, OPS, STAGE_ALIAS, TYPE_ALIAS, genOf} from './constants.js';
+import {rarityEn, rarityPt, BOOL, CAT_ALIAS, FIN, FM, GENS, OPS, STAGE_ALIAS, TYPE_ALIAS, genOf} from './constants.js';
 import {C, S, viewCache} from './state.js';
 import {canon, esc, natCmp, nz} from './util.js';
 import {remoteFor} from './remote.js';
@@ -18,7 +18,7 @@ export function viewOf(id){
   v.dex=Array.isArray(c.dexId)?c.dexId.map(Number):[];
   v.types=(c.types||[]).map(t=>canon(TYPE_ALIAS,t));
   v.cat=canon(CAT_ALIAS,c.category);v.stage=canon(STAGE_ALIAS,c.stage||'');
-  v.suffix=nz(c.suffix);v.trainer=nz(c.trainerType);v.illus=nz(c.illustrator);v.rarity=nz(c.rarity);
+  v.suffix=nz(c.suffix);v.trainer=nz(c.trainerType);v.illus=nz(c.illustrator);v.rarity=nz(rarityPt(c.rarity));v.rarityEn=nz(rarityEn(c.rarity));
   v.hp=c.hp==null?null:Number(c.hp);v.mark=String(c.regulationMark||'').toUpperCase();
   if(c.variants)FIN.forEach(f=>{if(c.variants[f])v.vars.push(f);});
  }
@@ -38,7 +38,7 @@ export function valuesOf(v,k){
   case 'suffix':return[v.suffix];
   case 'trainerType':return[v.trainer];
   case 'illustrator':return[v.illus];
-  case 'rarity':return[v.rarity];
+  case 'rarity':return v.rarity?[v.rarity,v.rarityEn]:[v.rarity];
   case 'hp':return v.hp==null?[]:[v.hp];
   case 'regulationMark':return[nz(v.mark)];
   case 'standard':return[S.settings.legalMarks.map(m=>m.toUpperCase()).includes(v.mark)?'sim':'nao'];
@@ -201,7 +201,7 @@ export function optionsFor(k){
   C.opt={illustrator:new Set(),rarity:new Set(),suffix:new Set(),trainerType:new Set(),regulationMark:new Set()};
   for(const id in S.cards){const c=S.cards[id];
    if(c.illustrator)C.opt.illustrator.add(c.illustrator);
-   if(c.rarity)C.opt.rarity.add(c.rarity);
+   if(c.rarity)C.opt.rarity.add(rarityPt(c.rarity));
    if(c.suffix)C.opt.suffix.add(c.suffix);
    if(c.trainerType)C.opt.trainerType.add(c.trainerType);
    if(c.regulationMark)C.opt.regulationMark.add(String(c.regulationMark).toUpperCase());
