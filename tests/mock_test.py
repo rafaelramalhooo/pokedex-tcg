@@ -50,6 +50,8 @@ def handle(route):
     h = {"access-control-allow-origin": "*"}
     if "fonts.g" in url:
         return route.abort()
+    if url.startswith("https://assets.tcgdex.net") and ("/sv02/logo" in url or "/sv02/symbol" in url):
+        return route.fulfill(status=404, body="", headers=h)
     if url.startswith("https://assets.tcgdex.net"):
         n = url.split("/")[-2] if url.endswith(("low.webp","high.webp")) else url.split("/")[-1]
         hue = (sum(map(ord, url)) * 37) % 360
@@ -153,7 +155,7 @@ with sync_playwright() as p:
     page.screenshot(path=str(ROOT/"tests/01_home.png"))
 
     # abrir expansão
-    page.locator(".set", has_text="Escarlate e Violeta").first.click()
+    page.locator(".set", has=page.locator(".sname", has_text="Escarlate e Violeta")).first.click()
     page.wait_for_selector(".slot", timeout=5000)
     check(page.locator(".slot").count() == 10, "expansão sv01 mostra 10 cartas")
     check(page.locator(".divider").count() == 1, "cartas secretas separadas")
@@ -166,7 +168,7 @@ with sync_playwright() as p:
     # abrir painel da 4a carta, +2 em reverse
     page.locator(".slot").nth(3).click()
     page.wait_for_selector("#panel.open .fin", timeout=5000)
-    check(page.locator("#panel .fin").count() == 2, "painel mostra normal + reverse da carta 4")
+    check(page.locator("#panel .fin .step").count() == 2, "painel mostra normal + reverse da carta 4")
     page.locator('#panel [data-act="inc"][data-fin="reverse"]').click()
     page.locator('#panel [data-act="inc"][data-fin="reverse"]').click()
     page.wait_for_timeout(200)
@@ -193,10 +195,10 @@ with sync_playwright() as p:
     # home com contadores
     page.goto(APP + "#/"); page.wait_for_selector(".set")
     page.wait_for_timeout(600)
-    tile = page.locator(".set", has_text="Escarlate e Violeta").first.inner_text()
+    tile = page.locator(".set", has=page.locator(".sname", has_text="Escarlate e Violeta")).first.inner_text()
     check("4" in tile and "de 16" in tile, "home (modo master) mostra 4 de 16")
     page.locator('[data-act="mode"][data-v="set"]').first.click()
-    tile = page.locator(".set", has_text="Escarlate e Violeta").first.inner_text()
+    tile = page.locator(".set", has=page.locator(".sname", has_text="Escarlate e Violeta")).first.inner_text()
     check("de 8" in tile, "home (modo set) mostra de 8")
 
     # sincronizar catálogo
@@ -279,12 +281,12 @@ with sync_playwright() as p:
     page.locator('.gc[data-ed-act="bgen"][data-g="1"]').click()
     page.locator('[data-ed-act="save"]').click(); page.wait_for_selector("#bgrid .slot")
     check(page.locator("#bgrid .slot").count() == 151, "Pokédex da 1ª geração tem 151 espaços")
-    check(page.locator("#bgrid .slot.dexempty").count() == 140, "espaços sem carta ficam vazios e cinza (140)")
+    check(page.locator("#bgrid .slot.dexempty").count() == 147, "sem carta que você tenha, o espaço mostra a arte do Pokémon (147)")
     check(page.locator("#bgrid .slot.on").count() == 4, "4 espaços preenchidos com cartas que tenho")
     check("espaços preenchidos" in page.locator("#bsum").inner_text(), "resumo fala em espaços")
     page.screenshot(path=str(ROOT/"tests/08_pokedex.png"))
     # arte, nome e número nos espaços vazios
-    check(page.locator("#bgrid .slot.dexempty .dexph img").count() == 140, "cada espaço vazio tem a arte do Pokémon")
+    check(page.locator("#bgrid .slot.dexempty .dexph img").count() == 147, "cada espaço vazio tem a arte do Pokémon")
     empty25 = page.locator('#bgrid .slot.dexempty[data-dex="25"]')
     empty25.scroll_into_view_if_needed()
     check("Pikachu" in empty25.inner_text() and "#0025" in empty25.inner_text(), f"espaço vazio mostra nome e número ({empty25.inner_text().strip()!r})")
@@ -298,6 +300,16 @@ with sync_playwright() as p:
     page.screenshot(path=str(ROOT/"tests/17_dex_janela.png"))
     page.fill("#dq", "gengar")
     check(page.locator("#dexgrid .dtile").count() == 1, "busca na janela filtra por nome")
+    page.fill("#dq", "(1/8)")
+    check(page.locator("#dexgrid .dtile").count() == 0, "número só em dex 2: '(1/8)' não casa (carta 2)")
+    page.fill("#dq", "gengar (2/6)")
+    check(page.locator("#dexgrid .dtile").count() == 1, "busca 'nome (número/total)' como na Liga Pokémon")
+    page.fill("#dq", "gengar (2/9)")
+    check(page.locator("#dexgrid .dtile").count() == 0, "total errado não casa")
+    page.fill("#dq", "gengar 2")
+    check(page.locator("#dexgrid .dtile").count() == 1, "nome + número simples")
+    page.fill("#dq", "02/6")
+    check(page.locator("#dexgrid .dtile").count() == 1, "número com zero à esquerda")
     page.fill("#dq", "")
     page.locator('#dexgrid .dtile').nth(0).locator(".dd").click()
     page.wait_for_selector("#panel.open .cand", timeout=5000)
@@ -315,6 +327,15 @@ with sync_playwright() as p:
     check(page.locator("#dexgrid .dtile.on").count() == 1 and "você tem 1" in page.locator("#dexsum").inner_text(), "tocar marca a carta como tenho")
     page.locator('[data-act="dex-close"]').click(); page.wait_for_timeout(300)
     check(page.locator("#bgrid .slot.on").count() == 5, "espaço #9 passou a preenchido (5 espaços)")
+    # remover a carta: o espaço volta à arte do Pokémon (não fica a carta apagada)
+    page.locator('#bgrid .slot[data-dex="9"]').click(); page.wait_for_selector("#dexgrid .dtile.on")
+    page.locator("#dexgrid .dtile.on").first.click(); page.wait_for_timeout(300)
+    page.locator('[data-act="dex-close"]').click(); page.wait_for_timeout(300)
+    check(page.locator('#bgrid .slot.dexempty[data-dex="9"] .dexph img').count() == 1 and page.locator("#bgrid .slot.on").count() == 4, "ao remover a carta, o espaço volta à arte do Pokémon")
+    page.locator('#bgrid .slot[data-dex="9"]').click(); page.wait_for_selector("#dexgrid .dtile")
+    page.locator("#dexgrid .dtile").first.click(); page.wait_for_timeout(500)
+    page.locator('[data-act="dex-close"]').click(); page.wait_for_timeout(300)
+    check(page.locator("#bgrid .slot.on").count() == 5, "marcar de novo preenche o espaço outra vez")
     page.reload(); page.wait_for_selector("#bgrid .slot")
     check(page.locator("#bgrid .slot.on").count() == 5, "marcação feita na janela persiste")
     check(page.locator("#bgrid .slot.dexempty").first.inner_text().strip() != "", "nomes vindos da PokeAPI guardados")
@@ -453,6 +474,49 @@ with sync_playwright() as p:
     check(db["x"] >= 0 and db["x"] + db["width"] <= 390.5, "janela de cartas cabe na tela do celular")
     page.screenshot(path=str(ROOT/"tests/18_mobile_dex.png"))
     page.keyboard.press("Escape")
+    # --- logo desenhado, imagens enviadas por você e diagnóstico ---
+    page.set_viewport_size({"width": 1360, "height": 900})
+    PNG = ROOT/"tests/_up.png"
+    import base64
+    PNG.write_bytes(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAYAAAD/Rn+7AAAAMklEQVR4nO3OMQ0AAAgEMYS9/+AKVJBjuKF7q5P5rOiAQYN0wKBBOmDQIB0waJAOGLy2Sb4FStHjNdcAAAAASUVORK5CYII="))
+    page.goto(APP + "#/"); page.wait_for_selector(".set")
+    page.wait_for_timeout(600)
+    fb = page.locator(".set .lgfb", has_text="Evoluções em Paldea")
+    check(fb.count() >= 1, "expansão sem logo mostra bloco com nome e cor da série")
+    check(page.locator(".set .lgfb small").first.inner_text().strip() != "", "bloco mostra o nome da série")
+    page.screenshot(path=str(ROOT/"tests/19_logo_fallback.png"))
+    page.goto(APP + "#/set/sv02"); page.wait_for_selector(".hero .logoctl")
+    with page.expect_file_chooser() as fc: page.locator('[data-act="upload"][data-kind="logo"]').click()
+    fc.value.set_files(str(PNG)); page.wait_for_timeout(600)
+    check(page.locator('.hlogo img[data-role="logo"]').count() == 1 and page.locator('.hlogo img').first.get_attribute("src").startswith("data:"), "logo enviado aparece na expansão")
+    page.goto(APP + "#/"); page.wait_for_selector(".set"); page.wait_for_timeout(300)
+    check(page.locator('.set .logo img[src^="data:"]').count() == 1, "logo enviado aparece na tela inicial")
+    page.reload(); page.wait_for_selector(".set"); page.wait_for_timeout(400)
+    check(page.locator('.set .logo img[src^="data:"]').count() == 1, "logo enviado persiste ao recarregar")
+    page.goto(APP + "#/set/sv02"); page.wait_for_selector(".hero .logoctl")
+    page.locator('[data-act="upload-rm"][data-kind="logo"]').click(); page.wait_for_timeout(400)
+    check(page.locator(".hlogo .lgfb").count() == 1, "remover o logo enviado volta ao bloco")
+    # carta sem imagem na fonte
+    page.evaluate("""import('./js/state.js').then(m=>{const S=m.S;const d=S.setd['sv02'];d.cards.forEach((c,i)=>{if(i<2){delete c.image;if(S.cards[c.id])delete S.cards[c.id].image;}});d.cards.slice(0,2).forEach(c=>{if(S.briefs[c.id])delete S.briefs[c.id].image;});m.viewCache.clear();})""")
+    page.goto(APP + "#/binders"); page.goto(APP + "#/set/sv02"); page.wait_for_selector(".slot"); page.wait_for_timeout(500)
+    check(page.locator(".slot .ph[data-noimg]").count() == 2, "cartas sem imagem viram cartão com nome e número")
+    check("1" in page.locator(".slot .ph[data-noimg]").first.inner_text(), "cartão mostra o número da carta")
+    page.screenshot(path=str(ROOT/"tests/20_card_noimg.png"))
+    page.locator(".slot").first.click(); page.wait_for_selector("#panel.open .tcard")
+    check("TCGdex não tem imagem" in page.locator("#panel").inner_text(), "painel explica que a fonte não tem a imagem")
+    with page.expect_file_chooser() as fc: page.locator('#panel [data-act="upload"][data-kind="card"]').click()
+    fc.value.set_files(str(PNG)); page.wait_for_timeout(700)
+    check(page.locator('#panel .tcard img[data-role="own"]').count() == 1, "foto enviada aparece no painel da carta")
+    page.keyboard.press("Escape"); page.wait_for_timeout(200)
+    check(page.locator('.slot img[data-role="own"]').count() == 1 and page.locator(".slot .ph[data-noimg]").count() == 1, "foto enviada aparece na grade; a outra segue sem imagem")
+    # diagnóstico
+    page.goto(APP + "#/ajustes"); page.wait_for_selector('[data-act="check-logos"]')
+    page.locator('[data-act="check-logos"]').click()
+    page.wait_for_function("document.querySelector('[data-act=check-logos]').innerText.includes('Verificar logos') && document.querySelector('#sbody .note')", timeout=15000)
+    txt = page.locator("#sbody").inner_text()
+    check("Evoluções em Paldea" in txt and "sem imagem" in txt, "diagnóstico lista expansões sem logo e com cartas sem imagem")
+    page.screenshot(path=str(ROOT/"tests/21_diagnostico.png"), full_page=True)
+    PNG.unlink()
     # instalável: manifesto e ícones
     mf = page.evaluate("fetch('manifest.webmanifest').then(r=>r.json())")
     check(mf["display"] == "standalone" and len(mf["icons"]) >= 3, "manifesto do app instalável")

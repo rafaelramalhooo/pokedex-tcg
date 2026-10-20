@@ -91,9 +91,11 @@ export function dexModel(b){
  GENS.filter(([g])=>gens.includes(g)).forEach(([g,a,z])=>{
   for(let n=a;n<=z;n++){
    const cand=sortIds((byDex.get(n)||[]).slice());
+   /* o espaço só mostra uma carta se você a tem; sem carta, volta a arte do Pokémon */
    let rep=null;
-   if(b.pick&&b.pick[n]&&cand.includes(b.pick[n]))rep=b.pick[n];
-   else{const ow=cand.filter(isOwned);rep=ow.length?ow[ow.length-1]:(cand.length?cand[cand.length-1]:null);}
+   const ow=cand.filter(isOwned);
+   if(b.pick&&b.pick[n]&&ow.includes(b.pick[n]))rep=b.pick[n];
+   else if(ow.length)rep=ow[ow.length-1];
    let name='';
    cand.forEach(id=>{const nm=cleanName((S.cards[id]||{}).name);if(nm&&(!name||nm.length<name.length))name=nm;});
    slots.push({dex:n,gen:g,name,rep,cand,owned:cand.some(isOwned)});

@@ -4,6 +4,7 @@ import {groupBySet, isOfficialNo, isOwned, ownedQty, setStat} from '../collectio
 import {FIN_LABEL} from '../constants.js';
 import {H, S, soft} from '../state.js';
 import {logoImg} from '../logos.js';
+import {customLogo} from '../custom.js';
 import {imgTag, modeSeg, noteHTML, sizeCtl} from '../ui.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
 import {$, $$, ICON, esc, fmtDate, fmtN, nz, pct} from '../util.js';
@@ -35,7 +36,7 @@ export function renderSetHero(){
  const logo=logoImg({...d,...set,id,name:d.name,logo:d.logo||set.logo});
  const stat=(k,label,own,tot)=>`<button type="button" class="hstat ${m===k?'active':''}" data-act="mode" data-v="${k}" style="background:none;border:0;text-align:left;cursor:pointer;padding:0"><div class="lbl">${label}</div><div class="count"><strong>${fmtN(own)}</strong><span>${tot==null?'de …':'de '+fmtN(tot)}</span></div><div class="bar ${tot>0&&own>=tot?'done':''}"><i style="width:${pct(own,tot)}%"></i></div></button>`;
  el.innerHTML=`<div class="hero">
-  <div class="hlogo">${logo}</div>
+  <div class="hlogo">${logo}<span class="logoctl"><button type="button" class="btn small" data-act="upload" data-kind="logo" data-id="${esc(id)}">${customLogo(id)?'Trocar logo':'Enviar logo'}</button>${customLogo(id)?`<button type="button" class="btn small" data-act="upload-rm" data-kind="logo" data-id="${esc(id)}">Remover</button>`:''}</span></div>
   <div class="htext"><h1 style="font-size:clamp(26px,3vw,36px)">${esc(d.name)}</h1>
    <p class="lead" style="margin-top:4px">${se?esc(se.name)+'. ':''}${d.releaseDate?'Lançada em '+fmtDate(d.releaseDate)+'. ':''}${fmtN(st.total)} cartas no total, ${fmtN(st.tot)} numeradas.</p></div>
   <div class="hstats">${stat('set','Set (cartas numeradas)',st.own,st.tot)}${stat('master','Master Set',st.ownM,st.masterTot)}</div></div>`;
@@ -94,7 +95,7 @@ export function slotHTML(c,fin){
  const on=q>0;
  const chip=fin&&fin!=='normal'?`<span class="chip ${fin==='reverse'?'R':'H'}">${fin==='reverse'?'Reverse':'Holo'}</span>`:'';
  return `<div class="slot ${on?'on':'off'}" data-act="open" data-id="${esc(c.id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, número ${esc(c.localId)}${fin?', '+FIN_LABEL[fin]:''}, ${on?'tenho':'não tenho'}">
-  <div class="pocket">${imgTag(c.image,'low',c.name)}${chip}${q>1?`<span class="qty">×${q}</span>`:''}
+  <div class="pocket">${imgTag(c.image,'low',c.name,undefined,c.id)}${chip}${q>1?`<span class="qty">×${q}</span>`:''}
    <button type="button" class="tg" data-act="tog" data-id="${esc(c.id)}" ${fin?`data-fin="${fin}"`:''} aria-label="${on?'Remover da coleção':'Marcar como tenho'}">${ICON.check}</button></div>
   <div class="num"><b>${esc(c.name)}</b><span>${esc(c.localId)}</span></div></div>`;
 }

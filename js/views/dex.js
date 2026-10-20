@@ -61,7 +61,7 @@ export function renderDex(){
  const d=$('#dialog');
  const name=titleOf(st.dex);
  d.innerHTML=`<div class="dexhead"><div class="dexart"><img alt="" src="${dexArt(st.dex)}" data-role="dexart"></div><div><h2>${esc(name||'Pokémon')} <small>#${pad4(st.dex)}</small></h2><p class="lead" id="dexsum" style="margin:0"></p></div></div>
-  <div class="row" style="margin:12px 0"><input class="field" id="dq" type="search" placeholder="Buscar por nome ou expansão" aria-label="Buscar carta" value="${esc(st.q)}" style="flex:1 1 200px">
+  <div class="row" style="margin:12px 0"><input class="field" id="dq" type="search" placeholder="Nome, número ou expansão. Ex.: bulbasaur (001/132)" aria-label="Buscar carta" value="${esc(st.q)}" style="flex:1 1 200px">
    <label class="size"><input type="checkbox" data-dexonly ${st.only?'checked':''}> Só as que tenho</label></div>
   <div id="dexgrid"></div>
   <div class="actions"><span class="lbl2">Toque numa carta para marcar ou desmarcar.</span><button class="btn primary" type="button" data-act="dex-close">Concluir</button></div>`;
@@ -75,22 +75,47 @@ export function renderDexGrid(){
  if(!all){g.innerHTML='<p class="lead">Buscando as cartas na TCGdex…</p>';if(sum)sum.textContent='';return;}
  const own=all.filter(c=>isOwned(c.id)).length;
  if(sum)sum.textContent=`${fmtN(all.length)} cartas encontradas, você tem ${fmtN(own)}.`;
- const q=nz(st.q);
+ const q=parseQuery(st.q);
  const list=all.filter(c=>{
   if(st.only&&!isOwned(c.id))return false;
-  if(!q)return true;
-  const set=S.setMap[c.setId];
-  return nz(c.name).includes(q)||nz(set?set.name:c.setId).includes(q)||nz(c.setId).includes(q);
+  return matchQuery(c,q);
  });
  if(!all.length){g.innerHTML='<div class="empty"><h3>Nenhuma carta encontrada</h3><p>A TCGdex não tem cartas catalogadas para este Pokémon.</p></div>';return;}
  if(!list.length){g.innerHTML='<div class="empty"><h3>Nada por aqui</h3><p>Ajuste a busca ou o filtro.</p></div>';return;}
  g.innerHTML=`<div class="dgrid">${list.map(c=>{
   const q2=ownedQty(c.id);const on=q2>0;const set=S.setMap[c.setId];
   return`<div class="dtile ${on?'on':'off'}" data-act="dex-toggle" data-id="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(c.name)}, ${esc(set?set.name:c.setId)}, ${on?'tenho':'não tenho'}">
-   <div class="pocket">${imgTag(c.image,'low',c.name)}${q2>1?`<span class="qty">×${q2}</span>`:''}<span class="dchk" aria-hidden="true">✓</span></div>
-   <div class="num"><b>${esc(c.name)}</b></div><div class="num"><span>${esc(set?set.name:c.setId)} · ${esc(c.localId)}</span></div>
+   <div class="pocket">${imgTag(c.image,'low',c.name,undefined,c.id)}${q2>1?`<span class="qty">×${q2}</span>`:''}<span class="dchk" aria-hidden="true">✓</span></div>
+   <div class="num"><b>${esc(c.name)}</b></div><div class="num"><span>${esc(set?set.name:c.setId)} · ${esc(numLabel(c))}</span></div>
    <button type="button" class="btn small dd" data-act="open" data-id="${esc(c.id)}" data-binder="${esc(st.binderId)}" data-dex="${st.dex}">Detalhes</button></div>`;}).join('')}</div>`;
 }
+
+/* Busca estilo Liga Pokémon: "bulbasaur (001/132)", "bulbasaur 1", "151/165", "mew ex", nome da expansão. */
+export function parseQuery(raw){
+ let t=String(raw||'');let num=null,tot=null;
+ const m=t.match(/(\d+)\s*\/\s*(\d+)/);
+ if(m){num=parseInt(m[1],10);tot=parseInt(m[2],10);t=t.replace(m[0],' ');}
+ else{const n=t.match(/(?:^|[\s(#])(\d{1,4})(?=$|[\s)])/);if(n){num=parseInt(n[1],10);t=t.replace(n[0],' ');}}
+ const words=nz(t.replace(/[()\[\]#,]/g,' ')).split(/\s+/).filter(Boolean);
+ return{words,num,tot};
+}
+export function officialOf(setId){
+ const d=S.setd[setId]||{};const s=S.setMap[setId]||{};
+ const cc=d.cardCount||s.cardCount||{};
+ return cc.official||cc.total||0;
+}
+export function matchQuery(c,q){
+ if(q.num!==null){
+  const ln=/^\d+$/.test(String(c.localId))?parseInt(c.localId,10):null;
+  if(ln!==q.num)return false;
+ }
+ if(q.tot!==null){const o=officialOf(c.setId);if(o&&o!==q.tot)return false;}
+ if(!q.words.length)return true;
+ const set=S.setMap[c.setId];
+ const hay=nz(c.name)+' '+nz(set?set.name:'')+' '+nz(c.setId);
+ return q.words.every(w=>hay.includes(w));
+}
+const numLabel=c=>{const o=officialOf(c.setId);return o&&/^\d+$/.test(String(c.localId))?`${c.localId}/${String(o).padStart(String(c.localId).length,'0')}`:c.localId;};
 export function dexToggle(id){
  toggleOwn(id);
  if(!isOwned(id))return;

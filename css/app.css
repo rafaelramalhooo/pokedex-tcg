@@ -304,3 +304,17 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .dtile.on .dchk{background:var(--ok);border-color:var(--ok);color:#fff}
 .dtile .dd{margin-top:4px;height:30px;font-size:12.5px;justify-content:center}
 .dialog .actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+
+/* logo sem imagem: bloco com o nome e a cor da série */
+.lgfb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;height:100%;min-height:44px;padding:6px 10px;border-radius:8px;text-align:center;background:linear-gradient(135deg,hsl(var(--h) 70% 55%/.22),hsl(var(--h) 70% 55%/.07));border:1px solid hsl(var(--h) 45% 55%/.35);color:var(--ink)}
+.lgfb b{font:800 15px/1.1 var(--display);font-stretch:80%;overflow-wrap:anywhere}
+.lgfb small{font-size:11px;font-weight:700;color:var(--ink-2);letter-spacing:.03em;text-transform:uppercase}
+.set .noimg.lgfb b{font-size:17px}
+.hero .hlogo{flex-direction:column;gap:6px;height:auto;min-height:96px}
+.logoctl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+/* carta sem imagem: cartão com nome e número */
+.ph[data-noimg]{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;height:100%;aspect-ratio:63/88;border-radius:6px;background:repeating-linear-gradient(135deg,var(--line-2) 0 8px,var(--pocket) 8px 16px);border:1px dashed var(--ink-3);padding:10px}
+.ph[data-noimg] b{font-size:13px;font-weight:800;color:var(--ink-2);line-height:1.15}
+.ph[data-noimg] small{font-size:12px;color:var(--ink-3);font-weight:700}
+.tcard .ph[data-noimg] b{font-size:22px}
+.pocket .ph[data-noimg]{aspect-ratio:auto;border:0;border-radius:0}

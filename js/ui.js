@@ -2,6 +2,7 @@
 import {S} from './state.js';
 import {logoFail} from './logos.js';
 import {$, esc} from './util.js';
+import {customCard} from './custom.js';
 
 let toastT=null;
 export function toast(msg,label,fn){
@@ -13,9 +14,15 @@ export function toast(msg,label,fn){
  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),6500);
 }
 
-export function imgTag(base,q,name,role){
- if(!base)return `<div class="ph">${esc(name||'')}</div>`;
- return `<img loading="lazy" decoding="async" alt="" src="${esc(base)}/${q}.webp" data-b="${esc(base)}" data-q="${q}" data-name="${esc(name||'')}"${role?` data-role="${role}"`:''}>`;
+/* Imagem da carta. Sem imagem na TCGdex: usa a foto enviada por você (se houver) ou um cartão com nome e número. */
+export function imgTag(base,q,name,role,id){
+ const own=id&&customCard(id);
+ if(own)return `<img decoding="async" alt="" src="${esc(own)}" data-role="own">`;
+ if(!base){
+  const b=id&&S.briefs[id];
+  return `<div class="ph" data-noimg="1"><b>${esc(name||'')}</b>${b&&b.localId?`<small>${esc(b.localId)}</small>`:''}</div>`;
+ }
+ return `<img loading="lazy" decoding="async" alt="" src="${esc(base)}/${q}.webp" data-b="${esc(base)}" data-q="${q}" data-name="${esc(name||'')}"${id?` data-id="${esc(id)}"`:''}${role?` data-role="${role}"`:''}>`;
 }
 document.addEventListener('error',e=>{
  const t=e.target;
@@ -24,7 +31,8 @@ document.addEventListener('error',e=>{
  if(t.dataset.role==='sym'||t.dataset.role==='dexart'){t.remove();return;}
  const n=+t.dataset.t||0,b=t.dataset.b||'';
  if(n===0&&b.includes('/pt/')){t.dataset.t=1;t.src=`${b.replace('/pt/','/en/')}/${t.dataset.q}.webp`;return;}
- const d=document.createElement('div');d.className='ph';d.textContent=t.dataset.name||'';t.replaceWith(d);
+ if(t.dataset.role==='own')return;
+ const d=document.createElement('div');d.className='ph';d.dataset.noimg='1';const bb=document.createElement('b');bb.textContent=t.dataset.name||'';d.appendChild(bb);t.replaceWith(d);
 },true);
 
 

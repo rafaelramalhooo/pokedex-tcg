@@ -1,6 +1,6 @@
 /* Tela de catálogo e ajustes, backup. */
 import {catalogCoverage} from '../catalog.js';
-import {DB, saveBinders, saveSettings} from '../db.js';
+import {DB, saveBinders, saveKV, saveSettings} from '../db.js';
 import {H, S, soft} from '../state.js';
 import {noteHTML, toast} from '../ui.js';
 import {$, esc, fmtN, pct} from '../util.js';
@@ -34,7 +34,7 @@ export function renderSettings(){
   <a class="btn" href="#/expansoes">Escolher expansões</a>
  </section>
  <section class="panel-sec"><h2>Logos das expansões</h2>
-  <p>Cada logo é procurado em vários endereços (catálogo, versão em inglês, montado pela série) e, se nada servir, aparece o símbolo ou o nome. O diagnóstico testa todas as expansões e lista as que ficaram sem logo.</p>
+  <p>Cada logo é procurado em vários endereços (catálogo, versão em inglês, montado pela série) e, se nada servir, aparece um bloco com o nome. O diagnóstico testa todas as expansões e lista as que ficaram sem logo e as que têm cartas sem imagem.</p>
   <div class="row"><button class="btn" type="button" data-act="check-logos" ${S.logoDiag&&S.logoDiag.running?'disabled':''}>${S.logoDiag&&S.logoDiag.running?`Verificando: ${S.logoDiag.done} de ${S.logoDiag.total}`:'Verificar logos'}</button></div>
   ${logoDiagHTML()}
  </section>
@@ -62,11 +62,16 @@ export function renderSettings(){
 }
 function logoDiagHTML(){
  const d=S.logoDiag;if(!d||d.running||!d.total)return '';
- if(!d.missing.length)return noteHTML('',`Todos os ${d.total} logos foram encontrados${d.viaAlt?`; ${d.viaAlt} só por um endereço alternativo`:''}.`);
- return noteHTML('warn',`${d.missing.length} de ${d.total} expansões ficaram sem logo${d.viaAlt?` (${d.viaAlt} outras foram resolvidas por endereço alternativo)`:''}. Elas aparecem com o símbolo ou o nome:<br>${d.missing.map(m=>esc(m.name)+(m.hasSymbol?'':' (sem símbolo)')).join(' · ')}`);
+ let h='';
+ if(!d.missing.length)h+=noteHTML('',`Todos os ${d.total} logos foram encontrados${d.viaAlt?`; ${d.viaAlt} só por um endereço alternativo`:''}.`);
+ else h+=noteHTML('warn',`${d.missing.length} de ${d.total} expansões ficaram sem logo${d.viaAlt?` (${d.viaAlt} outras foram resolvidas por endereço alternativo)`:''}. Elas aparecem como um bloco com o nome e a cor da série. Abra a expansão e use <strong>Enviar logo</strong> para colocar o seu:<br>${d.missing.map(m=>`<a href="#/set/${encodeURIComponent(m.id)}">${esc(m.name)}</a>`).join(' · ')}`);
+ if(d.noCards&&d.noCards.length)h+=noteHTML('warn',`${d.noCards.length} ${d.noCards.length===1?'expansão tem':'expansões têm'} cartas sem imagem na TCGdex (a fonte não tem a arte). Elas aparecem como um cartão com nome e número; em cada carta, o painel de detalhes tem <strong>Enviar foto da carta</strong>:<br>${d.noCards.map(m=>`<a href="#/set/${encodeURIComponent(m.id)}">${esc(m.name)}</a> (${m.miss} de ${m.total})`).join(' · ')}`);
+ else if(d.unknownCards===d.total)h+=noteHTML('',`Ainda não há listas de cartas baixadas para checar as imagens das cartas.`);
+ if(d.unknownCards&&d.unknownCards<d.total)h+=noteHTML('',`As imagens das cartas só foram conferidas nas expansões já carregadas (${d.total-d.unknownCards} de ${d.total}).`);
+ return h;
 }
 export function exportBackup(){
- const data={app:'pokedex-tcg',version:1,exportedAt:new Date().toISOString(),collection:S.collection,binders:S.binders,settings:S.settings};
+ const data={app:'pokedex-tcg',version:1,exportedAt:new Date().toISOString(),collection:S.collection,binders:S.binders,settings:S.settings,custom:S.custom};
  const a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
  a.download=`pokedex-backup-${new Date().toISOString().slice(0,10)}.json`;
@@ -82,6 +87,7 @@ export async function importBackup(file){
   for(const id in S.collection)await DB.put('coll',id,S.collection[id]);
   S.binders=d.binders||[];await saveBinders();
   Object.assign(S.settings,d.settings||{});await saveSettings();
+  if(d.custom){S.custom=Object.assign({logos:{},cards:{}},d.custom);await saveKV('custom',S.custom);}
   toast('Backup importado.');H.route();
  }catch(e){toast('Esse arquivo não parece ser um backup deste app.');}
 }

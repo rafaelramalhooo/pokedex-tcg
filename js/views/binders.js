@@ -101,7 +101,7 @@ export function dexSlotHTML(x,binderId){
  const c=S.cards[x.rep]||{};const br=S.briefs[x.rep]||{id:x.rep,name:c.name||x.rep,image:c.image};
  const on=x.owned;
  return`<div class="slot ${on?'on':'off'}" ${attrs} aria-label="${esc(label)}, ${on?'tenho':'não tenho'}. Abrir a lista de cartas">
-  <div class="pocket">${imgTag(br.image,'low',br.name)}<span class="dexno">#${pad4(x.dex)}</span></div>
+  <div class="pocket">${imgTag(br.image,'low',br.name,undefined,br.id||x.rep)}<span class="dexno">#${pad4(x.dex)}</span></div>
   <div class="num"><b>${esc(nm||br.name)}</b><span>#${pad4(x.dex)}</span></div></div>`;
 }
 export function slotHTMLCtx(c,binderId){

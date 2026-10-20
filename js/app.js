@@ -3,6 +3,7 @@ import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loa
 import {scopeIds} from './rules.js';
 import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl} from './views/book.js';
 import {checkLogos} from './logos.js';
+import {pickImage, removeCustom} from './custom.js';
 import {pickSave, pickSerie, pickToggle, renderPicker, viewPicker} from './views/picker.js';
 import {visibleSets} from './catalog.js';
 import {saveNote, setFin, toggleOwn} from './collection.js';
@@ -54,6 +55,8 @@ const ACT={
  'pick-toggle':t=>pickToggle(t.dataset.id),
  'pick-serie':t=>pickSerie(+t.dataset.gi,t.dataset.on==='1'),
  'pick-save':()=>pickSave(),
+ upload:t=>pickImage(t.dataset.kind,t.dataset.id,()=>imagesChanged(t.dataset.kind==='logo'?'Logo guardado.':'Foto guardada.'),()=>toast('Não consegui ler essa imagem. Tente um arquivo JPG, PNG ou WEBP.')),
+ 'upload-rm':async t=>{await removeCustom(t.dataset.kind,t.dataset.id);imagesChanged('Imagem removida.');},
  'check-logos':()=>checkLogos(visibleSets()),
  'sync-start':()=>runSync(),
  'sync-stop':()=>{S.sync.stop=true;},
@@ -68,6 +71,10 @@ const ACT={
   toast('Catálogo apagado. Atualizando a lista de expansões…');fetchCatalog();
  }
 };
+function imagesChanged(msg){
+ viewCache.clear();const p=$('#panel');if(p)delete p.dataset.id;
+ refreshAll();if(S.cur&&S.cur.soft)S.cur.soft();toast(msg);
+}
 document.addEventListener('click',e=>{
  const m=e.target.closest('#modal');
  if(m&&e.target===m){closeModal();return;}
@@ -158,6 +165,7 @@ async function boot(){
   if(!Array.isArray(S.settings.legalMarks))S.settings.legalMarks=['H','I','J'];
   S.logoOk=(await DB.get('kv','logoOk'))||{};
   S.dexNames=(await DB.get('kv','dexNames'))||{};
+  S.custom=Object.assign({logos:{},cards:{}},(await DB.get('kv','custom'))||{});
   /* primeira vez com a seleção de expansões: começa pelas que já têm cartas marcadas */
   if(!Array.isArray(S.settings.mySets)){
    S.settings.mySets=[...new Set(Object.values(S.collection).map(e=>e.s).filter(Boolean))];

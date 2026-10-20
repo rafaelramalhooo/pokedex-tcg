@@ -4,6 +4,7 @@ import {COND, FIN, FIN_LABEL, LANGS} from '../constants.js';
 import {H, S} from '../state.js';
 import {imgTag, noteHTML} from '../ui.js';
 import {dexModel} from '../rules.js';
+import {customCard} from '../custom.js';
 import {$, esc} from '../util.js';
 
 export function openPanel(id,ctx){
@@ -67,12 +68,13 @@ export function renderPanel(failed){
   ${rows}
   <div style="margin-top:14px"><label class="lbl2" for="note">Observações</label><textarea class="field" id="note" rows="3" data-id="${esc(id)}" placeholder="Ex.: comprada em feira, assinatura, ponto de dobra">${esc(e?e.n:'')}</textarea></div>
   ${dexPick(ctx,id)}
+  ${photoCtl(id,!!image)}
   ${manual?`<div style="margin-top:14px"><button class="btn danger" type="button" data-act="unbind" data-id="${esc(id)}">Tirar do fichário</button></div>`:''}`;
  if(p.dataset.id===id&&$('.pinfo',p)){
   $('.phead',p).outerHTML=phead;$('.pinfo',p).innerHTML=info;
  }else{
   p.dataset.id=id;
-  p.innerHTML=`<div class="inner">${phead}<div class="pgrid"><div class="pcol"><div class="tilt" aria-label="Carta em destaque. Passe o mouse ou arraste para inclinar."><div class="tcard">${imgTag(image,'high',name)}<span class="glare"></span></div></div><p class="phint">Passe o mouse ou arraste a carta.</p></div><div class="pinfo">${info}</div></div></div>`;
+  p.innerHTML=`<div class="inner">${phead}<div class="pgrid"><div class="pcol"><div class="tilt" aria-label="Carta em destaque. Passe o mouse ou arraste para inclinar."><div class="tcard">${imgTag(image,'high',name,undefined,id)}<span class="glare"></span></div></div><p class="phint">Passe o mouse ou arraste a carta.</p></div><div class="pinfo">${info}</div></div></div>`;
   p.scrollTop=0;
  }
  p.classList.add('open');sc.classList.add('on');
@@ -92,5 +94,13 @@ function dexPick(ctx,id){
  const auto=!(b.pick&&b.pick[ctx.dex]);
  return`<div class="fin" style="margin-top:14px"><div class="fin-head"><h3>Carta deste espaço</h3><button type="button" class="btn small" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" ${auto?'disabled':''}>Automática</button></div>
   <p class="lbl2" style="margin:0 0 8px">${auto?'Hoje vale a melhor carta que você tem. ':''}Toque em uma para fixá-la neste espaço.</p>
-  <div class="dexcand">${slot.cand.slice(0,36).map(cid=>{const c=S.cards[cid]||{};const sel=cid===slot.rep;return`<button type="button" class="cand ${sel?'sel':''}" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" data-id="${esc(cid)}" aria-pressed="${sel}" aria-label="${esc(c.name||cid)}">${imgTag(c.image,'low',c.name)}</button>`;}).join('')}</div></div>`;
+  <div class="dexcand">${slot.cand.slice(0,36).map(cid=>{const c=S.cards[cid]||{};const sel=cid===slot.rep;return`<button type="button" class="cand ${sel?'sel':''}" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" data-id="${esc(cid)}" aria-pressed="${sel}" aria-label="${esc(c.name||cid)}">${imgTag(c.image,'low',c.name,undefined,cid)}</button>`;}).join('')}</div></div>`;
+}
+
+/* Foto própria da carta: aparece sempre, mas com destaque quando a TCGdex não tem imagem. */
+function photoCtl(id,hasImg){
+ const own=customCard(id);
+ return`<div class="fin" style="margin-top:14px"><div class="fin-head"><h3>Foto da carta</h3></div>
+  <p class="lbl2" style="margin:0 0 8px">${own?'Você enviou uma foto para esta carta. Ela fica guardada só neste navegador.':hasImg?'A imagem vem da TCGdex. Se preferir, envie uma foto sua para ocupar o lugar dela.':'A TCGdex não tem imagem desta carta. Envie uma foto da sua carta para ela aparecer no app.'}</p>
+  <div class="row"><button type="button" class="btn small ${!hasImg&&!own?'primary':''}" data-act="upload" data-kind="card" data-id="${esc(id)}">${own?'Trocar foto':'Enviar foto da carta'}</button>${own?`<button type="button" class="btn small" data-act="upload-rm" data-kind="card" data-id="${esc(id)}">Remover minha foto</button>`:''}</div></div>`;
 }
