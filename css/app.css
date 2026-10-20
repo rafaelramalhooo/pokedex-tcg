@@ -232,7 +232,7 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .bempty{aspect-ratio:245/337;border:1.5px dashed var(--line);border-radius:9px}
 .bpage .slot{gap:3px;min-width:0}
 .bpage .slot .num{font-size:11px}
-.bpage .slot .num span{display:none}
+.bpage .slot .num span.no{font-size:10px}
 .bpage .tg{width:24px;height:24px;right:4px;top:4px}
 .bpage .qty{font-size:11px;right:4px;bottom:4px}
 @media (max-width:899px){.wide-only{display:none!important}.booklbl{min-width:0}}
@@ -368,3 +368,15 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .set .logo .lgfb small{font-size:9.5px}
 
 .tabs.scope{margin-bottom:8px}
+
+/* legenda: número + bandeira */
+.slot .num{align-items:center}
+.slot .num .no,.dtile .num .fl{display:inline-flex;align-items:center;gap:5px;flex:none;white-space:nowrap}
+.flag{display:block;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.18);flex:none}
+.dtile .num{justify-content:space-between;gap:6px}
+.dtile.here .pocket{border-color:var(--ok);border-width:3px}
+.dtile.have .pocket{border-color:var(--ink-3);border-width:2px}
+.qty.havechip{background:#e8edf7;color:#2b3b63}
+.qty.here{background:var(--ok);color:#fff}
+.slot.dexempty.hashave .pocket{border-color:var(--ink-3)}
+.slot.dexempty .pocket .qty{left:50%;right:auto;transform:translateX(-50%);bottom:8px;top:auto;white-space:nowrap}

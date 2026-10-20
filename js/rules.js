@@ -95,11 +95,11 @@ export function dexModel(b){
    /* o espaço só mostra uma carta se você a tem; sem carta, volta a arte do Pokémon */
    let rep=null;
    const ow=cand.filter(isOwned);
+   /* só vale a carta que você colocou neste espaço; as outras que você tem ficam como sugestão */
    if(b.pick&&b.pick[n]&&ow.includes(b.pick[n]))rep=b.pick[n];
-   else if(ow.length)rep=ow[ow.length-1];
    let name='';
    cand.forEach(id=>{const nm=cleanName((S.cards[id]||{}).name);if(nm&&(!name||nm.length<name.length))name=nm;});
-   slots.push({dex:n,gen:g,name,rep,cand,owned:cand.some(isOwned)});
+   slots.push({dex:n,gen:g,name,rep,cand,have:ow,owned:!!rep});
   }
  });
  return slots;

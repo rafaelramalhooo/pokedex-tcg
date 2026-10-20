@@ -301,6 +301,18 @@ with sync_playwright() as p:
     page.locator('.gc[data-ed-act="bgen"][data-g="1"]').click()
     page.locator('[data-ed-act="save"]').click(); page.wait_for_selector("#bgrid .slot")
     check(page.locator("#bgrid .slot").count() == 151, "Pokédex da 1ª geração tem 151 espaços")
+    # a Pokédex não se preenche sozinha com cartas marcadas em outros fichários
+    check(page.locator("#bgrid .slot.on").count() == 0 and page.locator("#bgrid .slot.dexempty").count() == 151, "Dex começa vazia, mesmo com cartas na coleção")
+    check(page.locator("#bgrid .slot.dexempty.hashave").count() == 4, "espaços com carta minha em outro lugar avisam 'Você tem'")
+    page.locator('#bgrid .slot.dexempty.hashave').first.click(); page.wait_for_selector("#dexgrid .dtile")
+    check(page.locator("#dexgrid .dtile.have").count() == 1 and page.locator("#dexgrid .dtile.here").count() == 0, "janela abre só nas que tenho, sugerindo trazer")
+    page.locator("#dexgrid .dtile.have").first.click(); page.wait_for_timeout(300)
+    check(page.locator("#dexgrid .dtile.here").count() == 1, "tocar traz a carta para este espaço")
+    page.locator("#dexgrid .dtile.here").first.click(); page.wait_for_timeout(300)
+    check(page.locator("#dexgrid .dtile.here").count() == 0 and page.evaluate("import('./js/collection.js').then(m=>Object.keys(m.groupBySet()).length)") >= 1, "tocar de novo tira do espaço e a carta continua na coleção")
+    page.keyboard.press("Escape"); page.wait_for_timeout(200)
+    page.evaluate("""Promise.all([import('./js/state.js'),import('./js/rules.js'),import('./js/db.js')]).then(([st,r,d])=>{const b=st.S.binders.find(x=>x.name==='Minha Pokédex 1ª geração');b.pick=b.pick||{};r.dexModel(b).forEach(x=>{if(x.have.length)b.pick[x.dex]=x.have[0];});d.saveBinders();st.viewCache.clear();st.refreshAll();})""")
+    page.wait_for_timeout(400)
     check(page.locator("#bgrid .slot.dexempty").count() == 147, "sem carta que você tenha, o espaço mostra a arte do Pokémon (147)")
     check(page.locator("#bgrid .slot.on").count() == 4, "4 espaços preenchidos com cartas que tenho")
     check("espaços preenchidos" in page.locator("#bsum").inner_text(), "resumo fala em espaços")
@@ -333,7 +345,7 @@ with sync_playwright() as p:
     page.fill("#dq", "")
     page.locator('#dexgrid .dtile').nth(0).locator(".dd").click()
     page.wait_for_selector("#panel.open .cand", timeout=5000)
-    check(page.locator("#panel .cand").count() == 3, "detalhes abrem o popup com as 3 cartas do espaço #2")
+    check(page.locator("#panel .cand").count() == 1, "detalhes abrem o popup só com as cartas que tenho do espaço #2")
     page.locator('#panel .cand').nth(0).click(); page.wait_for_timeout(300)
     check(page.locator('#panel .cand[aria-pressed="true"]').count() == 1, "carta fixada no espaço")
     page.keyboard.press("Escape"); page.wait_for_timeout(300)
@@ -556,7 +568,7 @@ with sync_playwright() as p:
     names2 = page.locator("#bgrid .slot .num b").all_inner_texts()
     check(names2 == list(reversed(names)) or names2 == sorted(names2, reverse=True), f"decrescente inverte a ordem ({names2[:3]})")
     page.select_option('select[data-bsort="f"]', "number"); page.locator('[data-act="bsortdir"]').click(); page.wait_for_timeout(300)
-    nums = [int(x) for x in page.locator("#bgrid .slot .num span").all_inner_texts() if x.isdigit()]
+    nums = [int(x.split("/")[0]) for x in page.locator("#bgrid .slot .num span.no").all_inner_texts() if x.split("/")[0].strip().isdigit()]
     check(nums == sorted(nums) and len(nums) > 1, f"ordenar por número crescente ({nums[:5]})")
     page.reload(); page.wait_for_selector("#bgrid .slot")
     check(page.locator('select[data-bsort="f"]').input_value() == "number", "ordem guardada no fichário")
@@ -639,6 +651,15 @@ with sync_playwright() as p:
     codes = [page.evaluate(f"fetch('{i['src']}').then(r=>r.status)") for i in mf["icons"]]
     check(all(c == 200 for c in codes), "ícones do app existem")
     check(page.evaluate("fetch('sw.js').then(r=>r.status)") == 200, "service worker disponível")
+    # legenda com número e bandeira; busca em tamanho grande
+    page.goto(APP + "#/set/sv01"); page.wait_for_selector(".slot"); page.wait_for_timeout(400)
+    cap = page.locator(".slot .num").first
+    check(cap.locator("span.no svg.flag").count() == 1 and "/" in cap.locator("span.no").inner_text(), f"legenda tem número e bandeira ({cap.locator('span.no').inner_text()!r})")
+    page.evaluate("document.querySelector('#sq')&&0")
+    tile0 = page.locator(".slot").first.bounding_box()["width"]
+    page.fill("#sq", "2"); page.wait_for_timeout(400)
+    check(page.locator(".slot").count() >= 1 and page.locator(".slot").first.bounding_box()["width"] >= max(tile0, 200), "ao buscar, a carta abre maior")
+    page.screenshot(path=str(ROOT/"tests/27_busca_grande.png"))
     # filtro "Com cartas minhas"
     page.goto(APP + "#/"); page.wait_for_selector(".set"); page.wait_for_timeout(500)
     tot = page.locator(".set").count()

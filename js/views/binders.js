@@ -11,6 +11,7 @@ import {$, $$, ICON, esc, fmtN, pct} from '../util.js';
 import {slotHTML} from './set.js';
 import {dexArt, dexName, loadDexNames, matchQuery, pad4, parseQuery} from './dex.js';
 import {nz} from '../util.js';
+import {capRight, numLabel} from '../cardlabel.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
 
 export function viewBinders(){
@@ -115,8 +116,8 @@ export function renderBinderBody(){
   const list=r.dex.filter(x=>(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned))&&slotMatches(x,q));
   S.cur.nav=list.filter(x=>x.rep).map(x=>({id:x.rep,dex:x.dex}));
   const shown=list.slice(0,S.ui.binderShown);
-  if(list.length&&isBook()){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
-  g.innerHTML=list.length?`<div class="cards">${shown.map(x=>dexSlotHTML(x,b.id)).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`
+  if(list.length&&isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
+  g.innerHTML=list.length?`<div class="cards"${noQ(q)?'':' style="--tile:230px"'}>${shown.map(x=>dexSlotHTML(x,b.id)).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`
    :`<div class="empty"><h3>Nada por aqui</h3><p>Ajuste o filtro.</p></div>`;
   return;
  }
@@ -128,9 +129,9 @@ export function renderBinderBody(){
   return;
  }
  S.cur.nav=list.map(id=>({id}));
- if(isBook()){g.innerHTML=bookHTML(list.map(id=>slotHTMLCtx(S.briefs[id]||{id,name:id,localId:''},b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
+ if(isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(id=>slotHTMLCtx(S.briefs[id]||{id,name:id,localId:''},b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
  const shown=list.slice(0,S.ui.binderShown);
- g.innerHTML=`<div class="cards">${shown.map(id=>{
+ g.innerHTML=`<div class="cards"${noQ(q)?'':' style="--tile:230px"'}>${shown.map(id=>{
   const br=S.briefs[id]||{id,name:id,localId:''};
   return slotHTMLCtx(br,b.id);
  }).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`;
@@ -153,12 +154,15 @@ export function dexSlotHTML(x,binderId){
  const nm=x.name||dexName(x.dex);
  const label=`Pokédex ${pad4(x.dex)}${nm?', '+nm:''}`;
  const attrs=`data-act="dex-open" data-dex="${x.dex}" data-binder="${esc(binderId)}" role="button" tabindex="0"`;
- if(!x.rep)return`<div class="slot off dexempty" ${attrs} aria-label="${esc(label)}, sem carta. Abrir a lista de cartas"><div class="pocket"><div class="dexph"><img alt="" loading="lazy" decoding="async" src="${dexArt(x.dex)}" data-role="dexart"><b>#${pad4(x.dex)}</b></div></div><div class="num dexname"><b>${esc(nm||'—')}</b></div></div>`;
+ if(!x.rep){
+  const h=(x.have||[]).length;
+  return`<div class="slot off dexempty ${h?'hashave':''}" ${attrs} aria-label="${esc(label)}, sem carta neste espaço${h?`. Você tem ${h} em outros fichários`:''}. Abrir a lista de cartas"><div class="pocket"><div class="dexph"><img alt="" loading="lazy" decoding="async" src="${dexArt(x.dex)}" data-role="dexart"><b>#${pad4(x.dex)}</b></div>${h?`<span class="qty havechip">Você tem ${h}</span>`:''}</div><div class="num dexname"><b>${esc(nm||'—')}</b></div></div>`;
+ }
  const c=S.cards[x.rep]||{};const br=S.briefs[x.rep]||{id:x.rep,name:c.name||x.rep,image:c.image};
  const on=x.owned;
  return`<div class="slot ${on?'on':'off'}" ${attrs} aria-label="${esc(label)}, ${on?'tenho':'não tenho'}. Abrir a lista de cartas">
   <div class="pocket">${imgTag(br.image,'low',br.name,undefined,br.id||x.rep)}<span class="dexno">#${pad4(x.dex)}</span></div>
-  <div class="num"><b>${esc(nm||br.name)}</b><span>#${pad4(x.dex)}</span></div></div>`;
+  <div class="num"><b>${esc(nm||br.name)}</b>${capRight({...br,id:br.id||x.rep})}</div></div>`;
 }
 export function slotHTMLCtx(c,binderId){
  return slotHTML(c,null).replace('data-act="open"',`data-act="open" data-binder="${esc(binderId)}"`);

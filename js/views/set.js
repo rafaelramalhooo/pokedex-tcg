@@ -7,6 +7,7 @@ import {logoImg} from '../logos.js';
 import {customLogo} from '../custom.js';
 import {imgTag, modeSeg, noteHTML, sizeCtl} from '../ui.js';
 import {modeOf} from '../modes.js';
+import {capRight} from '../cardlabel.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
 import {$, $$, ICON, esc, fmtDate, fmtN, nz, pct} from '../util.js';
 import {matchQuery, parseQuery} from './dex.js';
@@ -83,8 +84,8 @@ export function renderSetGrid(){
  });
  if(!filtered.length){g.innerHTML=`<div class="empty"><h3>Nenhuma carta aqui</h3><p>${S.ui.setFilter==='have'?'Você ainda não marcou cartas desta expansão.':'Ajuste o filtro ou a busca.'}</p></div>`;return;}
  S.cur.nav=filtered.filter((x,i)=>!i||x.c.id!==filtered[i-1].c.id).map(x=>({id:x.c.id}));
- if(isBook()){g.innerHTML=bookHTML(filtered.map(({c,f})=>slotHTML(c,f)),'set:'+id+':'+mode);return;}
- let html='<div class="cards">';let secShown=false;
+ if(isBook()&&!hasQ){g.innerHTML=bookHTML(filtered.map(({c,f})=>slotHTML(c,f)),'set:'+id+':'+mode);return;}
+ let html=`<div class="cards"${hasQ?' style="--tile:230px"':''}>`;let secShown=false;
  filtered.forEach(({c,f,sec})=>{
   if(sec&&!secShown){secShown=true;html+=`<div class="divider">Cartas secretas, numeradas acima de ${official}</div>`;}
   html+=slotHTML(c,f);
@@ -99,5 +100,5 @@ export function slotHTML(c,fin){
  return `<div class="slot ${on?'on':'off'}" data-act="open" data-id="${esc(c.id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, número ${esc(c.localId)}${fin?', '+FIN_LABEL[fin]:''}, ${on?'tenho':'não tenho'}">
   <div class="pocket">${imgTag(c.image,'low',c.name,undefined,c.id)}${chip}${q>1?`<span class="qty">×${q}</span>`:''}
    <button type="button" class="tg" data-act="tog" data-id="${esc(c.id)}" ${fin?`data-fin="${fin}"`:''} aria-label="${on?'Remover da coleção':'Marcar como tenho'}">${ICON.check}</button></div>
-  <div class="num"><b>${esc(c.name)}</b><span>${esc(c.localId)}</span></div></div>`;
+  <div class="num"><b>${esc(c.name)}</b>${capRight(c)}</div></div>`;
 }

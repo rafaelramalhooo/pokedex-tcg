@@ -85,17 +85,17 @@ export function renderPanel(failed){
 
 H.renderPanel=renderPanel;
 
-/* No fichário Pokédex: escolher qual carta representa o espaço. */
+/* No fichário Pokédex: o espaço só tem a carta que você colocou nele. */
 function dexPick(ctx,id){
  if(!ctx||!ctx.dex||!ctx.binderId)return'';
  const b=S.binders.find(x=>x.id===ctx.binderId);
  if(!b||b.mode!=='pokedex')return'';
  const slot=dexModel(b).find(x=>x.dex===ctx.dex);
- if(!slot||slot.cand.length<2)return'';
- const auto=!(b.pick&&b.pick[ctx.dex]);
- return`<div class="fin" style="margin-top:14px"><div class="fin-head"><h3>Carta deste espaço</h3><button type="button" class="btn small" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" ${auto?'disabled':''}>Automática</button></div>
-  <p class="lbl2" style="margin:0 0 8px">${auto?'Hoje vale a melhor carta que você tem. ':''}Toque em uma para fixá-la neste espaço.</p>
-  <div class="dexcand">${slot.cand.slice(0,36).map(cid=>{const c=S.cards[cid]||{};const sel=cid===slot.rep;return`<button type="button" class="cand ${sel?'sel':''}" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" data-id="${esc(cid)}" aria-pressed="${sel}" aria-label="${esc(c.name||cid)}">${imgTag(c.image,'low',c.name,undefined,cid)}</button>`;}).join('')}</div></div>`;
+ if(!slot||!slot.have.length)return'';
+ const picked=!!slot.rep;
+ return`<div class="fin" style="margin-top:14px"><div class="fin-head"><h3>Carta deste espaço</h3><button type="button" class="btn small" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" ${picked?'':'disabled'}>Tirar do espaço</button></div>
+  <p class="lbl2" style="margin:0 0 8px">${picked?'Tirar do espaço não apaga a carta da sua coleção. ':'Este espaço está vazio. '}Toque numa das cartas que você tem para colocá-la aqui.</p>
+  <div class="dexcand">${slot.have.slice(0,36).map(cid=>{const c=S.cards[cid]||S.briefs[cid]||{};const sel=cid===slot.rep;return`<button type="button" class="cand ${sel?'sel':''}" data-act="dex-pick" data-binder="${esc(b.id)}" data-dex="${ctx.dex}" data-id="${esc(cid)}" aria-pressed="${sel}" aria-label="${esc(c.name||cid)}">${imgTag(c.image,'low',c.name,undefined,cid)}</button>`;}).join('')}</div></div>`;
 }
 
 /* Foto própria da carta: aparece sempre, mas com destaque quando a TCGdex não tem imagem. */
