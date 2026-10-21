@@ -1,7 +1,7 @@
 /* Eventos, rotas e início do app. */
 import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
-import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade} from './views/trades.js';
+import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter} from './views/trades.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
 import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl, setImmersive} from './views/book.js';
@@ -126,6 +126,8 @@ document.addEventListener('change',e=>{
  if(t.dataset.bsort!==undefined){setBinderSort({f:t.value});return;}
  if(t.dataset.edsort&&S.ui.edit){S.ui.edit.b.sort={f:'default',dir:'asc',...(S.ui.edit.b.sort||{}),[t.dataset.edsort]:t.value};return;}
  if(t.dataset.dexonly!==undefined&&S.ui.dexdlg){S.ui.dexdlg.only=t.checked;renderDexGrid();return;}
+ if(t.dataset.pl==='set'){pullFilter('set',t.value);return;}
+ if(t.dataset.pl==='rep'){pullFilter('rep',t.checked);return;}
  if(t.dataset.exp==='scope'){exportScopeChanged(t.value);return;}
  if(t.dataset.bk){bookSetting(t);return;}
  if(t.classList&&t.classList.contains('bookrange')){bookTo(+t.value);return;}
@@ -151,6 +153,7 @@ document.addEventListener('input',e=>{
  if(t.id==='pq'){S.ui.pick.q=t.value;renderPicker();return;}
  if(t.id==='bq'){S.ui.binderQ=t.value;S.ui.binderShown=240;S.ui.page=0;renderBinderBody();return;}
  if(t.id==='sq'){S.ui.setQ=t.value;renderSetGrid();return;}
+ if(t.id==='plq'&&S.ui.pull){pullFilter('q',t.value);return;}
  if(t.id==='tra'&&S.ui.tradeAdd){S.ui.tradeAdd.q=t.value;renderAddTrade();return;}
  if(t.id==='ac'&&S.ui.adding){S.ui.adding.q=t.value;renderAddResults();return;}
  if(t.id==='tile'){setCfg({tile:+t.value});document.documentElement.style.setProperty('--tile',t.value+'px');return;}

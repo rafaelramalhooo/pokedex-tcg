@@ -5,11 +5,11 @@ import {flagHTML, langOf} from '../cardlabel.js';
 import {S, refreshAll} from '../state.js';
 import {imgTag, noteHTML, toast} from '../ui.js';
 import {$, ICON, esc, fmtN, live, nz} from '../util.js';
-import {KINDS, addItem, getTrade, imgOf, itemKey, newTrade, pullMine, saveTrades, setQty, totalQty, updateItem} from '../trades.js';
+import {KINDS, addItem, getTrade, imgOf, itemKey, newTrade, saveTrades, setQty, snapOf, totalQty, updateItem} from '../trades.js';
 import {openExport} from '../exportimg.js';
 
 const LANGS=[['pt','Português'],['en','Inglês'],['ja','Japonês'],['es','Espanhol'],['fr','Francês'],['de','Alemão'],['it','Italiano'],['ko','Coreano'],['zh','Chinês']];
-const kindChip=k=>`<span class="chip ${k==='want'?'H':'R'}">${KINDS[k]}</span>`;
+const kindChip=k=>`<span class="ttag ${k==='want'?'want':'sell'}">${KINDS[k]}</span>`;
 
 export function viewTrades(){
  S.cur={name:'trades',soft:renderTrades,refresh:renderTrades};
@@ -112,7 +112,82 @@ export function tradeExport(id){
  openExport({title:t.name,kindLabel:KINDS[t.kind],kindColor:t.kind==='want'?'#2F6FDE':'#D93A2B',scopes:null,build:()=>t.items.map(it=>({url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l}))});
 }
 
-const closeDlg=()=>{$('#modal').classList.remove('on');S.ui.tr=null;S.ui.tradeAdd=null;};
+/* ---------- Puxar das minhas cartas, com seleção ---------- */
+const PULL_MAX=120;
+function ownRows(){
+ const rows=[];
+ for(const id in S.collection){
+  const e=S.collection[id];
+  for(const f in e.f){
+   const x=e.f[f];if(!x||x.q<=0)continue;
+   const l=x.l||langOf(id);const sn=snapOf(id);
+   rows.push({key:itemKey({id,f,l}),id,f,l,own:x.q,sn,set:e.s||sn.s});
+  }
+ }
+ rows.sort((a,b)=>a.sn.n.localeCompare(b.sn.n,'pt',{numeric:true})||String(a.sn.no).localeCompare(String(b.sn.no),undefined,{numeric:true}));
+ return rows;
+}
+function pullDialog(id){
+ const t=getTrade(id);if(!t)return;
+ const rows=ownRows();
+ if(!rows.length){toast('Você ainda não marcou cartas na sua coleção para copiar.');return;}
+ S.ui.pull={id,q:'',set:'',rep:false,sel:{},rows};
+ const sets=[...new Set(rows.map(r=>r.set).filter(Boolean))].map(sid=>({sid,name:(S.setMap[sid]&&S.setMap[sid].name)||sid})).sort((a,b)=>a.name.localeCompare(b.name,'pt'));
+ $('#dialog').innerHTML=`<h2>Puxar das minhas cartas</h2><p class="lead">Marque as cartas que você quer copiar para “${esc(t.name)}”. Isso só copia: a sua coleção não muda.</p>
+  <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+   <div style="flex:1;min-width:180px"><label class="lbl2" for="plq">Buscar pelo nome</label><input class="field" id="plq" type="search" style="width:100%" placeholder="Ex.: Pikachu"></div>
+   <label class="size">Coleção <select class="field" data-pl="set"><option value="">Todas</option>${sets.map(x=>`<option value="${esc(x.sid)}">${esc(x.name)}</option>`).join('')}</select></label>
+   <label class="size"><input type="checkbox" data-pl="rep"> Só repetidas (×2 ou mais)</label></div>
+  <div class="row" style="gap:8px;margin-top:10px"><button class="btn small" type="button" data-act="pl-all">Marcar todas as visíveis</button><button class="btn small" type="button" data-act="pl-none">Limpar</button></div>
+  <div id="pullres" style="margin-top:12px"></div>
+  <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="pl-go" id="plgo">Copiar 0 cartas</button></div>`;
+ $('#modal').classList.add('on');setTimeout(()=>$('#plq').focus(),30);
+ renderPull();
+}
+function pullVisible(){
+ const st=S.ui.pull;const t=getTrade(st.id);const q=nz(st.q);
+ const inList=new Set(t.items.map(itemKey));
+ return st.rows.filter(r=>(!st.set||r.set===st.set)&&(!st.rep||r.own>=2)&&(!q||nz(r.sn.n).includes(q))).map(r=>({...r,dup:inList.has(r.key)}));
+}
+export function renderPull(){
+ const st=S.ui.pull;const el=$('#pullres');if(!st||!el)return;
+ const vis=pullVisible();const list=vis.slice(0,PULL_MAX);
+ el.innerHTML=vis.length?`<p class="lbl2">${fmtN(vis.length)} carta${vis.length===1?'':'s'}${vis.length>list.length?', mostrando as primeiras '+list.length+'. Use a busca ou o filtro para achar as outras':''}.</p><div class="cards" style="--tile:118px">${list.map(r=>{
+  const on=!r.dup&&st.sel[r.key]!=null;const q=on?st.sel[r.key]:r.own;
+  const tag=[r.f!=='normal'?(r.f==='reverse'?'Reverse':'Holo'):'',r.l&&r.l!=='xx'?r.l.toUpperCase():''].filter(Boolean).join(' · ');
+  return`<div class="slot ${on?'on':'off'} plslot" ${r.dup?'':`data-act="pl-toggle" data-key="${esc(r.key)}"`} role="button" tabindex="0" aria-label="${esc(r.sn.n)}, você tem ${r.own}, ${r.dup?'já na lista':on?'marcada':'não marcada'}">
+   <div class="pocket">${imgTag(r.sn.i,'low',r.sn.n,undefined,r.id)}${on?'<span class="tg on" aria-hidden="true">✓</span>':''}<span class="qty tq">${r.dup?'Já na lista':'×'+q}</span></div>
+   <div class="num"><b>${esc(r.sn.n)}</b><span>${esc(r.sn.no)}</span></div>${tag?`<div class="num"><span>${esc(tag)}</span></div>`:''}
+   ${on?`<div class="stepper"><button type="button" class="btn small" data-act="pl-dec" data-key="${esc(r.key)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="pl-inc" data-key="${esc(r.key)}" aria-label="Aumentar">+</button></div>`:`<div class="num"><span>Você tem ×${r.own}</span></div>`}</div>`;}).join('')}</div>`:'<p class="lead">Nenhuma carta com esse filtro.</p>';
+ const n=Object.keys(st.sel).length;const b=$('#plgo');if(b){b.textContent=`Copiar ${n} carta${n===1?'':'s'}`;b.disabled=!n;}
+}
+export function pullFilter(k,v){const st=S.ui.pull;if(!st)return;st[k]=v;renderPull();}
+function plToggle(key){
+ const st=S.ui.pull;if(!st)return;
+ const r=st.rows.find(x=>x.key===key);if(!r)return;
+ if(st.sel[key]!=null)delete st.sel[key];else st.sel[key]=r.own;
+ renderPull();
+}
+function plStep(key,d){
+ const st=S.ui.pull;if(!st)return;const r=st.rows.find(x=>x.key===key);if(!r||st.sel[key]==null)return;
+ st.sel[key]=Math.max(1,Math.min(r.own,st.sel[key]+d));renderPull();
+}
+function plAll(on){
+ const st=S.ui.pull;if(!st)return;
+ if(!on){st.sel={};}else pullVisible().forEach(r=>{if(!r.dup&&st.sel[r.key]==null)st.sel[r.key]=r.own;});
+ renderPull();
+}
+function plGo(){
+ const st=S.ui.pull;const t=st&&getTrade(st.id);if(!t)return;
+ let n=0;
+ for(const r of st.rows){const q=st.sel[r.key];if(q==null)continue;addItem(t,r.id,r.f,r.l,q);n++;}
+ if(!n)return;
+ saveTrades();closeDlg();S.ui.pull=null;
+ if(S.cur&&S.cur.refresh)S.cur.refresh();
+ toast(`Copiei ${n} carta${n===1?'':'s'} da sua coleção para a lista.`);
+}
+
+const closeDlg=()=>{$('#modal').classList.remove('on');S.ui.tr=null;S.ui.tradeAdd=null;S.ui.pull=null;};
 export const TRADE_ACT={
  'trade-new':()=>listDialog(newTrade('', 'sell'),true),
  'tr-kind':t=>{document.querySelectorAll('[data-act=tr-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));if(S.ui.tr)S.ui.tr.t.kind=t.dataset.v;},
@@ -138,11 +213,13 @@ export const TRADE_ACT={
   addItem(x,t.dataset.id,f,l||langOf(t.dataset.id),1);
   saveTrades();renderAddTrade();if(S.cur&&S.cur.refresh)S.cur.refresh();
  },
- 'trade-pull':t=>{
-  const x=getTrade(t.dataset.id);if(!x)return;
-  const n=pullMine(x);saveAndRefresh();
-  toast(n?`Copiei ${n} carta${n===1?'':'s'} da sua coleção para a lista.`:'Não encontrei cartas novas para copiar.');
- },
+ 'trade-pull':t=>pullDialog(t.dataset.id),
+ 'pl-toggle':t=>plToggle(t.dataset.key),
+ 'pl-inc':(t,e)=>{e&&e.stopPropagation();plStep(t.dataset.key,1);},
+ 'pl-dec':(t,e)=>{e&&e.stopPropagation();plStep(t.dataset.key,-1);},
+ 'pl-all':()=>plAll(true),
+ 'pl-none':()=>plAll(false),
+ 'pl-go':()=>plGo(),
  'trade-export':t=>tradeExport(t.dataset.id),
  'trade-inc':(t,e)=>{e&&e.stopPropagation();const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(!it)return;setQty(x,t.dataset.key,it.q+1);saveAndRefresh();},
  'trade-dec':(t,e)=>{e&&e.stopPropagation();const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(!it)return;setQty(x,t.dataset.key,it.q-1);saveAndRefresh();},

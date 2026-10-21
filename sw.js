@@ -1,6 +1,6 @@
 /* Service worker simples: guarda o próprio app para abrir sem internet. Sempre tenta a rede primeiro,
    então atualizações publicadas aparecem na hora; o cache só serve quando a rede falha. */
-const V='pokedex-shell-v6';
+const V='pokedex-shell-v7';
 const LIB=/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@/;
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>{
