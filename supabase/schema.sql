@@ -118,3 +118,24 @@ create policy "trade_lists: só o dono" on public.trade_lists
   for all to authenticated
   using      ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+
+-- Decks: decks de 60 cartas (também disponível separado em atualizacao-decks.sql).
+create table if not exists public.decks (
+  user_id    uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  id         text        not null,
+  data       jsonb       not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
+drop trigger if exists decks_touch on public.decks;
+create trigger decks_touch before update on public.decks
+  for each row execute function public.touch_updated_at();
+
+alter table public.decks enable row level security;
+
+drop policy if exists "decks: só o dono" on public.decks;
+create policy "decks: só o dono" on public.decks
+  for all to authenticated
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);

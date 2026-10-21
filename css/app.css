@@ -482,3 +482,19 @@ body.immersive{overflow:hidden}
 .tvrow .stepper .btn{min-width:44px;min-height:44px;font-size:20px;padding:0}
 .tvq{min-width:28px;text-align:center;font-weight:800;font-size:18px}
 @media (max-width:600px){.tvgrid{grid-template-columns:1fr}.tvimg{max-width:220px;margin:0 auto}}
+
+/* decks */
+.ttag.fmt{background:#4A5578}
+.dstat{font-size:13px;font-weight:700;color:var(--ink-2)}.dstat.ok{color:#1F7A44}.dstat.bad{color:#B3261E}
+.dcount{font-weight:800;font-size:15px;color:var(--ink-2)}.dcount.full{color:#1F7A44}
+.dval{border-radius:12px;padding:12px 16px;margin:0 0 16px;border:1px solid var(--line);background:var(--sheet)}
+.dval ul{margin:8px 0 0;padding-left:20px;font-size:14px}
+.dval.ok{background:#E8F6EE;border-color:#A9DDBF;color:#14532D}
+.dval.bad{background:#FDECEA;border-color:#F2B4AE;color:#8A1F17}
+.dval.warn{background:#FFF4E0;border-color:#F0C98A;color:#7A4A06}
+.dval li.info{opacity:.75}
+.dsec{margin:18px 0 8px;font-size:16px}.dsec span{color:var(--ink-2);font-weight:600;margin-left:6px}
+.lgl{position:absolute;left:6px;top:6px;font-size:11px;font-weight:800;color:#fff;border-radius:999px;padding:2px 8px;line-height:1.4;z-index:2}
+.lgl.no{background:#B3261E}.lgl.rp{background:#C27A06}
+.dslot.illegal .pocket img{opacity:.55}
+.tradeslot .qty.over{background:#B3261E}

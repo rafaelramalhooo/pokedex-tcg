@@ -5,6 +5,7 @@
 import {SUPABASE} from './config.js';
 import {DB, hooks, saveBinders, saveKV, saveSettings} from './db.js';
 import {saveTrades} from './trades.js';
+import {saveDecks} from './decks.js';
 import {S, refreshAll, viewCache} from './state.js';
 
 export const enabled=!!(SUPABASE.url&&SUPABASE.key);
@@ -63,6 +64,21 @@ const TABLES={
    const order=[];S.trades.forEach(b=>{if(by.has(b.id)){order.push(by.get(b.id));by.delete(b.id);}});
    by.forEach(b=>order.push(b));
    S.trades=order;saveTrades();
+  }
+ },
+ decks:{
+  optional:true,
+  cols:'id,data',ord:['id'],
+  local(){const m=new Map();S.decks.forEach(b=>m.set(b.id,{id:b.id,data:b}));return m;},
+  key:r=>r.id,
+  del:keys=>({col:'id',keys}),
+  apply(changes,removed){
+   const by=new Map(S.decks.map(b=>[b.id,b]));
+   changes.forEach(r=>by.set(r.id,clone(r.data)));
+   removed.forEach(k=>by.delete(k));
+   const order=[];S.decks.forEach(b=>{if(by.has(b.id)){order.push(by.get(b.id));by.delete(b.id);}});
+   by.forEach(b=>order.push(b));
+   S.decks=order;saveDecks();
   }
  },
  user_settings:{
@@ -157,7 +173,7 @@ async function pushOne(name){
   const dels=T.del?Object.keys(snap).filter(k=>!cur.has(k)):[];
   for(let i=0;i<ups.length;i+=200){
    const part=ups.slice(i,i+200);
-   const {error}=await sb.from(name).upsert(part.map(x=>x[1]),{onConflict:name==='collection'?'user_id,card_id':(name==='binders'||name==='trade_lists')?'user_id,id':name==='user_settings'?'user_id':'user_id,kind,id'});
+   const {error}=await sb.from(name).upsert(part.map(x=>x[1]),{onConflict:name==='collection'?'user_id,card_id':(name==='binders'||name==='trade_lists'||name==='decks')?'user_id,id':name==='user_settings'?'user_id':'user_id,kind,id'});
    if(error)throw error;
    part.forEach(([k,,s])=>{snap[k]=s;});
   }
@@ -234,7 +250,7 @@ export async function initCloud(){
  if(data&&data.session){user=data.session.user;S.cloud.email=user.email||'';return'in';}
  return'out';
 }
-export const hasLocalData=()=>Object.keys(S.collection).length>0||S.binders.length>0||S.trades.length>0;
+export const hasLocalData=()=>Object.keys(S.collection).length>0||S.binders.length>0||S.trades.length>0||S.decks.length>0;
 
 /* Chamado depois de entrar (ou ao abrir o app já com sessão). Faz a primeira junção, se for o caso. */
 export async function startSession(session){
@@ -282,6 +298,7 @@ export async function wipeLocal(){
  await DB.clear('coll');S.collection={};
  S.binders=[];await saveBinders();
  S.trades=[];await saveTrades();
+ S.decks=[];await saveDecks();
  S.custom={logos:{},cards:{},covers:{}};await saveKV('custom',S.custom);
  S.settings.mySets=null;S.settings.legalMarks=['H','I','J'];
  await saveSettings();

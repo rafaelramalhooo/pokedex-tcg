@@ -878,6 +878,60 @@ with sync_playwright() as p:
     check(page.locator("#exn").inner_text().strip() != "", "fichário: opções de exportação")
     page.screenshot(path=str(ROOT/"tests/32_export_dialogo.png"))
     page.keyboard.press("Escape"); page.evaluate("document.getElementById('modal').classList.remove('on')")
+    # ---- decks ----
+    page.set_viewport_size({"width": 1360, "height": 900})
+    page.evaluate("import('./js/state.js').then(m=>{m.S.settings.legalMarks=['H','I','J'];})")
+    page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".empty .btn.primary", timeout=5000)
+    check(page.locator('.rail a.nav[data-nav="decks"].on').count() == 1, "decks: item do menu fica ativo")
+    page.locator(".empty .btn.primary").click(); page.fill("#dkn", "Deck teste")
+    page.locator('[data-act="dk-save"]').click(); page.wait_for_selector("#dname", timeout=5000)
+    check("Deck teste" in page.locator("#dname").inner_text() and "0/60" in page.locator("#dchips").inner_text(), "decks: deck criado e aberto com 0/60")
+    page.locator('[data-act="deck-add"]').click(); page.fill("#dka", "carta sv02"); page.wait_for_selector("#dkres .slot", timeout=8000)
+    check("0/60" in page.locator("#tdcount").inner_text() and page.locator("#dialog .tdhead [data-ed-act=cancel]").inner_text().strip() == "Concluir", "decks: janela de adicionar com Concluir e contador no topo")
+    page.locator('#dkres .slot[data-id=sv02-1]').click(); page.wait_for_timeout(300)
+    check("1/60" in page.locator("#tdcount").inner_text() and page.locator('#dkres .slot.sel[data-id=sv02-1]').count() == 1, "decks: tocar na carta já coloca no deck")
+    for _ in range(5): page.locator('#dkres .slot[data-id=sv02-1] [data-act="dk-inc"]').click(); page.wait_for_timeout(60)
+    check("6/60" in page.locator("#tdcount").inner_text(), "decks: botão + aumenta as cópias")
+    page.fill("#dka", "carta sv01"); page.wait_for_timeout(1200)
+    check(page.locator("#dkres .slot").count() == 0 and "fora do Standard" in page.locator("#dkres").inner_text(), "decks: fora do Standard fica escondida por padrão")
+    page.locator('[data-dk="legal"]').uncheck(); page.wait_for_timeout(300)
+    check(page.locator("#dkres .slot .lgl.no").count() >= 1, "decks: carta fora do Standard mostra a etiqueta")
+    page.locator('#dkres .slot[data-id=sv01-3]').click(); page.wait_for_timeout(300)
+    page.fill("#dka", "carta sv02 3"); page.wait_for_timeout(500)
+    page.locator('#dkres .slot[data-id=sv02-3]').click(); page.wait_for_timeout(300)
+    page.locator('[data-dk="own"]').check(); page.fill("#dka", ""); page.wait_for_timeout(500)
+    own_n = page.locator("#dkres .slot").count()
+    check(own_n >= 1 and page.locator("#dkres .slot", has_text="Você não tem").count() == 0, f"decks: só as que eu tenho ({own_n} cartas)")
+    page.locator('#dialog [data-ed-act="cancel"]').click(); page.wait_for_timeout(500)
+    txt = page.locator("#dvalid").inner_text()
+    check("Faltam" in txt and "cópias" in txt and "Fora do Standard" in txt, "decks: validação mostra faltantes, excesso de cópias e fora do Standard")
+    check(page.locator("#dgrid .dslot").count() == 3 and page.locator("#dgrid .dslot.illegal").count() == 1, "decks: três cartas no deck, uma fora do Standard")
+    check(page.locator("#dgrid .qty.over").count() == 1, "decks: carta com mais de 4 cópias fica destacada")
+    page.locator('#dgrid .dslot[data-id=sv02-1] [data-act="deck-dec"]').click(); page.wait_for_timeout(200)
+    check("5/" not in page.locator("#dchips").inner_text() and page.locator("#dchips").inner_text().startswith("Standard"), "decks: botão − no deck")
+    info = page.evaluate("""async()=>{const m=await import('./js/decks.js');
+      const bo=m.infoFrom({id:'x',name:"Boss's Orders (Giovanni)",category:'Trainer',trainerType:'Supporter',regulationMark:'D',localId:'189',set:{id:'swsh2'}});
+      const ro=m.infoFrom({id:'y',name:'Rocky Fighting Energy',category:'Energy',regulationMark:'J',localId:'87',set:{id:'me03'}});
+      const be=m.infoFrom({id:'z',name:'Fighting Energy',category:'Energy',localId:'6',set:{id:'mee'}});
+      return {bo:bo.nk,ro:ro.be,be:be.be,k:m.nameKey('Boss’s Orders')};}""")
+    check(info["bo"] == "boss's orders" == info["k"] and info["ro"] is False and info["be"] is True, f"decks: nomes e energia básica ({info})")
+    rp = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
+      const d=s.decks[0];const i=s.dinfo['sv01-3'];i.rp=true;
+      const v1=m.validate(d);const w=v1.issues.some(x=>x.lvl==='warn'&&x.msg.includes('reimpress'));
+      const noErr=!v1.issues.some(x=>x.msg.startsWith('Fora do Standard'));
+      i.rp=false;return {w,noErr,legal:m.legalOf(i)};}""")
+    check(rp["w"] and rp["noErr"] and rp["legal"] == "no", f"decks: reimpressão vira aviso e não erro ({rp})")
+    full = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
+      const d={id:'t',name:'t',format:'livre',items:[]};
+      s.dinfo.fake1={id:'fake1',ne:'Pika',nk:'pika',cat:'pokemon',st:'Basic',mk:'H',be:false};
+      s.dinfo.fake2={id:'fake2',ne:'Basic Energy',nk:'basic energy',cat:'energia',st:'',mk:'',be:true};
+      d.items.push({id:'fake1',q:4,n:'Pika',i:'',no:'1',s:'x'},{id:'fake2',q:56,n:'Basic Energy',i:'',no:'2',s:'x'});
+      const v=m.validate(d);return {ok:v.ok,total:v.total,issues:v.issues.length};}""")
+    check(full["ok"] and full["total"] == 60 and full["issues"] == 0, f"decks: deck de 60 válido (energia básica sem limite) {full}")
+    page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".binder")
+    check(page.locator(".binder").count() == 1 and "Com problemas" in page.locator(".binder").first.inner_text(), "decks: lista mostra o deck e o estado")
+    page.screenshot(path=str(ROOT/"tests/38_decks.png"))
+    check(page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.collection))") == page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.collection))"), "decks: a coleção não muda")
     b.close()
 
 SERVER.terminate()

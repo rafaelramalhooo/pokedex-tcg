@@ -2,6 +2,7 @@
 import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
 import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter} from './views/trades.js';
+import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter} from './views/decks.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
 import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl, setImmersive} from './views/book.js';
@@ -34,6 +35,7 @@ import {exportBackup, importBackup, renderSettings, viewSettings} from './views/
 
 const ACT={
  ...TRADE_ACT,
+ ...DECK_ACT,
  'binder-export':t=>binderExport(t.dataset.id),
  'exp-go':()=>runExport(),
  'exp-share':()=>shareAgain(),
@@ -126,6 +128,9 @@ document.addEventListener('change',e=>{
  if(t.dataset.bsort!==undefined){setBinderSort({f:t.value});return;}
  if(t.dataset.edsort&&S.ui.edit){S.ui.edit.b.sort={f:'default',dir:'asc',...(S.ui.edit.b.sort||{}),[t.dataset.edsort]:t.value};return;}
  if(t.dataset.dexonly!==undefined&&S.ui.dexdlg){S.ui.dexdlg.only=t.checked;renderDexGrid();return;}
+ if(t.dataset.dk==='set'){deckAddFilter('set',t.value);return;}
+ if(t.dataset.dk==='own'){deckAddFilter('own',t.checked);return;}
+ if(t.dataset.dk==='legal'){deckAddFilter('legal',t.checked);return;}
  if(t.dataset.ta==='set'){tradeSetFilter(t.value);return;}
  if(t.dataset.pl==='set'){pullFilter('set',t.value);return;}
  if(t.dataset.pl==='rep'){pullFilter('rep',t.checked);return;}
@@ -156,6 +161,7 @@ document.addEventListener('input',e=>{
  if(t.id==='bq'){S.ui.binderQ=t.value;S.ui.binderShown=240;S.ui.page=0;renderBinderBody();return;}
  if(t.id==='sq'){S.ui.setQ=t.value;renderSetGrid();return;}
  if(t.id==='plq'&&S.ui.pull){pullFilter('q',t.value);return;}
+ if(t.id==='dka'&&S.ui.deckAdd){S.ui.deckAdd.q=t.value;renderAdd();return;}
  if(t.id==='tra'&&S.ui.tradeAdd){S.ui.tradeAdd.q=t.value;renderAddTrade();return;}
  if(t.id==='ac'&&S.ui.adding){S.ui.adding.q=t.value;renderAddResults();return;}
  if(t.id==='tile'){setCfg({tile:+t.value});document.documentElement.style.setProperty('--tile',t.value+'px');return;}
@@ -203,12 +209,14 @@ function route(fresh){
  if(key!==curKey)keepLeave();
  const same=key===curKey;
  curKey=key;
- const nav=parts[0]==='binders'||parts[0]==='binder'?'binders':parts[0]==='negociacao'?'negociacao':parts[0]==='ajustes'?'ajustes':'home';
+ const nav=parts[0]==='binders'||parts[0]==='binder'?'binders':parts[0]==='negociacao'?'negociacao':parts[0]==='decks'?'decks':parts[0]==='ajustes'?'ajustes':'home';
  $$('.rail a.nav').forEach(a=>a.classList.toggle('on',a.dataset.nav===nav));
  document.documentElement.style.setProperty('--tile',S.settings.tile+'px');
  if(!same&&keepEnter(key))return;
  window.scrollTo(0,0);
  if(parts[0]==='set'&&parts[1])viewSet(decodeURIComponent(parts[1]));
+ else if(parts[0]==='decks'&&parts[1])viewDeck(parts[1]);
+ else if(parts[0]==='decks')viewDecks();
  else if(parts[0]==='negociacao'&&parts[1])viewTrade(parts[1]);
  else if(parts[0]==='negociacao')viewTrades();
  else if(parts[0]==='binders')viewBinders();
@@ -230,6 +238,7 @@ async function boot(){
   S.catalogAt=(await DB.get('kv','catalogAt'))||0;
   S.binders=(await DB.get('kv','binders'))||[];
   S.trades=(await DB.get('kv','trades'))||[];
+  S.decks=(await DB.get('kv','decks'))||[];S.dinfo=(await DB.get('kv','dinfo'))||{};
   Object.assign(S.settings,(await DB.get('kv','settings'))||{});
   if(!Array.isArray(S.settings.legalMarks))S.settings.legalMarks=['H','I','J'];
   S.logoOk=(await DB.get('kv','logoOk'))||{};
