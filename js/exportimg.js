@@ -10,16 +10,19 @@ const WIDTHS=[600,540,480,420,360];
 
 export const autoCols=n=>Math.max(2,Math.min(10,Math.round(Math.sqrt(n*0.9))));
 
-/* Medidas da folha para n cartas em cols colunas com cartas de largura cw. */
-export function sheetSize(n,cols,cw,labels){
- const g=cw*0.045,pad=cw*0.07,ch=cw*1.375,lab=labels?cw*0.3:0,head=cw*0.62,foot=cw*0.26;
- const rows=Math.ceil(n/cols);
- return{g,pad,ch,lab,head,foot,rows,W:Math.round(pad*2+cols*cw+(cols-1)*g),H:Math.round(head+rows*(ch+lab+g)+foot+pad*0.5)};
+/* Medidas da folha para n cartas em cols colunas com cartas de largura cw.
+   A folha nunca fica mais estreita que MIN_COLS colunas, para o cabeçalho e o rodapé terem espaço. */
+const MIN_COLS=4;
+export function sheetSize(n,cols,cw,labels,lines,kind){
+ const g=cw*0.045,pad=cw*0.07,ch=cw*1.375,lab=labels?cw*0.38:0,head=cw*(0.07+(kind?0.185:0)+(lines||1)*0.165+0.25),foot=cw*0.42;
+ const rows=Math.ceil(n/cols);const gc=Math.max(cols,MIN_COLS);
+ const gridW=cols*cw+(cols-1)*g;
+ return{g,pad,ch,lab,head,foot,rows,gc,gridW,W:Math.round(pad*2+gc*cw+(gc-1)*g),H:Math.round(head+rows*(ch+lab+g)+foot+pad*0.5)};
 }
 /* Escolhe a maior largura de carta em que tudo cabe numa imagem; se não couber, divide em partes. */
-export function planSheets(n,cols,labels){
+export function planSheets(n,cols,labels,lines,kind){
  const L=limits();
- const fits=(m,cw)=>{const s=sheetSize(m,cols,cw,labels);return s.W*s.H<=L.area&&s.W<=L.dim&&s.H<=L.dim;};
+ const fits=(m,cw)=>{const s=sheetSize(m,cols,cw,labels,lines,kind);return s.W*s.H<=L.area&&s.W<=L.dim&&s.H<=L.dim;};
  for(const cw of WIDTHS)if(fits(n,cw))return{cw,parts:[n]};
  const cw=WIDTHS[WIDTHS.length-1];
  let rows=1;while(fits((rows+1)*cols,cw))rows++;
@@ -66,49 +69,81 @@ function fit(ctx,text,maxW){
 }
 const finTxt=f=>f&&f!=='normal'?(f==='reverse'?'Reverse':f==='holo'?'Holo':(FIN_LABEL[f]||f)):'';
 
+/* Quebra o texto em até maxLines linhas; a última leva "…" se faltar espaço. */
+function wrap(ctx,text,maxW,maxLines){
+ const words=String(text).split(/\s+/).filter(Boolean);const lines=[];let cur='';
+ for(let i=0;i<words.length;i++){
+  const t=cur?cur+' '+words[i]:words[i];
+  if(ctx.measureText(t).width<=maxW||!cur){cur=t;}
+  else{lines.push(cur);cur=words[i];if(lines.length===maxLines-1){cur=words.slice(i).join(' ');break;}}
+ }
+ lines.push(cur);
+ return lines.slice(0,maxLines).map((l,i,a)=>i===a.length-1?fit(ctx,l,maxW):fit(ctx,l,maxW));
+}
+const linesGuess=t=>String(t||'').length>22?2:1;
+
 function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty){
- const s=sheetSize(items.length,o.cols,cw,o.labels);
+ const full=title+(partTotal>1?` (parte ${partNo}/${partTotal})`:'');
+ const probe=document.createElement('canvas').getContext('2d');
+ probe.font=`800 ${cw*0.16}px "Hanken Grotesk","Segoe UI",Roboto,Helvetica,Arial,sans-serif`;
+ const w0=sheetSize(items.length,o.cols,cw,o.labels,1,!!o.kindLabel);
+ const nLines=wrap(probe,full,w0.W-w0.pad*2,2).length;
+ const s=sheetSize(items.length,o.cols,cw,o.labels,nLines,!!o.kindLabel);
  const cv=document.createElement('canvas');cv.width=s.W;cv.height=s.H;
  const ctx=cv.getContext('2d');
  ctx.fillStyle='#F2F4F9';ctx.fillRect(0,0,s.W,s.H);
  const FONT='"Hanken Grotesk","Segoe UI",Roboto,Helvetica,Arial,sans-serif';
- ctx.textBaseline='alphabetic';
- /* cabeçalho */
- ctx.fillStyle='#121A2B';ctx.font=`800 ${cw*0.17}px ${FONT}`;ctx.textAlign='left';
- ctx.fillText(fit(ctx,title+(partTotal>1?` (parte ${partNo}/${partTotal})`:''),s.W-s.pad*2-cw*1.6),s.pad,s.pad+cw*0.2);
- ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.085}px ${FONT}`;
- ctx.fillText(`${totalCards} carta${totalCards===1?'':'s'}${totalQty!=null?' · '+totalQty+' unidade'+(totalQty===1?'':'s'):''}`,s.pad,s.pad+cw*0.38);
- ctx.textAlign='right';ctx.fillText(new Date().toLocaleDateString('pt-BR'),s.W-s.pad,s.pad+cw*0.2);
- ctx.textAlign='left';
+ const x0=(s.W-s.gridW)/2;            /* a grade fica centralizada na folha */
+ const textW=s.W-s.pad*2;
+ ctx.textBaseline='alphabetic';ctx.textAlign='left';
+ /* cabeçalho: tipo da lista, título (até 2 linhas) e resumo */
+ let y=s.pad;
+ if(o.kindLabel){
+  ctx.font=`800 ${cw*0.062}px ${FONT}`;const kt=o.kindLabel.toUpperCase();
+  const kw=ctx.measureText(kt).width+cw*0.2,kh=cw*0.115;
+  rr(ctx,s.pad,y,kw,kh,kh/2);ctx.fillStyle=o.kindColor||'#D93A2B';ctx.fill();
+  ctx.fillStyle='#fff';ctx.fillText(kt,s.pad+cw*0.1,y+kh*0.72);
+  y+=kh+cw*0.07;
+ }
+ ctx.fillStyle='#121A2B';ctx.font=`800 ${cw*0.16}px ${FONT}`;
+ const tl=wrap(ctx,full,textW,2);
+ tl.forEach((l,i)=>{y+=cw*0.165;ctx.fillText(l,s.pad,y);});
+ y+=cw*0.11;
+ ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.078}px ${FONT}`;
+ ctx.fillText(fit(ctx,`${totalCards} carta${totalCards===1?'':'s'}${totalQty!=null?' · '+totalQty+' unidade'+(totalQty===1?'':'s'):''}  ·  ${new Date().toLocaleDateString('pt-BR')}`,textW),s.pad,y);
  /* cartas */
  items.forEach((it,i)=>{
   const col=i%o.cols,row=Math.floor(i/o.cols);
-  const x=s.pad+col*(cw+s.g),y=s.head+row*(s.ch+s.lab+s.g);
+  const x=x0+col*(cw+s.g),yy=s.head+row*(s.ch+s.lab+s.g);
   const b=bmps[i];
-  ctx.save();rr(ctx,x,y,cw,s.ch,cw*0.045);ctx.clip();
-  if(b)ctx.drawImage(b,x,y,cw,s.ch);
-  else{ctx.fillStyle='#CBD2E0';ctx.fillRect(x,y,cw,s.ch);ctx.fillStyle='#121A2B';ctx.font=`700 ${cw*0.085}px ${FONT}`;ctx.textAlign='center';ctx.fillText(fit(ctx,it.n,cw*0.86),x+cw/2,y+s.ch/2);ctx.textAlign='left';}
+  ctx.save();rr(ctx,x,yy,cw,s.ch,cw*0.045);ctx.clip();
+  if(b)ctx.drawImage(b,x,yy,cw,s.ch);
+  else{ctx.fillStyle='#CBD2E0';ctx.fillRect(x,yy,cw,s.ch);ctx.fillStyle='#121A2B';ctx.font=`700 ${cw*0.085}px ${FONT}`;ctx.textAlign='center';ctx.fillText(fit(ctx,it.n,cw*0.86),x+cw/2,yy+s.ch/2);ctx.textAlign='left';}
   ctx.restore();
   /* selo de quantidade: centralizado embaixo, sobre a carta */
   if(it.q>0){
-   const txt='×'+it.q;ctx.font=`800 ${cw*0.115}px ${FONT}`;
-   const bw=Math.max(cw*0.3,ctx.measureText(txt).width+cw*0.14),bh=cw*0.17;
-   const bx=x+(cw-bw)/2,by=y+s.ch-bh-cw*0.04;
+   const txt='×'+it.q;ctx.font=`800 ${cw*0.1}px ${FONT}`;
+   const bw=Math.max(cw*0.26,ctx.measureText(txt).width+cw*0.13),bh=cw*0.15;
+   const bx=x+(cw-bw)/2,by=yy+s.ch-bh-cw*0.035;
    rr(ctx,bx,by,bw,bh,bh/2);ctx.fillStyle='rgba(18,26,43,.94)';ctx.fill();
    ctx.lineWidth=Math.max(2,cw*0.008);ctx.strokeStyle='#fff';ctx.stroke();
    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(txt,x+cw/2,by+bh*0.72);ctx.textAlign='left';
   }
   if(o.labels){
-   ctx.fillStyle='#121A2B';ctx.font=`700 ${cw*0.075}px ${FONT}`;
-   ctx.fillText(fit(ctx,it.n,cw),x,y+s.ch+cw*0.1);
+   ctx.fillStyle='#121A2B';ctx.font=`700 ${cw*0.072}px ${FONT}`;
+   const nl=wrap(ctx,it.n,cw,2);let ly=yy+s.ch+cw*0.02;
+   nl.forEach(l=>{ly+=cw*0.085;ctx.fillText(l,x,ly);});
    const meta=[it.no,finTxt(it.f),it.l&&it.l!=='xx'?it.l.toUpperCase():''].filter(Boolean).join(' · ');
-   ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.065}px ${FONT}`;
-   ctx.fillText(fit(ctx,meta,cw),x,y+s.ch+cw*0.2);
+   ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.062}px ${FONT}`;
+   ctx.fillText(fit(ctx,meta,cw),x,ly+cw*0.085);
   }
  });
- /* rodapé */
- ctx.fillStyle='#8B94AB';ctx.font=`500 ${cw*0.05}px ${FONT}`;ctx.textAlign='center';
- ctx.fillText('Gerado pelo Pokédex TCG · app pessoal, não afiliado à The Pokémon Company · imagens: TCGdex',s.W/2,s.H-s.pad*0.9);
+ /* rodapé em duas linhas, com margem de segurança */
+ ctx.strokeStyle='#D8DDE9';ctx.lineWidth=Math.max(1,cw*0.004);
+ ctx.beginPath();ctx.moveTo(s.pad,s.H-s.foot*0.95);ctx.lineTo(s.W-s.pad,s.H-s.foot*0.95);ctx.stroke();
+ ctx.fillStyle='#8B94AB';ctx.font=`500 ${cw*0.052}px ${FONT}`;ctx.textAlign='center';
+ ctx.fillText(fit(ctx,'Gerado pelo Pokédex TCG · app pessoal',textW),s.W/2,s.H-s.foot*0.55);
+ ctx.fillText(fit(ctx,'Não afiliado à The Pokémon Company · imagens: TCGdex',textW),s.W/2,s.H-s.foot*0.3);
  return cv;
 }
 const toBlob=cv=>new Promise(res=>cv.toBlob(res,'image/jpeg',0.92));
@@ -118,13 +153,13 @@ const slug=t=>String(t||'cartas').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowe
 export async function buildImages(items,o){
  const labels=o.labels!==false;
  const cols=Math.max(1,Math.min(10,items.length,o.cols||autoCols(items.length)));
- const plan=planSheets(items.length,cols,labels);
+ const plan=planSheets(items.length,cols,labels,linesGuess(o.title+' (parte 1/1)'),!!o.kindLabel);
  const {bmps,fb,miss}=await loadAll(items,o.onProgress);
  const totalQty=items.reduce((a,i)=>a+(i.q||0),0);
  const files=[];let at=0;
  for(let p=0;p<plan.parts.length;p++){
   const n=plan.parts[p];
-  const cv=drawSheet(items.slice(at,at+n),bmps.slice(at,at+n),{cols,labels},plan.cw,o.title,p+1,plan.parts.length,items.length,totalQty);
+  const cv=drawSheet(items.slice(at,at+n),bmps.slice(at,at+n),{cols,labels,kindLabel:o.kindLabel,kindColor:o.kindColor},plan.cw,o.title,p+1,plan.parts.length,items.length,totalQty);
   const blob=await toBlob(cv);cv.width=cv.height=1;
   if(!blob)throw new Error('O navegador não conseguiu gerar a imagem (talvez seja grande demais).');
   files.push(new File([blob],slug(o.title)+(plan.parts.length>1?'-parte'+(p+1):'')+'.jpg',{type:'image/jpeg'}));
@@ -188,7 +223,7 @@ export async function runExport(){
  if(!TOUCH()){try{tab=window.open('','_blank');if(tab)tab.document.title='Gerando imagem…';}catch(e){}}
  const btn=$('#exgo');if(btn){btn.disabled=true;btn.textContent='Gerando… 0%';}
  try{
-  const r=await buildImages(items,{title,cols,labels,onProgress:(d,t)=>{const b=$('#exgo');if(b)b.textContent=`Gerando… ${Math.round(d/t*100)}%`;}});
+  const r=await buildImages(items,{title,cols,labels,kindLabel:cfg.kindLabel,kindColor:cfg.kindColor,onProgress:(d,t)=>{const b=$('#exgo');if(b)b.textContent=`Gerando… ${Math.round(d/t*100)}%`;}});
   document.getElementById('modal').classList.remove('on');
   let msg='';
   if(r.miss)msg+=`${r.miss} carta(s) ficaram sem imagem. `;

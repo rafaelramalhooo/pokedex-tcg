@@ -782,6 +782,25 @@ with sync_playwright() as p:
     page.wait_for_function("window.__shared", timeout=20000)
     sh = page.evaluate("window.__shared")
     check(sh["n"] == 1 and sh["type"] == "image/jpeg" and sh["size"] > 5000, f"celular: abre o compartilhar com a imagem {sh}")
+    # folhas de exportação: títulos longos, poucas cartas, muitas cartas
+    import base64
+    def sheet(n, title, cols, name, kind=None):
+        r = page.evaluate("""async ([n,title,cols,kind])=>{
+          const m=await import('./js/exportimg.js');
+          const items=Array.from({length:n},(_,i)=>({url:'https://assets.tcgdex.net/pt/sv/sv01/'+(i+1)+'/high.webp',n:i%3?('Carta '+(i+1)):'Mega Kangaskhan ex de nome bem comprido',no:String(i+1).padStart(3,'0'),q:(i%4)+1,f:i%5?'normal':'reverse',l:i%2?'pt':'en'}));
+          const r=await m.buildImages(items,{title,cols,labels:true,kindLabel:kind,kindColor:'#D93A2B'});
+          const f=r.files[0];const b=new Uint8Array(await f.arrayBuffer());let s='';for(let i=0;i<b.length;i+=8192)s+=String.fromCharCode(...b.subarray(i,i+8192));
+          const im=new Image();im.src=URL.createObjectURL(f);await im.decode();
+          return {b64:btoa(s),w:im.naturalWidth,h:im.naturalHeight,parts:r.files.length,miss:r.miss};
+        }""", [n, title, cols, kind])
+        open(str(ROOT/f"tests/{name}.jpg"), "wb").write(base64.b64decode(r["b64"]))
+        return r
+    r1 = sheet(2, "Buscando Mew ex e Mega Kangaskhan ex", 10, "33_folha_2cartas", "Procuro")
+    check(r1["w"] >= 4 * 360 and r1["parts"] == 1, f"exportar: folha de 2 cartas tem largura mínima de 4 colunas ({r1['w']}x{r1['h']})")
+    r2 = sheet(1, "Bus", 10, "34_folha_1carta")
+    check(r2["w"] >= 4 * 360, f"exportar: folha de 1 carta ({r2['w']}x{r2['h']})")
+    r3 = sheet(40, "Vendo – outubro", 8, "35_folha_40cartas", "Vendo / Troco")
+    check(r3["parts"] == 1 and r3["miss"] == 0, f"exportar: folha de 40 cartas ({r3['w']}x{r3['h']})")
     # exportar a partir de um fichário
     page.evaluate("location.hash='#/binders'"); page.wait_for_selector(".binder"); page.locator(".binder").first.click(); page.wait_for_selector("#bgrid")
     check(page.locator('[data-act="binder-export"]').count() == 1, "fichário: botão Exportar imagem")

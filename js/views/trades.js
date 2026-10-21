@@ -64,7 +64,7 @@ const saveAndRefresh=()=>{saveTrades();if(S.cur&&S.cur.refresh)S.cur.refresh();}
 function listDialog(t,isNew){
  S.ui.tr={t:{...t},isNew};
  $('#dialog').innerHTML=`<h2>${isNew?'Nova lista':'Editar lista'}</h2>
-  <label class="lbl2" for="trn">Nome da lista</label><input class="field" id="trn" style="width:100%" maxlength="60" value="${esc(t.name==='Nova lista'?'':t.name)}" placeholder="Ex.: Vendo – outubro">
+  <label class="lbl2" for="trn">Nome da lista</label><input class="field" id="trn" style="width:100%" maxlength="40" value="${esc(t.name==='Nova lista'?'':t.name)}" placeholder="Ex.: Vendo – outubro">
   <label class="lbl2" style="margin-top:12px">Tipo</label>
   <div class="seg" role="group" aria-label="Tipo da lista"><button type="button" data-act="tr-kind" data-v="sell" aria-pressed="${t.kind==='sell'}">Vendo / Troco</button><button type="button" data-act="tr-kind" data-v="want" aria-pressed="${t.kind==='want'}">Procuro</button></div>
   <div class="actions">${isNew?'<span></span>':`<button class="btn" type="button" data-act="trade-del" data-id="${esc(t.id)}">Excluir lista</button>`}<span><button class="btn" type="button" data-ed-act="cancel">Cancelar</button> <button class="btn primary" type="button" data-act="tr-save">Salvar</button></span></div>`;
@@ -109,7 +109,7 @@ function itemDialog(t,it){
 }
 export function tradeExport(id){
  const t=getTrade(id);if(!t)return;
- openExport({title:t.name,scopes:null,build:()=>t.items.map(it=>({url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l}))});
+ openExport({title:t.name,kindLabel:KINDS[t.kind],kindColor:t.kind==='want'?'#2F6FDE':'#D93A2B',scopes:null,build:()=>t.items.map(it=>({url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l}))});
 }
 
 const closeDlg=()=>{$('#modal').classList.remove('on');S.ui.tr=null;S.ui.tradeAdd=null;};
