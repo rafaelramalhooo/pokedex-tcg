@@ -97,14 +97,13 @@ export function validate(d){
  if(ace>1)issues.push({lvl:'err',msg:`ACE SPEC: ${ace} cartas (só 1 por deck).`});
  if(rad>1)issues.push({lvl:'err',msg:`Radiante: ${rad} cartas (só 1 por deck).`});
  if(d.format==='standard'){
-  const bad=[],rep=[],cls=[];let exc=0;
+  const bad=[],rep=[],cls=[];
   const seen=new Set();
   for(const it of d.items){
    const i=S.dinfo[it.id];const L=legalOf(i);if(seen.has(it.n+L))continue;seen.add(it.n+L);
-   if(L==='no'){if(i&&i.set===CLASSIC_30)cls.push(i.ne);else bad.push(i?`${i.ne} (${markTxt(i)})`:it.n);}else if(L==='reprint')rep.push(`${i.ne} (${markTxt(i)})`);else if(L==='exc')exc++;
+   if(L==='no'){if(i&&i.set===CLASSIC_30)cls.push(i.ne);else bad.push(i?`${i.ne} (${markTxt(i)})`:it.n);}else if(L==='reprint')rep.push(`${i.ne} (${markTxt(i)})`);
   }
   if(cls.length)issues.push({lvl:'err',msg:`Coleção Clássica da Celebração de 30 Anos não vale em torneio: ${cls.join(', ')}.`});
-  if(exc)issues.push({lvl:'info',msg:`${exc} carta${exc===1?'':'s'} da Celebração de 30 Anos contam como legais por exceção (a TCGdex não traz a letra delas). Dá para desligar isso nos Ajustes.`});
   if(bad.length)issues.push({lvl:'err',msg:`Fora do Standard: ${bad.join(', ')}.`});
   if(rep.length)issues.push({lvl:'warn',msg:`A letra da carta está fora da lista de marcas legais, mas existe uma cópia idêntica legal (reimpressão, inferido pelo nome e texto; confira no jogo): ${rep.join(', ')}.`});
  }
