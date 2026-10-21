@@ -76,4 +76,5 @@ Hoje a coleção fica no navegador (IndexedDB), com exportação e importação 
 - Testes: `python3 tests/mock_test.py` (app) e `python3 tests/cloud_test.py` (login e sincronização, com Supabase simulado).
 
 - **Link público (Negociação)**: em uma lista, *Compartilhar link* gera um endereço só de leitura (nome, tipo, cartas e quantidades; sem login nem dados da conta). O link só muda quando você aperta *Atualizar link*, e *Parar de compartilhar* o derruba. Precisa rodar `supabase/atualizacao-link-publico.sql` uma vez.
-- **30 Anos**: a Coleção da Celebração de 30 Anos vale no Standard por exceção (Ajustes); a Coleção Clássica nunca.
+- **30 Anos**: a letra (marca) da carta decide a legalidade no Standard; só as cartas da Celebração de 30 Anos que vêm sem letra na base entram por exceção (Ajustes), e a Coleção Clássica nunca.
+- **Versão 3.0**: Decks, TCG Live, listas a partir de decks, link público e legalidade pela letra.

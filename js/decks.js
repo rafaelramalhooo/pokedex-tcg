@@ -53,8 +53,9 @@ export async function ensureReprint(info){
  }catch(e){return undefined;}
  info.rp=rp;saveInfoSoon();return rp;
 }
+export const markTxt=i=>i&&i.mk?`letra ${i.mk}`:'sem letra na base';
 export const legalMarks=()=>S.settings.legalMarks.map(m=>m.toUpperCase());
-/* Coleções liberadas por exceção (a TCGdex não traz a marca delas). A Coleção Clássica (30th-c) nunca entra: não vale em torneio. */
+/* A letra (marca) impressa na carta decide. Só as cartas SEM letra nos dados, de coleções liberadas por exceção (a TCGdex não traz a marca da Celebração de 30 Anos), entram por exceção. A Coleção Clássica (30th-c) nunca entra: não vale em torneio. */
 export const CLASSIC_30='30th-c';
 export const legalSetOk=sid=>!!sid&&sid!==CLASSIC_30&&(S.settings.legalSets||[]).map(x=>String(x).toLowerCase()).includes(String(sid).toLowerCase());
 /* 'ok' (marca legal ou energia básica), 'exc' (coleção liberada por exceção), 'reprint' (inferido), 'no', ou 'wait' (ainda sem dados) */
@@ -63,7 +64,7 @@ export function legalOf(info){
  if(info.be)return'ok';
  if(legalMarks().includes(info.mk))return'ok';
  if(info.set===CLASSIC_30)return'no';
- if(legalSetOk(info.set))return'exc';
+ if(info.mk===''&&legalSetOk(info.set))return'exc';
  if(info.rp===true)return'reprint';
  if(info.rp===false)return'no';
  return info.mk===''&&info.rp===undefined?'wait':'wait';
@@ -100,12 +101,12 @@ export function validate(d){
   const seen=new Set();
   for(const it of d.items){
    const i=S.dinfo[it.id];const L=legalOf(i);if(seen.has(it.n+L))continue;seen.add(it.n+L);
-   if(L==='no'){if(i&&i.set===CLASSIC_30)cls.push(i.ne);else bad.push(i?i.ne:it.n);}else if(L==='reprint')rep.push(i.ne);else if(L==='exc')exc++;
+   if(L==='no'){if(i&&i.set===CLASSIC_30)cls.push(i.ne);else bad.push(i?`${i.ne} (${markTxt(i)})`:it.n);}else if(L==='reprint')rep.push(`${i.ne} (${markTxt(i)})`);else if(L==='exc')exc++;
   }
   if(cls.length)issues.push({lvl:'err',msg:`Coleção Clássica da Celebração de 30 Anos não vale em torneio: ${cls.join(', ')}.`});
-  if(exc)issues.push({lvl:'info',msg:`${exc} carta${exc===1?'':'s'} da Celebração de 30 Anos contam como legais por exceção (a TCGdex não traz a marca delas). Dá para desligar isso nos Ajustes.`});
+  if(exc)issues.push({lvl:'info',msg:`${exc} carta${exc===1?'':'s'} da Celebração de 30 Anos contam como legais por exceção (a TCGdex não traz a letra delas). Dá para desligar isso nos Ajustes.`});
   if(bad.length)issues.push({lvl:'err',msg:`Fora do Standard: ${bad.join(', ')}.`});
-  if(rep.length)issues.push({lvl:'warn',msg:`Legais por reimpressão (inferido pelo nome e texto, confira no jogo): ${rep.join(', ')}.`});
+  if(rep.length)issues.push({lvl:'warn',msg:`A letra da carta está fora da lista de marcas legais, mas existe uma cópia idêntica legal (reimpressão, inferido pelo nome e texto; confira no jogo): ${rep.join(', ')}.`});
  }
  if(pending)issues.push({lvl:'info',msg:`Conferindo ${pending} carta${pending===1?'':'s'} na TCGdex…`});
  const errs=issues.filter(x=>x.lvl==='err').length;

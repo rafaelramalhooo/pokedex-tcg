@@ -48,7 +48,7 @@ export function renderSettings(){
  </section>
  <section class="panel-sec"><h2>Exceções de legalidade</h2>
   <p>A TCGdex não traz a marca de regulamentação das cartas da <strong>Celebração de 30 Anos</strong> e as marca todas como fora do Standard, mas as cartas da coleção principal valem em torneios desde 25/09/2026. Por isso o app as trata como legais. A <strong>Coleção Clássica</strong> (as 30 reimpressões com o selo do Pikachu) não vale em torneio e continua de fora. Fontes: matérias de junho a setembro de 2026; a página oficial da Pokémon não pôde ser lida.</p>
-  <label class="chk"><input type="checkbox" data-legalset="30th" ${(S.settings.legalSets||[]).includes('30th')?'checked':''}> Tratar a Celebração de 30 Anos (coleção principal) como legal no Standard</label>
+  <label class="chk"><input type="checkbox" data-legalset="30th" ${(S.settings.legalSets||[]).includes('30th')?'checked':''}> Tratar como legais as cartas da Celebração de 30 Anos (coleção principal) que não trazem letra na base</label>
  </section>
  <section class="panel-sec"><h2>Contagem e exibição</h2>
   <label class="chk"><input type="checkbox" data-set="masterReverse" ${S.settings.masterReverse?'checked':''}> Master Set inclui o reverse holo de cada carta</label>

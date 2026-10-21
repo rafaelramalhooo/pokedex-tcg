@@ -5,7 +5,7 @@ import {imgTag, toast} from '../ui.js';
 import {$, ICON, esc, fmtN, live, nz} from '../util.js';
 import {exportRows, importInto, tcgText} from '../decktext.js';
 import {addItem, newTrade, saveTrades} from '../trades.js';
-import {DECK_SIZE, MAX_COPIES, addCopy, ensureInfo, ensureReprint, getDeck, legalOf, nameKey, newDeck, ownByName, resolveDeck, saveDecks, setCopies, totalCards, validate, nameCounts, tradeFromDeck} from '../decks.js';
+import {DECK_SIZE, MAX_COPIES, addCopy, ensureInfo, ensureReprint, getDeck, legalOf, markTxt, nameKey, newDeck, ownByName, resolveDeck, saveDecks, setCopies, totalCards, validate, nameCounts, tradeFromDeck} from '../decks.js';
 
 const FMT={standard:'Standard',livre:'Livre (sem validar o Standard)'};
 const CATS=[['pokemon','Pokémon'],['treinador','Treinador'],['energia','Energia']];
@@ -52,13 +52,13 @@ function resolveSoon(d){
 }
 let paint=0;
 function softPaint(){if(paint)return;paint=setTimeout(()=>{paint=0;renderDeck();},400);}
-const lglTag=l=>l==='no'?'<span class="lgl no">Fora do Standard</span>':l==='reprint'?'<span class="lgl rp">Reimpressão</span>':'';
+const lglTag=(l,i)=>l==='no'?`<span class="lgl no" title="${esc(markTxt(i))}">Fora${i&&i.mk?' · '+esc(i.mk):''}</span>`:l==='reprint'?`<span class="lgl rp" title="${esc(markTxt(i))}: legal por reimpressão">Reimpressão${i&&i.mk?' · '+esc(i.mk):''}</span>`:'';
 function deckTile(d,it,own){
  const i=S.dinfo[it.id];const L=d.format==='standard'?legalOf(i):'ok';
  const k=i?i.nk:nameKey(it.n);const have=own.get(nameKey(it.n))||0;
  const over=!(i&&i.be)&&nameCounts(d).get(k)&&nameCounts(d).get(k).q>MAX_COPIES;
  return`<div class="slot on tradeslot dslot ${L==='no'?'illegal':''}" data-act="deck-card" data-id="${esc(it.id)}" role="button" tabindex="0" aria-label="${esc(it.n)}, ${it.q} cópia${it.q===1?'':'s'}">
-  <div class="pocket">${imgTag(it.i,'low',it.n,undefined,it.id)}<span class="qty tq ${over?'over':''}">×${it.q}</span>${lglTag(L)}</div>
+  <div class="pocket">${imgTag(it.i,'low',it.n,undefined,it.id)}<span class="qty tq ${over?'over':''}">×${it.q}</span>${lglTag(L,i)}</div>
   <div class="num"><b>${esc(it.n)}</b><span>${esc(it.no)}</span></div>
   <div class="num"><span>${have?`Você tem ×${have}`:'Você não tem'}</span></div>
   <div class="stepper"><button type="button" class="btn small" data-act="deck-dec" data-id="${esc(it.id)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="deck-inc" data-id="${esc(it.id)}" aria-label="Aumentar">+</button></div></div>`;
