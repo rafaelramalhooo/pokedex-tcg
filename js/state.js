@@ -5,7 +5,7 @@ export const S={
  persist:true,
  sets:[],setMap:{},setIdx:{},serieOf:{},catalogAt:0,
  setd:{},briefs:{},cards:{},dexNames:{},dexCards:{},
- collection:{},binders:[],trades:[],decks:[],dinfo:{},
+ collection:{},binders:[],trades:[],decks:[],dinfo:{},setab:{},
  settings:{legalMarks:['H','I','J'],masterReverse:true,showPocket:false,mode:'set',tile:150,mySets:null,view:'list',grid:{p:'3x3'},spread:false},
  remote:{},logoOk:{},logoDiag:null,custom:{logos:{},cards:{},covers:{}},
  ui:{dexdlg:null,page:0,pageKey:'',q:'',serie:'all',scope:'auto',setFilter:'all',setQ:'',binderFilter:'all',binderShown:240,panelId:null,panelCtx:null,edit:null,pick:{q:'',draft:[],groups:[]}},

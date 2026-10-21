@@ -30,7 +30,7 @@ def set_detail(sid, lang):
     name, ser, sername, off, tot, mark, rel = d
     return {"id": sid, "name": name, "logo": f"https://assets.tcgdex.net/{lang}/x/{sid}/logo",
             "symbol": f"https://assets.tcgdex.net/univ/x/{sid}/symbol", "releaseDate": rel,
-            "serie": {"id": ser, "name": sername},
+            "serie": {"id": ser, "name": sername}, "abbreviation": {"official": sid.upper()},
             "cardCount": {"official": off, "total": tot, "normal": tot, "holo": 2, "reverse": 4, "firstEd": 0},
             "cards": set_cards(sid, tot, lang)[:2] if (sid == "swsh1" and lang == "pt") else set_cards(sid, tot, lang)}
 
@@ -932,6 +932,58 @@ with sync_playwright() as p:
     check(page.locator(".binder").count() == 1 and "Com problemas" in page.locator(".binder").first.inner_text(), "decks: lista mostra o deck e o estado")
     page.screenshot(path=str(ROOT/"tests/38_decks.png"))
     check(page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.collection))") == page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.collection))"), "decks: a coleção não muda")
+    # ---- decks: exportar e importar (TCG Live) ----
+    ctx.grant_permissions(["clipboard-read", "clipboard-write"])
+    page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".binder"); page.locator(".binder").first.click(); page.wait_for_selector("#dname")
+    page.evaluate("window.__printed=0;window.print=()=>{window.__printed++;};0")
+    page.locator('[data-act="deck-export"]').click(); page.wait_for_function("document.querySelector('#dxtext')&&document.querySelector('#dxtext').value.includes('Total de cartas')", timeout=10000)
+    tx = page.locator("#dxtext").input_value()
+    check(tx.startswith("Pokémon: ") and "Carta sv02 3 SV02 3" in tx and tx.rstrip().endswith("Total de cartas: %d" % int(tx.rstrip().split(":")[-1])), "exportar deck: texto no padrão do TCG Live com sigla e número")
+    page.select_option('[data-dx="lang"]', "en"); page.wait_for_timeout(200)
+    check("Total Cards:" in page.locator("#dxtext").input_value(), "exportar deck: títulos em inglês")
+    page.locator('[data-act="dx-copy"]').click(); page.wait_for_timeout(300)
+    check(page.locator(".toast").count() >= 1, "exportar deck: copiar texto avisa o resultado")
+    page.locator('[data-act="dx-print"]').click(); page.wait_for_timeout(400)
+    check(page.evaluate("window.__printed") == 1 and "Deck teste" in page.locator("#printsheet").inner_text() and "SV02" in page.locator("#printsheet").inner_text(), "exportar deck: página de impressão montada e impressão chamada")
+    page.emulate_media(media="print")
+    check(page.evaluate("getComputedStyle(document.getElementById('printsheet')).display") == "block" and page.evaluate("document.getElementById('view').getBoundingClientRect().height") == 0, "exportar deck: ao imprimir, só a lista aparece")
+    page.emulate_media(media="screen")
+    page.locator('#dialog [data-ed-act="cancel"]').click()
+    fmt = page.evaluate("""async()=>{const t=await import('./js/decktext.js');const d=await import('./js/decks.js');
+      const rows=[
+       {q:2,cat:'energia',name:t.tcgName(d.infoFrom({id:'a',name:'Rocky Fighting Energy',category:'Energy',localId:'087',set:{id:'me03'}})),ab:'POR',no:'87'},
+       {q:7,cat:'energia',name:t.tcgName(d.infoFrom({id:'b',name:'Fighting Energy',category:'Energy',localId:'006',set:{id:'mee'}})),ab:'MEE',no:'6'},
+       {q:3,cat:'treinador',name:t.tcgName(d.infoFrom({id:'c',name:"Boss's Orders (Giovanni)",category:'Trainer',localId:'189',set:{id:'swsh2'}})),ab:'RCL',no:'189'},
+       {q:3,cat:'pokemon',name:t.tcgName(d.infoFrom({id:'d',name:'Mega Lucario ex',category:'Pokemon',localId:'033',set:{id:'mep'}})),ab:'MEP',no:'33'}];
+      return t.tcgText(rows,'pt');}""")
+    check("2 Rocky {F} Energy POR 87" in fmt and "7 Basic {F} Energy MEE 6" in fmt and "3 Boss's Orders RCL 189" in fmt and "Pokémon: 3" in fmt and "Treinador: 3" in fmt and "Energia: 9" in fmt, f"exportar deck: nomes do TCG Live (energias com {{F}}, sem parênteses) {fmt!r}")
+    sample = """Pokémon: 8
+2 Dudunsparce TEF 129
+3 Mega Lucario ex MEP 33
+1 Lucario 30C 83
+
+Treinador: 14
+4 Poké Pad 30C 126
+3 Boss's Orders RCL 189
+
+Energia: 2
+2 Rocky {F} Energy POR 87
+7 Basic {F} Energy MEE 14
+
+Total de cartas: 60"""
+    pr = page.evaluate("async s=>{const t=await import('./js/decktext.js');return t.parseDeckText(s);}", sample)
+    e = pr["entries"]
+    check(len(e) == 7 and not pr["skipped"] and e[0] == {"line": "2 Dudunsparce TEF 129", "q": 2, "name": "Dudunsparce", "code": "TEF", "num": "129"} and e[-1]["name"] == "Basic {F} Energy" and e[-1]["code"] == "MEE" and e[-1]["num"] == "14", f"importar deck: leitura do texto (títulos e total ignorados) {len(e)} linhas")
+    page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".binder")
+    page.locator('[data-act="deck-import"]').click(); page.fill("#din", "Importado")
+    page.fill("#dit", "Pokémon: 3\n2 Carta sv02 3 SV02 3\n1 Carta sv02 5 SV02 5\n\nEnergia: 1\n3 Zzz Inexistente XXX 9\nTotal de cartas: 6")
+    page.locator('[data-act="di-go"]').click(); page.wait_for_selector('[data-act="di-open"]', timeout=30000)
+    rep = page.locator("#dialog").inner_text()
+    check("2 de 3 linhas" in rep and "Zzz Inexistente XXX 9" in rep, "importar deck: relatório mostra o que entrou e o que não foi encontrado")
+    page.locator('[data-act="di-open"]').click(); page.wait_for_selector("#dname")
+    check("Importado" in page.locator("#dname").inner_text() and "3/60" in page.locator("#dchips").inner_text(), "importar deck: deck criado com as cartas reconhecidas")
+    check(page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.decks.find(d=>d.name==='Importado').items.map(i=>[i.id,i.q]).sort()))") == '[["sv02-3",2],["sv02-5",1]]', "importar deck: cartas e quantidades certas")
+    page.screenshot(path=str(ROOT/"tests/39_deck_importado.png"))
     b.close()
 
 SERVER.terminate()

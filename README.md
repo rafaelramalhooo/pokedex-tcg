@@ -48,7 +48,7 @@ Requer Python com Playwright instalado:
 
 - **Minhas coleções:** você escolhe quais carregar; só elas aparecem e são baixadas.
 - **Set e Master Set**, com cartas cinza (faltam) e coloridas (tenho), quantidade, acabamento, condição e idioma.
-- **Decks**: monte decks de 60 cartas, busque pelo nome (inclusive só as que você tem) e veja na hora se ele respeita 60 cartas, 4 cópias por nome, Pokémon Básico, ACE SPEC/Radiante e o Standard (marcas editáveis; cartas reimpressas aparecem como aviso, por inferência). Precisa rodar `supabase/atualizacao-decks.sql` uma vez para sincronizar os decks na nuvem.
+- **Decks**: monte decks de 60 cartas, busque pelo nome (inclusive só as que você tem) e veja na hora se ele respeita 60 cartas, 4 cópias por nome, Pokémon Básico, ACE SPEC/Radiante e o Standard (marcas editáveis; cartas reimpressas aparecem como aviso, por inferência). Exporta e importa no formato de texto do Pokémon TCG Live (`4 Nome SIGLA 123`) e gera uma página para imprimir ou salvar em PDF. Precisa rodar `supabase/atualizacao-decks.sql` uma vez para sincronizar os decks na nuvem.
 - **Negociação**: listas "Vendo / Troco" e "Procuro" (com quantidade, acabamento e idioma), separadas da coleção. **Exportar imagem** (até 10 colunas, quantidade sobre cada carta) nas listas e nos fichários, para compartilhar. Precisa rodar `supabase/atualizacao-negociacao.sql` uma vez para sincronizar as listas na nuvem.
 - **Fichários** por regras (tipo, Pokémon por nome, geração, ilustrador, raridade, coleção, Standard…), manuais ou no modo **Pokédex**.
 - **Visual de fichário:** grades 2×2, 3×3, 3×4, 4×4, 5×4 ou personalizada, páginas, setas, teclado, deslize e página dupla no computador.

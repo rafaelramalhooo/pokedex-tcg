@@ -25,7 +25,7 @@ export function infoFrom(c){
  const cat=CAT[nz(c.category)]||'pokemon';
  const sig=cat==='pokemon'?JSON.stringify([c.hp||0,(c.abilities||[]).map(a=>nz(a.name)),(c.attacks||[]).map(a=>[nz(a.name),String(a.damage||'')])]):'';
  return{id:c.id,ne,nk,cat,tt:c.trainerType||'',st:c.stage||'',mk:String(c.regulationMark||'').toUpperCase(),ra:c.rarity||'',
-  be:cat==='energia'&&BASIC_E.test(nz(ne)),set:c.set&&c.set.id||'',no:String(c.localId||''),sig,
+  be:cat==='energia'&&BASIC_E.test(nz(ne)),set:c.set&&c.set.id||'',no:String(c.localId||''),img:c.image||'',sig,
   ace:/ace\s*spec/i.test(c.rarity||''),rad:/radiant/i.test(c.rarity||'')};
 }
 export function ensureInfo(id){

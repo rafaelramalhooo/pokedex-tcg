@@ -2,7 +2,7 @@
 import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
 import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter} from './views/trades.js';
-import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter} from './views/decks.js';
+import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter, deckExportLang} from './views/decks.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
 import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl, setImmersive} from './views/book.js';
@@ -128,6 +128,7 @@ document.addEventListener('change',e=>{
  if(t.dataset.bsort!==undefined){setBinderSort({f:t.value});return;}
  if(t.dataset.edsort&&S.ui.edit){S.ui.edit.b.sort={f:'default',dir:'asc',...(S.ui.edit.b.sort||{}),[t.dataset.edsort]:t.value};return;}
  if(t.dataset.dexonly!==undefined&&S.ui.dexdlg){S.ui.dexdlg.only=t.checked;renderDexGrid();return;}
+ if(t.dataset.dx==='lang'){deckExportLang(t.value);return;}
  if(t.dataset.dk==='set'){deckAddFilter('set',t.value);return;}
  if(t.dataset.dk==='own'){deckAddFilter('own',t.checked);return;}
  if(t.dataset.dk==='legal'){deckAddFilter('legal',t.checked);return;}
@@ -238,7 +239,7 @@ async function boot(){
   S.catalogAt=(await DB.get('kv','catalogAt'))||0;
   S.binders=(await DB.get('kv','binders'))||[];
   S.trades=(await DB.get('kv','trades'))||[];
-  S.decks=(await DB.get('kv','decks'))||[];S.dinfo=(await DB.get('kv','dinfo'))||{};
+  S.decks=(await DB.get('kv','decks'))||[];S.dinfo=(await DB.get('kv','dinfo'))||{};S.setab=(await DB.get('kv','setab'))||{};
   Object.assign(S.settings,(await DB.get('kv','settings'))||{});
   if(!Array.isArray(S.settings.legalMarks))S.settings.legalMarks=['H','I','J'];
   S.logoOk=(await DB.get('kv','logoOk'))||{};
