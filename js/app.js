@@ -128,6 +128,7 @@ document.addEventListener('change',e=>{
  if(t.dataset.dexonly!==undefined&&S.ui.dexdlg){S.ui.dexdlg.only=t.checked;renderDexGrid();return;}
  if(t.dataset.pl==='set'){pullFilter('set',t.value);return;}
  if(t.dataset.pl==='rep'){pullFilter('rep',t.checked);return;}
+ if(t.dataset.pl==='split'){pullFilter('split',t.checked);return;}
  if(t.dataset.exp==='scope'){exportScopeChanged(t.value);return;}
  if(t.dataset.bk){bookSetting(t);return;}
  if(t.classList&&t.classList.contains('bookrange')){bookTo(+t.value);return;}

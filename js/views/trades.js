@@ -127,17 +127,29 @@ function ownRows(){
  rows.sort((a,b)=>a.sn.n.localeCompare(b.sn.n,'pt',{numeric:true})||String(a.sn.no).localeCompare(String(b.sn.no),undefined,{numeric:true}));
  return rows;
 }
+/* Uma linha por carta: soma os acabamentos; o item copiado leva o acabamento e o idioma da versão que você mais tem. */
+function groupRows(rows){
+ const by=new Map();
+ for(const r of rows){
+  const g=by.get(r.id);
+  if(!g)by.set(r.id,{...r,key:r.id,own:r.own,parts:1,top:r.own});
+  else{g.own+=r.own;g.parts++;if(r.own>g.top){g.top=r.own;g.f=r.f;g.l=r.l;}}
+ }
+ return[...by.values()];
+}
+const viewRows=st=>st.split?st.all:groupRows(st.all);
 function pullDialog(id){
  const t=getTrade(id);if(!t)return;
  const rows=ownRows();
  if(!rows.length){toast('Você ainda não marcou cartas na sua coleção para copiar.');return;}
- S.ui.pull={id,q:'',set:'',rep:false,sel:{},rows};
+ S.ui.pull={id,q:'',set:'',rep:false,split:false,sel:{},all:rows};
  const sets=[...new Set(rows.map(r=>r.set).filter(Boolean))].map(sid=>({sid,name:(S.setMap[sid]&&S.setMap[sid].name)||sid})).sort((a,b)=>a.name.localeCompare(b.name,'pt'));
  $('#dialog').innerHTML=`<h2>Puxar das minhas cartas</h2><p class="lead">Marque as cartas que você quer copiar para “${esc(t.name)}”. Isso só copia: a sua coleção não muda.</p>
   <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
    <div style="flex:1;min-width:180px"><label class="lbl2" for="plq">Buscar pelo nome</label><input class="field" id="plq" type="search" style="width:100%" placeholder="Ex.: Pikachu"></div>
    <label class="size">Coleção <select class="field" data-pl="set"><option value="">Todas</option>${sets.map(x=>`<option value="${esc(x.sid)}">${esc(x.name)}</option>`).join('')}</select></label>
-   <label class="size"><input type="checkbox" data-pl="rep"> Só repetidas (×2 ou mais)</label></div>
+   <label class="size"><input type="checkbox" data-pl="rep"> Só repetidas (×2 ou mais)</label>
+   <label class="size"><input type="checkbox" data-pl="split"> Separar por acabamento</label></div>
   <div class="row" style="gap:8px;margin-top:10px"><button class="btn small" type="button" data-act="pl-all">Marcar todas as visíveis</button><button class="btn small" type="button" data-act="pl-none">Limpar</button></div>
   <div id="pullres" style="margin-top:12px"></div>
   <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="pl-go" id="plgo">Copiar 0 cartas</button></div>`;
@@ -146,30 +158,30 @@ function pullDialog(id){
 }
 function pullVisible(){
  const st=S.ui.pull;const t=getTrade(st.id);const q=nz(st.q);
- const inList=new Set(t.items.map(itemKey));
- return st.rows.filter(r=>(!st.set||r.set===st.set)&&(!st.rep||r.own>=2)&&(!q||nz(r.sn.n).includes(q))).map(r=>({...r,dup:inList.has(r.key)}));
+ const inList=st.split?new Set(t.items.map(itemKey)):new Set(t.items.map(i=>i.id));
+ return viewRows(st).filter(r=>(!st.set||r.set===st.set)&&(!st.rep||r.own>=2)&&(!q||nz(r.sn.n).includes(q))).map(r=>({...r,dup:inList.has(r.key)}));
 }
 export function renderPull(){
  const st=S.ui.pull;const el=$('#pullres');if(!st||!el)return;
  const vis=pullVisible();const list=vis.slice(0,PULL_MAX);
  el.innerHTML=vis.length?`<p class="lbl2">${fmtN(vis.length)} carta${vis.length===1?'':'s'}${vis.length>list.length?', mostrando as primeiras '+list.length+'. Use a busca ou o filtro para achar as outras':''}.</p><div class="cards" style="--tile:118px">${list.map(r=>{
   const on=!r.dup&&st.sel[r.key]!=null;const q=on?st.sel[r.key]:r.own;
-  const tag=[r.f!=='normal'?(r.f==='reverse'?'Reverse':'Holo'):'',r.l&&r.l!=='xx'?r.l.toUpperCase():''].filter(Boolean).join(' · ');
+  const tag=st.split?[r.f!=='normal'?(r.f==='reverse'?'Reverse':'Holo'):'',r.l&&r.l!=='xx'?r.l.toUpperCase():''].filter(Boolean).join(' · '):(r.l&&r.l!=='xx'?r.l.toUpperCase():'');
   return`<div class="slot ${on?'on':'off'} plslot" ${r.dup?'':`data-act="pl-toggle" data-key="${esc(r.key)}"`} role="button" tabindex="0" aria-label="${esc(r.sn.n)}, você tem ${r.own}, ${r.dup?'já na lista':on?'marcada':'não marcada'}">
    <div class="pocket">${imgTag(r.sn.i,'low',r.sn.n,undefined,r.id)}${on?'<span class="tg on" aria-hidden="true">✓</span>':''}<span class="qty tq">${r.dup?'Já na lista':'×'+q}</span></div>
    <div class="num"><b>${esc(r.sn.n)}</b><span>${esc(r.sn.no)}</span></div>${tag?`<div class="num"><span>${esc(tag)}</span></div>`:''}
    ${on?`<div class="stepper"><button type="button" class="btn small" data-act="pl-dec" data-key="${esc(r.key)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="pl-inc" data-key="${esc(r.key)}" aria-label="Aumentar">+</button></div>`:`<div class="num"><span>Você tem ×${r.own}</span></div>`}</div>`;}).join('')}</div>`:'<p class="lead">Nenhuma carta com esse filtro.</p>';
  const n=Object.keys(st.sel).length;const b=$('#plgo');if(b){b.textContent=`Copiar ${n} carta${n===1?'':'s'}`;b.disabled=!n;}
 }
-export function pullFilter(k,v){const st=S.ui.pull;if(!st)return;st[k]=v;renderPull();}
+export function pullFilter(k,v){const st=S.ui.pull;if(!st)return;st[k]=v;if(k==='split')st.sel={};renderPull();}
 function plToggle(key){
  const st=S.ui.pull;if(!st)return;
- const r=st.rows.find(x=>x.key===key);if(!r)return;
+ const r=viewRows(st).find(x=>x.key===key);if(!r)return;
  if(st.sel[key]!=null)delete st.sel[key];else st.sel[key]=r.own;
  renderPull();
 }
 function plStep(key,d){
- const st=S.ui.pull;if(!st)return;const r=st.rows.find(x=>x.key===key);if(!r||st.sel[key]==null)return;
+ const st=S.ui.pull;if(!st)return;const r=viewRows(st).find(x=>x.key===key);if(!r||st.sel[key]==null)return;
  st.sel[key]=Math.max(1,Math.min(r.own,st.sel[key]+d));renderPull();
 }
 function plAll(on){
@@ -180,7 +192,7 @@ function plAll(on){
 function plGo(){
  const st=S.ui.pull;const t=st&&getTrade(st.id);if(!t)return;
  let n=0;
- for(const r of st.rows){const q=st.sel[r.key];if(q==null)continue;addItem(t,r.id,r.f,r.l,q);n++;}
+ for(const r of viewRows(st)){const q=st.sel[r.key];if(q==null)continue;addItem(t,r.id,r.f,r.l,q);n++;}
  if(!n)return;
  saveTrades();closeDlg();S.ui.pull=null;
  if(S.cur&&S.cur.refresh)S.cur.refresh();
