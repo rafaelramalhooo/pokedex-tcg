@@ -1,7 +1,7 @@
 /* Eventos, rotas e início do app. */
 import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
-import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter} from './views/trades.js';
+import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter} from './views/trades.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
 import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl, setImmersive} from './views/book.js';
@@ -126,6 +126,7 @@ document.addEventListener('change',e=>{
  if(t.dataset.bsort!==undefined){setBinderSort({f:t.value});return;}
  if(t.dataset.edsort&&S.ui.edit){S.ui.edit.b.sort={f:'default',dir:'asc',...(S.ui.edit.b.sort||{}),[t.dataset.edsort]:t.value};return;}
  if(t.dataset.dexonly!==undefined&&S.ui.dexdlg){S.ui.dexdlg.only=t.checked;renderDexGrid();return;}
+ if(t.dataset.ta==='set'){tradeSetFilter(t.value);return;}
  if(t.dataset.pl==='set'){pullFilter('set',t.value);return;}
  if(t.dataset.pl==='rep'){pullFilter('rep',t.checked);return;}
  if(t.dataset.pl==='split'){pullFilter('split',t.checked);return;}
