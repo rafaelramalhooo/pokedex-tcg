@@ -783,6 +783,12 @@ with sync_playwright() as p:
     reps = page.locator("#pullres .plslot").count()
     check(reps <= total_own, f"puxar: só repetidas ({reps} de {total_own})")
     page.locator('[data-pl="rep"]').uncheck(); page.wait_for_timeout(200)
+    check(page.locator("#pullres .plslot.off").count() == 0, "puxar: nenhuma carta fica apagada")
+    sel = page.locator("#pullres .plslot.sel").first
+    check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
+    check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
+    check("v2.0" in page.locator(".rail .ver").inner_text() and "Gestão de Coleção" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 2.0")
+    page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
     page.locator('[data-act="pl-go"]').click(); page.wait_for_timeout(500)
     check(page.locator("#tgrid .tradeslot").count() == n_items + 2, "negociação: puxar das minhas cartas copia só as escolhidas")
     page.locator('[data-act="trade-pull"]').click(); page.wait_for_selector("#pullres .slot")
