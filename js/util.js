@@ -62,3 +62,5 @@ export function live(el){
  Object.defineProperty(el,'innerHTML',{configurable:true,get(){return NATIVE.get.call(this);},set(v){setHTML(this,v);}});
  return el;
 }
+
+export const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});

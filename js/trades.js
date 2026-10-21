@@ -8,7 +8,7 @@ import {uid} from './util.js';
 
 export const saveTrades=()=>saveKV('trades',S.trades);
 export const KINDS={sell:'Vendo / Troco',want:'Procuro'};
-export const itemKey=i=>i.id+'|'+i.f+'|'+i.l;
+export const itemKey=i=>i.id+'|'+i.f+'|'+i.l+(i.c?'|'+i.c:'');
 export const newTrade=(name,kind)=>({id:uid(),name:name||'Nova lista',kind:kind==='want'?'want':'sell',items:[],created:Date.now()});
 export const getTrade=id=>S.trades.find(t=>t.id===id);
 export const totalQty=t=>t.items.reduce((a,i)=>a+i.q,0);
@@ -20,11 +20,11 @@ export function snapOf(id){
  if(!img){const dv=derivedImage(id);if(dv)img=dv.url;}
  return{n:b.name||c.name||id,i:img,no:String(b.localId||c.localId||id.slice(id.lastIndexOf('-')+1)),s:b.setId||c.set||id.slice(0,id.lastIndexOf('-'))};
 }
-export function addItem(t,id,f,l,q){
- f=f||'normal';l=l||langOf(id);q=Math.max(1,q||1);
- const probe={id,f,l};const ex=t.items.find(x=>itemKey(x)===itemKey(probe));
+export function addItem(t,id,f,l,q,c){
+ f=f||'normal';l=l||langOf(id);q=Math.max(1,q||1);c=c||'';
+ const probe={id,f,l,c};const ex=t.items.find(x=>itemKey(x)===itemKey(probe));
  if(ex){ex.q+=q;return ex;}
- const it={id,f,l,q,...snapOf(id)};t.items.push(it);return it;
+ const it={id,f,l,q,...snapOf(id)};if(c)it.c=c;t.items.push(it);return it;
 }
 export function setQty(t,key,q){
  const i=t.items.findIndex(x=>itemKey(x)===key);if(i<0)return;
@@ -36,6 +36,45 @@ export function updateItem(t,key,patch){
  const clash=t.items.find(x=>x!==old&&itemKey(x)===itemKey(next));
  if(clash){clash.q=Math.min(999,clash.q+next.q);t.items.splice(t.items.indexOf(old),1);return clash;}
  Object.assign(it,patch);return it;
+}
+/* ---------- valor e condição (listas Vendo/Troco) ---------- */
+/* Lê um valor digitado em reais: "12,50", "1.250,00" ou "12.5". Vazio ou inválido vira null. */
+export function parsePrice(s){
+ s=String(s==null?'':s).trim().replace(/R\$|\s/g,'');if(!s)return null;
+ s=s.includes(',')?s.replace(/\./g,'').replace(',','.'):s;
+ const n=Number(s);if(!isFinite(n)||n<0)return null;
+ return Math.round(Math.min(n,999999)*100)/100;
+}
+export const hasPrice=i=>typeof i.p==='number'&&isFinite(i.p);
+export function tradeTotal(t){
+ let sum=0,priced=0,missing=0;
+ for(const i of t.items){if(hasPrice(i)){sum+=i.p*i.q;priced++;}else missing++;}
+ return{sum:Math.round(sum*100)/100,priced,missing};
+}
+/* Edição em massa. o: {c: undefined|'__none'|código, qMode:''|'set'|'add'|'sub', qVal, pMode:''|'set'|'up'|'down'|'clear', pVal}. Devolve quantas cartas mudaram. */
+export function bulkEdit(t,keys,o){
+ let n=0;
+ const items=t.items.filter(i=>keys.has(itemKey(i)));
+ for(const it of items){
+  if(!t.items.includes(it))continue;
+  const patch={};
+  if(o.c!==undefined&&o.c!==null&&o.c!=='')patch.c=o.c==='__none'?'':o.c;
+  if(o.qMode){
+   const v=Math.floor(Number(o.qVal));
+   if(isFinite(v)&&v>=0){
+    const q=o.qMode==='set'?v:o.qMode==='add'?it.q+v:it.q-v;
+    patch.q=Math.max(1,Math.min(999,q));
+   }
+  }
+  if(o.pMode==='clear')patch.p=null;
+  else if(o.pMode==='set'){const p=parsePrice(o.pVal);if(p!==null)patch.p=p;}
+  else if((o.pMode==='up'||o.pMode==='down')&&hasPrice(it)){
+   const pc=Number(String(o.pVal).replace(',','.'));
+   if(isFinite(pc)&&pc>=0){const f=o.pMode==='up'?1+pc/100:Math.max(0,1-pc/100);patch.p=Math.round(Math.min(it.p*f,999999)*100)/100;}
+  }
+  if(Object.keys(patch).length){updateItem(t,itemKey(it),patch);n++;}
+ }
+ return n;
 }
 /* Copia as cartas que você tem para a lista (não mexe na coleção). */
 export function pullMine(t){
@@ -61,5 +100,13 @@ export function newShareCode(){
  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 export const shareLink=code=>`${location.origin}${location.pathname}#/v/${code}`;
-/* A cópia leva só o que é visível: nome, tipo e cartas com quantidade, acabamento e idioma. */
-export const shareSnapshot=t=>({v:1,name:t.name,kind:t.kind,at:Date.now(),items:t.items.map(i=>({n:i.n,no:i.no,i:i.i,q:i.q,f:i.f,l:i.l}))});
+/* A cópia leva só o que é visível: nome, tipo e cartas com quantidade, acabamento e idioma. Valor e condição só entram se você escolher (opts.v, opts.c) e só em listas Vendo/Troco. */
+export const shareSnapshot=(t,opts)=>{
+ const o=t.kind==='sell'?(opts||{}):{};
+ return{v:1,name:t.name,kind:t.kind,at:Date.now(),items:t.items.map(i=>{
+  const x={n:i.n,no:i.no,i:i.i,q:i.q,f:i.f,l:i.l};
+  if(o.c&&i.c)x.c=i.c;
+  if(o.v&&hasPrice(i))x.p=i.p;
+  return x;
+ })};
+};

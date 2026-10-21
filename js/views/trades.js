@@ -1,11 +1,11 @@
 /* Negociação: listas para vender/trocar ou procurar. Não afetam a coleção, a Dex nem os fichários. */
 import {visibleSet,loadAllSetLists} from '../catalog.js';
-import {FIN_LABEL} from '../constants.js';
+import {COND, FIN_LABEL} from '../constants.js';
 import {flagHTML, langOf} from '../cardlabel.js';
 import {S, refreshAll} from '../state.js';
 import {imgTag, noteHTML, toast} from '../ui.js';
-import {$, ICON, esc, fmtN, live, nz} from '../util.js';
-import {KINDS, addItem, getTrade, imgOf, itemKey, newShareCode, newTrade, saveTrades, setQty, shareLink, shareSnapshot, snapOf, totalQty, updateItem} from '../trades.js';
+import {$, ICON, brl, esc, fmtN, live, nz} from '../util.js';
+import {KINDS, addItem, bulkEdit, getTrade, hasPrice, imgOf, itemKey, newShareCode, newTrade, parsePrice, saveTrades, setQty, shareLink, shareSnapshot, snapOf, totalQty, tradeTotal, updateItem} from '../trades.js';
 import {canShare, shareList, sharingMissing, unshareList} from '../cloud.js';
 import {openExport} from '../exportimg.js';
 
@@ -35,23 +35,26 @@ export function viewTrade(id){
  S.cur={name:'trade',id,soft:renderTrade,refresh:renderTrade};
  $('#view').innerHTML=`<a class="back" href="#/negociacao">${ICON.back} Negociação</a>
   <div class="top"><div><h1 id="tname"></h1><div class="chips" id="tchips"></div></div>
-  <div class="tools"><button class="btn" type="button" data-act="trade-add" data-id="${esc(id)}">Adicionar cartas</button>${t.kind==='sell'?`<button class="btn" type="button" data-act="trade-pull" data-id="${esc(id)}">Puxar das minhas cartas</button>`:''}<button class="btn primary" type="button" data-act="trade-export" data-id="${esc(id)}">Exportar imagem</button><button class="btn" type="button" data-act="trade-share" data-id="${esc(id)}">Compartilhar link</button><button class="btn" type="button" data-act="trade-edit-list" data-id="${esc(id)}">Editar lista</button></div></div>
+  <div class="tools"><button class="btn" type="button" data-act="trade-add" data-id="${esc(id)}">Adicionar cartas</button>${t.kind==='sell'?`<button class="btn" type="button" data-act="trade-pull" data-id="${esc(id)}">Puxar das minhas cartas</button><button class="btn" type="button" data-act="trade-bulk" data-id="${esc(id)}">Editar em massa</button>`:''}<button class="btn primary" type="button" data-act="trade-export" data-id="${esc(id)}">Exportar imagem</button><button class="btn" type="button" data-act="trade-share" data-id="${esc(id)}">Compartilhar link</button><button class="btn" type="button" data-act="trade-edit-list" data-id="${esc(id)}">Editar lista</button></div></div>
   <div id="tgrid"></div>`;
  renderTrade();
 }
 export function tradeTile(t,it){
  const key=itemKey(it);
- const tag=[it.f!=='normal'?(it.f==='reverse'?'Reverse':'Holo'):'',it.l&&it.l!=='xx'?it.l.toUpperCase():''].filter(Boolean).join(' · ');
+ const sell=t.kind==='sell';
+ const tag=[it.f!=='normal'?(it.f==='reverse'?'Reverse':'Holo'):'',it.l&&it.l!=='xx'?it.l.toUpperCase():'',sell&&it.c?it.c:''].filter(Boolean).join(' · ');
  return`<div class="slot on tradeslot" data-act="trade-item" data-trade="${esc(t.id)}" data-key="${esc(key)}" role="button" tabindex="0" aria-label="${esc(it.n)}, ${it.q} unidade${it.q===1?'':'s'}. Editar">
   <div class="pocket">${imgTag(it.i,'low',it.n,undefined,it.id)}<span class="qty tq">×${it.q}</span></div>
   <div class="num"><b>${esc(it.n)}</b><span>${esc(it.no)} ${flagHTML(it.l||'xx')}</span></div>
   ${tag?`<div class="num"><span>${esc(tag)}</span></div>`:''}
+  ${sell?`<div class="num"><b class="tprice">${hasPrice(it)?esc(brl(it.p)):'<span class="tnop">Sem valor</span>'}</b></div>`:''}
   <div class="stepper"><button type="button" class="btn small" data-act="trade-dec" data-trade="${esc(t.id)}" data-key="${esc(key)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="trade-inc" data-trade="${esc(t.id)}" data-key="${esc(key)}" aria-label="Aumentar">+</button></div></div>`;
 }
 export function renderTrade(){
  if(!S.cur||S.cur.name!=='trade')return;
  const t=getTrade(S.cur.id);if(!t)return;
- $('#tname').textContent=t.name;$('#tchips').innerHTML=kindChip(t.kind)+(t.share?' <span class="ttag fmt">Link ativo</span>':'')+` <span class="lead" style="margin:0">${fmtN(t.items.length)} carta${t.items.length===1?'':'s'} · ${fmtN(totalQty(t))} unidade${totalQty(t)===1?'':'s'}</span>`;
+ const tt=t.kind==='sell'?tradeTotal(t):null;
+ $('#tname').textContent=t.name;$('#tchips').innerHTML=kindChip(t.kind)+(t.share?' <span class="ttag fmt">Link ativo</span>':'')+` <span class="lead" style="margin:0">${fmtN(t.items.length)} carta${t.items.length===1?'':'s'} · ${fmtN(totalQty(t))} unidade${totalQty(t)===1?'':'s'}</span>`+(tt&&tt.priced?` <span class="ttag fmt" id="ttotal">Total ${esc(brl(tt.sum))}</span>`+(tt.missing?` <span class="lead" style="margin:0">${tt.missing} sem valor</span>`:''):'');
  const g=live($('#tgrid'));
  if(!t.items.length){
   g.innerHTML=`<div class="empty"><h3>Lista vazia</h3><p>Use “Adicionar cartas” para buscar pelo nome${t.kind==='sell'?' ou “Puxar das minhas cartas” para copiar o que você tem':''}.</p></div>`;
@@ -183,13 +186,65 @@ function itemDialog(t,it){
   <div class="row" style="gap:12px;flex-wrap:wrap">
    <label class="size">Quantidade <input class="field mini" id="tiq" type="number" min="1" max="999" value="${it.q}"></label>
    <label class="size">Acabamento <select class="field" id="tif">${Object.entries(FIN_LABEL).map(([k,l])=>`<option value="${k}" ${it.f===k?'selected':''}>${l}</option>`).join('')}</select></label>
-   <label class="size">Idioma <select class="field" id="til">${LANGS.map(([k,l])=>`<option value="${k}" ${it.l===k?'selected':''}>${l}</option>`).join('')}</select></label></div>
+   <label class="size">Idioma <select class="field" id="til">${LANGS.map(([k,l])=>`<option value="${k}" ${it.l===k?'selected':''}>${l}</option>`).join('')}</select></label>
+   ${t.kind==='sell'?`<label class="size">Condição <select class="field" id="tic"><option value="">Não informada</option>${COND.map(([k,l])=>`<option value="${k}" ${it.c===k?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label class="size">Valor pedido (R$, por carta) <input class="field mini" id="tip" type="text" inputmode="decimal" placeholder="0,00" value="${hasPrice(it)?String(it.p).replace('.',','):''}" style="width:110px"></label>`:''}</div>
   <div class="actions"><button class="btn" type="button" data-act="tr-remove">Remover da lista</button><span><button class="btn" type="button" data-ed-act="cancel">Cancelar</button> <button class="btn primary" type="button" data-act="tr-item-save">Salvar</button></span></div>`;
  $('#modal').classList.add('on');
 }
 export function tradeExport(id){
  const t=getTrade(id);if(!t)return;
- openExport({title:t.name,kindLabel:KINDS[t.kind],kindColor:t.kind==='want'?'#2F6FDE':'#D93A2B',scopes:null,build:()=>t.items.map(it=>({url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l}))});
+ const sell=t.kind==='sell';
+ openExport({title:t.name,kindLabel:KINDS[t.kind],kindColor:t.kind==='want'?'#2F6FDE':'#D93A2B',scopes:null,extras:sell?{p:t.items.some(hasPrice),c:t.items.some(i=>i.c),on:false}:null,build:()=>t.items.map(it=>({url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l,...(sell&&it.c?{c:it.c}:{}),...(sell&&hasPrice(it)?{p:it.p}:{})}))});
+}
+
+/* ---------- Editar em massa (listas Vendo/Troco) ---------- */
+const sel=(id,opts)=>`<select class="field" id="${id}">${opts.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select>`;
+function bulkRows(t,st){
+ return t.items.map(it=>{
+  const key=itemKey(it),on=st.sel.has(key);
+  const tag=[it.f!=='normal'?(it.f==='reverse'?'Reverse':'Holo'):'',it.l&&it.l!=='xx'?it.l.toUpperCase():'',it.c||''].filter(Boolean).join(' · ');
+  return`<button type="button" class="bkrow ${on?'on':''}" data-act="bk-toggle" data-key="${esc(key)}" aria-pressed="${on}"><span class="bkchk" aria-hidden="true">${on?'✓':''}</span><span class="bkname"><b>${esc(it.n)}</b> <small>${esc(it.no)}${tag?' · '+esc(tag):''}</small></span><span class="bkq">×${it.q}</span><span class="bkp">${hasPrice(it)?esc(brl(it.p)):'—'}</span></button>`;
+ }).join('');
+}
+function bulkPaint(){
+ const st=S.ui.bulk;const t=st&&getTrade(st.id);if(!t)return;
+ const l=$('#bkl');if(l)l.innerHTML=bulkRows(t,st);
+ const n=$('#bkn');if(n)n.textContent=`${st.sel.size} de ${t.items.length} selecionada${st.sel.size===1?'':'s'}`;
+ const a=$('#bkgo');if(a)a.disabled=!st.sel.size;const r=$('#bkrm');if(r)r.disabled=!st.sel.size;
+}
+function bulkDialog(id){
+ const t=getTrade(id);if(!t)return;
+ if(!t.items.length){toast('A lista está vazia.');return;}
+ S.ui.bulk={id,sel:new Set()};
+ $('#dialog').innerHTML=`<div class="tdlg"><h2>Editar em massa</h2>
+  <p class="lead">1. Marque as cartas. 2. Escolha o que mudar. 3. Aplique. O que ficar em “Não mudar” não é alterado.</p>
+  <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><button class="btn small" type="button" data-act="bk-all">Marcar todas</button><button class="btn small" type="button" data-act="bk-none">Desmarcar</button><span class="lead" id="bkn" style="margin:0"></span></div>
+  <div class="tdbody bklist" id="bkl" style="max-height:34vh;margin:8px 0"></div>
+  <div class="bkctl">
+   <label class="size">Condição ${sel('bkc',[['','Não mudar'],['__none','Limpar a condição'],...COND])}</label>
+   <label class="size">Quantidade ${sel('bkqm',[['','Não mudar'],['set','Definir como'],['add','Somar'],['sub','Subtrair']])} <input class="field mini" id="bkqv" type="number" min="0" max="999" placeholder="0"></label>
+   <label class="size">Valor (R$) ${sel('bkpm',[['','Não mudar'],['set','Definir como'],['up','Aumentar em %'],['down','Diminuir em %'],['clear','Limpar o valor']])} <input class="field mini" id="bkpv" type="text" inputmode="decimal" placeholder="0,00" style="width:100px"></label>
+  </div>
+  <div class="actions"><button class="btn" type="button" data-act="bk-remove" id="bkrm">Remover marcadas</button><span><button class="btn" type="button" data-ed-act="cancel">Fechar</button> <button class="btn primary" type="button" data-act="bk-apply" id="bkgo">Aplicar às marcadas</button></span></div></div>`;
+ $('#modal').classList.add('on');bulkPaint();
+}
+function bulkApply(){
+ const st=S.ui.bulk;const t=st&&getTrade(st.id);if(!t||!st.sel.size)return;
+ const o={c:$('#bkc').value,qMode:$('#bkqm').value,qVal:$('#bkqv').value,pMode:$('#bkpm').value,pVal:$('#bkpv').value};
+ if(!o.c&&!o.qMode&&!o.pMode){toast('Escolha o que mudar: condição, quantidade ou valor.');return;}
+ if(o.qMode&&!(Number($('#bkqv').value)>=0&&$('#bkqv').value!=='')){toast('Digite a quantidade.');return;}
+ if((o.pMode==='set'||o.pMode==='up'||o.pMode==='down')&&!String(o.pVal).trim()){toast('Digite o valor ou o percentual.');return;}
+ if(o.pMode==='set'&&parsePrice(o.pVal)===null){toast('Esse valor não é válido. Use, por exemplo, 12,50.');return;}
+ if(!confirm(`Aplicar a ${st.sel.size} carta${st.sel.size===1?'':'s'} da lista “${t.name}”?`))return;
+ const n=bulkEdit(t,st.sel,o);
+ closeDlg();saveAndRefresh();toast(`${n} carta${n===1?'':'s'} atualizada${n===1?'':'s'}.`);
+}
+function bulkRemove(){
+ const st=S.ui.bulk;const t=st&&getTrade(st.id);if(!t||!st.sel.size)return;
+ if(!confirm(`Remover ${st.sel.size} carta${st.sel.size===1?'':'s'} da lista “${t.name}”? Sua coleção não muda.`))return;
+ const n=st.sel.size;t.items=t.items.filter(i=>!st.sel.has(itemKey(i)));
+ closeDlg();saveAndRefresh();toast(`${n} carta${n===1?'':'s'} removida${n===1?'':'s'}.`);
 }
 
 /* ---------- Puxar das minhas cartas: tocar na carta já a coloca na lista ---------- */
@@ -286,6 +341,8 @@ function plAll(on){
 /* ---------- link público ---------- */
 const SQL_MSG='Falta rodar o arquivo supabase/atualizacao-link-publico.sql no Supabase (SQL Editor → New query → colar → Run).';
 const fmtAt=ms=>new Date(ms).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const shareOpts=t=>{const o=(t.share&&t.share.opts)||{};return t.kind==='sell'?`<div style="margin:10px 0"><label class="size" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="shv" ${o.v?'checked':''}> Mostrar os valores pedidos</label><label class="size" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="shc" ${o.c?'checked':''}> Mostrar as condições das cartas</label><p class="lead" style="margin:6px 0 0">Desligado, quem abre o link não vê valor nem condição.</p></div>`:'';};
+const readShareOpts=t=>t.kind==='sell'?{v:!!($('#shv')&&$('#shv').checked),c:!!($('#shc')&&$('#shc').checked)}:{};
 function shareDialog(id,msg){
  const t=getTrade(id);if(!t)return;
  S.ui.sh={id};
@@ -293,9 +350,11 @@ function shareDialog(id,msg){
  if(!canShare())body=`<p class="note warn">Para criar um link, entre na sua conta (menu Catálogo e ajustes). O link fica guardado na nuvem.</p>`;
  else if(!t.share)body=`<p>O link abre uma página <b>só de leitura</b> com o nome da lista, o tipo, as cartas e as quantidades. Quem abre não vê sua conta, sua coleção, seus fichários nem seus decks, e não precisa de login.</p>
   <p class="lead">O endereço é longo e aleatório, mas qualquer pessoa que receber o link consegue ver a lista. A página é uma cópia: ela só muda quando você usar “Atualizar o link”. Dá para parar de compartilhar a qualquer momento.</p>
+  ${shareOpts(t)}
   <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="sh-create" data-id="${esc(id)}">Criar link</button></div>`;
  else body=`<label class="lbl2" for="shl">Link da lista</label><input class="field" id="shl" readonly style="width:100%" value="${esc(shareLink(t.share.code))}" onfocus="this.select()">
   <p class="lead" style="margin-top:8px">Última atualização do link: ${esc(fmtAt(t.share.at))}. ${t.items.length} carta${t.items.length===1?'':'s'} na lista agora.</p>
+  ${shareOpts(t)}
   <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-act="sh-copy">Copiar link</button><button class="btn" type="button" data-act="sh-update" data-id="${esc(id)}">Atualizar o link com a lista atual</button><button class="btn" type="button" data-act="sh-stop" data-id="${esc(id)}">Parar de compartilhar</button></div>
   <div class="actions"><span></span><button class="btn" type="button" data-ed-act="cancel">Fechar</button></div>`;
  $('#dialog').innerHTML=`<h2>Compartilhar link</h2>${msg?`<p class="note err">${esc(msg)}</p>`:''}${body}`;
@@ -304,9 +363,10 @@ function shareDialog(id,msg){
 async function shareGo(id,fresh){
  const t=getTrade(id);if(!t)return;
  const code=fresh||!t.share?newShareCode():t.share.code;
- try{await shareList(code,shareSnapshot(t));}
+ const opts=readShareOpts(t);
+ try{await shareList(code,shareSnapshot(t,opts));}
  catch(e){shareDialog(id,sharingMissing(e)?SQL_MSG:'Não consegui criar o link agora. Confira a conexão e tente de novo.');return;}
- t.share={code,at:Date.now()};saveTrades();
+ t.share={code,at:Date.now(),opts};saveTrades();
  shareDialog(id);
  if(S.cur&&S.cur.refresh)S.cur.refresh();
 }
@@ -317,7 +377,7 @@ async function shareStop(id){
  delete t.share;saveTrades();shareDialog(id);toast('O link deixou de funcionar.');
 }
 
-const closeDlg=()=>{$('#modal').classList.remove('on');S.ui.tr=null;S.ui.tradeAdd=null;S.ui.pull=null;};
+const closeDlg=()=>{$('#modal').classList.remove('on');S.ui.tr=null;S.ui.tradeAdd=null;S.ui.pull=null;S.ui.bulk=null;};
 export const TRADE_ACT={
  'trade-new':()=>listDialog(newTrade('', 'sell'),true),
  'tr-kind':t=>{document.querySelectorAll('[data-act=tr-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));if(S.ui.tr)S.ui.tr.t.kind=t.dataset.v;},
@@ -352,6 +412,12 @@ export const TRADE_ACT={
  'pl-all':()=>plAll(true),
  'pl-none':()=>plAll(false),
  'trade-export':t=>tradeExport(t.dataset.id),
+ 'trade-bulk':t=>bulkDialog(t.dataset.id),
+ 'bk-toggle':t=>{const st=S.ui.bulk;if(!st)return;const k=t.dataset.key;if(st.sel.has(k))st.sel.delete(k);else st.sel.add(k);bulkPaint();},
+ 'bk-all':()=>{const st=S.ui.bulk;const t=st&&getTrade(st.id);if(!t)return;t.items.forEach(i=>st.sel.add(itemKey(i)));bulkPaint();},
+ 'bk-none':()=>{const st=S.ui.bulk;if(!st)return;st.sel.clear();bulkPaint();},
+ 'bk-apply':()=>bulkApply(),
+ 'bk-remove':()=>bulkRemove(),
  'trade-share':t=>shareDialog(t.dataset.id),
  'sh-create':t=>shareGo(t.dataset.id,true),
  'sh-update':t=>shareGo(t.dataset.id,false),
@@ -363,7 +429,9 @@ export const TRADE_ACT={
  'tr-item-save':()=>{
   const st=S.ui.tr;const x=st&&getTrade(st.id);if(!x)return;
   const q=Math.max(1,Math.min(999,parseInt($('#tiq').value,10)||1));
-  updateItem(x,st.key,{q,f:$('#tif').value,l:$('#til').value});
+  const patch={q,f:$('#tif').value,l:$('#til').value};
+  if(x.kind==='sell'){patch.c=$('#tic').value;patch.p=parsePrice($('#tip').value);}
+  updateItem(x,st.key,patch);
   closeDlg();saveAndRefresh();
  },
  'tr-remove':()=>{const st=S.ui.tr;const x=st&&getTrade(st.id);if(!x)return;setQty(x,st.key,0);closeDlg();saveAndRefresh();}

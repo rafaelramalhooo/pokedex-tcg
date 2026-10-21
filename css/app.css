@@ -530,3 +530,16 @@ img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.hero .hlogo img.lgbg{position:a
 .set .logo img.lgbg:not([src]),.pk .logo img.lgbg:not([src]),.hero .hlogo img.lgbg:not([src]){visibility:hidden}
 .set .logo>img[data-role="logo"],.pk .logo>img[data-role="logo"],.hero .hlogo>img[data-role="logo"]{position:relative;z-index:1}
 .set .logo::after,.pk .logo::after,.hero .hlogo::after{content:"";position:absolute;inset:0;z-index:0;background:radial-gradient(closest-side,rgba(255,255,255,.35),rgba(255,255,255,0) 80%);pointer-events:none}
+
+/* Valor e condição nas listas de negociação */
+.tprice{font:800 13px/1.2 var(--display);color:var(--ink)}
+.tnop{font-weight:600;color:var(--ink-2)}
+.bkrow{display:grid;grid-template-columns:26px minmax(0,1fr) auto auto;gap:10px;align-items:center;width:100%;text-align:left;padding:9px 6px;border:0;border-bottom:1px solid var(--line);background:none;cursor:pointer;min-height:44px;color:inherit;font:inherit}
+.bkrow.on{background:hsl(220 80% 60%/.10)}
+.bkchk{width:22px;height:22px;border:2px solid var(--line);border-radius:6px;display:grid;place-items:center;font-weight:800;font-size:14px}
+.bkrow.on .bkchk{background:var(--ink);border-color:var(--ink);color:#fff}
+.bkname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bkname small{color:var(--ink-2)}
+.bkq,.bkp{font-weight:700;font-size:13px;white-space:nowrap}
+.bkctl{display:grid;gap:10px;margin-top:6px}
+.bkctl .size{display:flex;flex-wrap:wrap;gap:8px;align-items:center}

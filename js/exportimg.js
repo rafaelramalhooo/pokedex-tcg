@@ -13,16 +13,16 @@ export const autoCols=n=>Math.max(2,Math.min(10,Math.round(Math.sqrt(n*0.9))));
 /* Medidas da folha para n cartas em cols colunas com cartas de largura cw.
    A folha nunca fica mais estreita que MIN_COLS colunas, para o cabeçalho e o rodapé terem espaço. */
 const MIN_COLS=4;
-export function sheetSize(n,cols,cw,labels,lines,kind){
- const g=cw*0.045,pad=cw*0.07,ch=cw*1.375,lab=labels?cw*0.38:0,head=cw*(0.07+(kind?0.185:0)+(lines||1)*0.165+0.25),foot=cw*0.42;
+export function sheetSize(n,cols,cw,labels,lines,kind,extra){
+ const g=cw*0.045,pad=cw*0.07,ch=cw*1.375,lab=labels?cw*(0.38+(extra?0.1:0)):0,head=cw*(0.07+(kind?0.185:0)+(lines||1)*0.165+0.25),foot=cw*0.42;
  const rows=Math.ceil(n/cols);const gc=Math.max(cols,MIN_COLS);
  const gridW=cols*cw+(cols-1)*g;
  return{g,pad,ch,lab,head,foot,rows,gc,gridW,W:Math.round(pad*2+gc*cw+(gc-1)*g),H:Math.round(head+rows*(ch+lab+g)+foot+pad*0.5)};
 }
 /* Escolhe a maior largura de carta em que tudo cabe numa imagem; se não couber, divide em partes. */
-export function planSheets(n,cols,labels,lines,kind){
+export function planSheets(n,cols,labels,lines,kind,extra){
  const L=limits();
- const fits=(m,cw)=>{const s=sheetSize(m,cols,cw,labels,lines,kind);return s.W*s.H<=L.area&&s.W<=L.dim&&s.H<=L.dim;};
+ const fits=(m,cw)=>{const s=sheetSize(m,cols,cw,labels,lines,kind,extra);return s.W*s.H<=L.area&&s.W<=L.dim&&s.H<=L.dim;};
  for(const cw of WIDTHS)if(fits(n,cw))return{cw,parts:[n]};
  const cw=WIDTHS[WIDTHS.length-1];
  let rows=1;while(fits((rows+1)*cols,cw))rows++;
@@ -95,9 +95,9 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty){
  const full=title+(partTotal>1?` (parte ${partNo}/${partTotal})`:'');
  const probe=document.createElement('canvas').getContext('2d');
  probe.font=`800 ${cw*0.16}px "Hanken Grotesk","Segoe UI",Roboto,Helvetica,Arial,sans-serif`;
- const w0=sheetSize(items.length,o.cols,cw,o.labels,1,!!o.kindLabel);
+ const w0=sheetSize(items.length,o.cols,cw,o.labels,1,!!o.kindLabel,o.extra);
  const nLines=wrap(probe,full,w0.W-w0.pad*2,2).length;
- const s=sheetSize(items.length,o.cols,cw,o.labels,nLines,!!o.kindLabel);
+ const s=sheetSize(items.length,o.cols,cw,o.labels,nLines,!!o.kindLabel,o.extra);
  const cv=document.createElement('canvas');cv.width=s.W;cv.height=s.H;
  const ctx=cv.getContext('2d');
  ctx.fillStyle='#F2F4F9';ctx.fillRect(0,0,s.W,s.H);
@@ -145,6 +145,10 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty){
    const meta=[it.no,finTxt(it.f),it.l&&it.l!=='xx'?it.l.toUpperCase():''].filter(Boolean).join(' · ');
    ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.062}px ${FONT}`;
    ctx.fillText(fit(ctx,meta,cw),x,ly+cw*0.085);
+   if(o.extra){
+    const ex=[it.c||'',typeof it.p==='number'?it.p.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):''].filter(Boolean);
+    if(ex.length){ctx.fillStyle='#121A2B';ctx.font=`800 ${cw*0.068}px ${FONT}`;ctx.fillText(fit(ctx,ex.join(' · '),cw),x,ly+cw*0.17);}
+   }
   }
  });
  /* rodapé em duas linhas, com margem de segurança */
@@ -162,13 +166,14 @@ const slug=t=>String(t||'cartas').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowe
 export async function buildImages(items,o){
  const labels=o.labels!==false;
  const cols=Math.max(1,Math.min(10,items.length,o.cols||autoCols(items.length)));
- const plan=planSheets(items.length,cols,labels,linesGuess(o.title+' (parte 1/1)'),!!o.kindLabel);
+ const extra=!!o.extra&&labels&&items.some(i=>i.c||typeof i.p==='number');
+ const plan=planSheets(items.length,cols,labels,linesGuess(o.title+' (parte 1/1)'),!!o.kindLabel,extra);
  const {bmps,fb,miss}=await loadAll(items,o.onProgress);
  const totalQty=items.reduce((a,i)=>a+(i.q||0),0);
  const files=[];let at=0;
  for(let p=0;p<plan.parts.length;p++){
   const n=plan.parts[p];
-  const cv=drawSheet(items.slice(at,at+n),bmps.slice(at,at+n),{cols,labels,kindLabel:o.kindLabel,kindColor:o.kindColor},plan.cw,o.title,p+1,plan.parts.length,items.length,totalQty);
+  const cv=drawSheet(items.slice(at,at+n),bmps.slice(at,at+n),{cols,labels,extra,kindLabel:o.kindLabel,kindColor:o.kindColor},plan.cw,o.title,p+1,plan.parts.length,items.length,totalQty);
   const blob=await toBlob(cv);cv.width=cv.height=1;
   if(!blob)throw new Error('O navegador não conseguiu gerar a imagem (talvez seja grande demais).');
   files.push(new File([blob],slug(o.title)+(plan.parts.length>1?'-parte'+(p+1):'')+'.jpg',{type:'image/jpeg'}));
@@ -217,6 +222,8 @@ export function openExport(c){
   <label class="lbl2" for="exc" style="margin-top:12px;display:block">Colunas (no máximo 10)</label>
   <select class="field" id="exc"><option value="0">Automático</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('')}</select>
   <label class="size" style="margin-top:12px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="exl" checked> Mostrar nome, número, acabamento e idioma</label>
+  ${c.extras&&c.extras.p?`<label class="size" style="margin-top:8px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="exp" ${c.extras.on?'checked':''}> Mostrar o valor pedido</label>`:''}
+  ${c.extras&&c.extras.c?`<label class="size" style="margin-top:8px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="exk" ${c.extras.on?'checked':''}> Mostrar a condição</label>`:''}
   <p class="lead" id="exn" style="margin-top:12px">${n0} carta${n0===1?'':'s'} na imagem.</p>
   <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="exp-go" id="exgo">Gerar imagem</button></div>`;
  $('#modal').classList.add('on');
@@ -224,7 +231,9 @@ export function openExport(c){
 export function exportScopeChanged(v){if(!cfg)return;cfg.scope=v;const n=cfg.build(v).length;const el=$('#exn');if(el)el.textContent=`${n} carta${n===1?'':'s'} na imagem.`;}
 export async function runExport(){
  if(!cfg)return;
- const items=cfg.build(cfg.scope);
+ let items=cfg.build(cfg.scope);
+ const showP=!!($('#exp')&&$('#exp').checked),showC=!!($('#exk')&&$('#exk').checked);
+ items=items.map(i=>{const x={...i};if(!showP)delete x.p;if(!showC)delete x.c;return x;});
  if(!items.length){toast('Não há cartas para exportar nesta opção.');return;}
  const cols=+($('#exc')||{value:0}).value||0;const labels=!!($('#exl')||{checked:true}).checked;
  const title=cfg.title;
@@ -232,7 +241,7 @@ export async function runExport(){
  if(!TOUCH()){try{tab=window.open('','_blank');if(tab)tab.document.title='Gerando imagem…';}catch(e){}}
  const btn=$('#exgo');if(btn){btn.disabled=true;btn.textContent='Gerando… 0%';}
  try{
-  const r=await buildImages(items,{title,cols,labels,kindLabel:cfg.kindLabel,kindColor:cfg.kindColor,onProgress:(d,t)=>{const b=$('#exgo');if(b)b.textContent=`Gerando… ${Math.round(d/t*100)}%`;}});
+  const r=await buildImages(items,{title,cols,labels,extra:showP||showC,kindLabel:cfg.kindLabel,kindColor:cfg.kindColor,onProgress:(d,t)=>{const b=$('#exgo');if(b)b.textContent=`Gerando… ${Math.round(d/t*100)}%`;}});
   document.getElementById('modal').classList.remove('on');
   let msg='';
   if(r.miss)msg+=`${r.miss} carta(s) ficaram sem imagem. `;
