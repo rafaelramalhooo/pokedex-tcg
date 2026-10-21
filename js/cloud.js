@@ -4,6 +4,7 @@
    Ao baixar, linhas que você alterou e ainda não foram enviadas valem mais que as da nuvem; o resto vem da nuvem. */
 import {SUPABASE} from './config.js';
 import {DB, hooks, saveBinders, saveKV, saveSettings} from './db.js';
+import {saveTrades} from './trades.js';
 import {S, refreshAll, viewCache} from './state.js';
 
 export const enabled=!!(SUPABASE.url&&SUPABASE.key);
@@ -47,6 +48,21 @@ const TABLES={
    const order=[];S.binders.forEach(b=>{if(by.has(b.id)){order.push(by.get(b.id));by.delete(b.id);}});
    by.forEach(b=>order.push(b));
    S.binders=order;saveBinders();
+  }
+ },
+ trade_lists:{
+  optional:true,
+  cols:'id,data',ord:['id'],
+  local(){const m=new Map();S.trades.forEach(b=>m.set(b.id,{id:b.id,data:b}));return m;},
+  key:r=>r.id,
+  del:keys=>({col:'id',keys}),
+  apply(changes,removed){
+   const by=new Map(S.trades.map(b=>[b.id,b]));
+   changes.forEach(r=>by.set(r.id,clone(r.data)));
+   removed.forEach(k=>by.delete(k));
+   const order=[];S.trades.forEach(b=>{if(by.has(b.id)){order.push(by.get(b.id));by.delete(b.id);}});
+   by.forEach(b=>order.push(b));
+   S.trades=order;saveTrades();
   }
  },
  user_settings:{
@@ -97,7 +113,9 @@ async function pull(){
  let changed=false;
  for(const name of NAMES){
   const T=TABLES[name];
-  const remote=new Map((await fetchAll(name)).map(r=>[T.key(r),r]));
+  let rows;
+  try{rows=await fetchAll(name);}catch(e){if(T.optional&&missingTable(e))continue;throw e;}
+  const remote=new Map(rows.map(r=>[T.key(r),r]));
   const cur=T.local();
   const snap=meta.snap[name]||(meta.snap[name]={});
   const dirty=k=>{const c=cur.has(k)?rowStr(cur.get(k)):undefined;return c!==snap[k];};
@@ -123,8 +141,15 @@ async function pull(){
 }
 
 /* ---------- enviar ---------- */
+/* Tabela opcional ainda não criada no Supabase: o app segue funcionando sem ela. */
+const missingTable=e=>!!e&&(e.code==='42P01'||e.code==='PGRST205'||e.code==='PGRST200'||/does not exist|schema cache|could not find the table/i.test(String(e.message||'')));
 async function push(){
  for(const name of NAMES){
+  try{await pushOne(name);}catch(e){if(TABLES[name].optional&&missingTable(e))continue;throw e;}
+ }
+}
+async function pushOne(name){
+ {
   const T=TABLES[name];
   const cur=T.local();const snap=meta.snap[name]||(meta.snap[name]={});
   const ups=[];
@@ -132,7 +157,7 @@ async function push(){
   const dels=T.del?Object.keys(snap).filter(k=>!cur.has(k)):[];
   for(let i=0;i<ups.length;i+=200){
    const part=ups.slice(i,i+200);
-   const {error}=await sb.from(name).upsert(part.map(x=>x[1]),{onConflict:name==='collection'?'user_id,card_id':name==='binders'?'user_id,id':name==='user_settings'?'user_id':'user_id,kind,id'});
+   const {error}=await sb.from(name).upsert(part.map(x=>x[1]),{onConflict:name==='collection'?'user_id,card_id':(name==='binders'||name==='trade_lists')?'user_id,id':name==='user_settings'?'user_id':'user_id,kind,id'});
    if(error)throw error;
    part.forEach(([k,,s])=>{snap[k]=s;});
   }
@@ -209,7 +234,7 @@ export async function initCloud(){
  if(data&&data.session){user=data.session.user;S.cloud.email=user.email||'';return'in';}
  return'out';
 }
-export const hasLocalData=()=>Object.keys(S.collection).length>0||S.binders.length>0;
+export const hasLocalData=()=>Object.keys(S.collection).length>0||S.binders.length>0||S.trades.length>0;
 
 /* Chamado depois de entrar (ou ao abrir o app já com sessão). Faz a primeira junção, se for o caso. */
 export async function startSession(session){
@@ -256,6 +281,7 @@ export async function setNewPassword(password){
 export async function wipeLocal(){
  await DB.clear('coll');S.collection={};
  S.binders=[];await saveBinders();
+ S.trades=[];await saveTrades();
  S.custom={logos:{},cards:{},covers:{}};await saveKV('custom',S.custom);
  S.settings.mySets=null;S.settings.legalMarks=['H','I','J'];
  await saveSettings();

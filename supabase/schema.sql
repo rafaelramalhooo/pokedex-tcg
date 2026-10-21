@@ -98,3 +98,23 @@ create policy "user_settings: só o dono" on public.user_settings
   using      ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+-- Negociação: listas de vender/trocar e procurar (também disponível separado em atualizacao-negociacao.sql).
+create table if not exists public.trade_lists (
+  user_id    uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  id         text        not null,
+  data       jsonb       not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
+drop trigger if exists trade_lists_touch on public.trade_lists;
+create trigger trade_lists_touch before update on public.trade_lists
+  for each row execute function public.touch_updated_at();
+
+alter table public.trade_lists enable row level security;
+
+drop policy if exists "trade_lists: só o dono" on public.trade_lists;
+create policy "trade_lists: só o dono" on public.trade_lists
+  for all to authenticated
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);

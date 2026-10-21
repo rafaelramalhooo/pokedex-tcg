@@ -450,3 +450,11 @@ body.immersive{overflow:hidden}
  .immersive .booknav .bookrange,.immersive .booknav [data-act=book-go]{display:none}
  .immersive .booknav .booklbl{flex:1;font-size:14px}
 }
+
+/* ---------- Negociação e exportar imagem ---------- */
+.tradeslot .qty{left:50%;right:auto;transform:translateX(-50%);bottom:6px;font-size:14px;padding:3px 12px;border-radius:999px}
+.tradeslot .stepper{display:flex;gap:6px;justify-content:center;margin-top:2px}
+.tradeslot .stepper .btn{min-width:44px;padding:0 10px;font-size:18px;line-height:1}
+.exres{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;max-height:58vh;overflow:auto}
+.exitem img{width:100%;border-radius:10px;border:1px solid var(--line);display:block;margin-bottom:6px}
+.exitem .row{display:flex;gap:6px;flex-wrap:wrap}

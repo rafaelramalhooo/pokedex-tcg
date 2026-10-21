@@ -1,6 +1,7 @@
 /* Tela de catálogo e ajustes, backup. */
 import {catalogCoverage} from '../catalog.js';
 import {DB, saveBinders, saveKV, saveSettings} from '../db.js';
+import {saveTrades} from '../trades.js';
 import {H, S, soft} from '../state.js';
 import {noteHTML, toast} from '../ui.js';
 import {cloudSection} from './auth.js';
@@ -73,7 +74,7 @@ function logoDiagHTML(){
  return h;
 }
 export function exportBackup(){
- const data={app:'pokedex-tcg',version:1,exportedAt:new Date().toISOString(),collection:S.collection,binders:S.binders,settings:S.settings,custom:S.custom};
+ const data={app:'pokedex-tcg',version:1,exportedAt:new Date().toISOString(),collection:S.collection,binders:S.binders,trades:S.trades,settings:S.settings,custom:S.custom};
  const a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
  a.download=`pokedex-backup-${new Date().toISOString().slice(0,10)}.json`;
@@ -88,6 +89,7 @@ export async function importBackup(file){
   S.collection=d.collection;
   for(const id in S.collection)await DB.put('coll',id,S.collection[id]);
   S.binders=d.binders||[];await saveBinders();
+  S.trades=d.trades||[];await saveTrades();
   Object.assign(S.settings,d.settings||{});await saveSettings();
   if(d.custom){S.custom=Object.assign({logos:{},cards:{},covers:{}},d.custom);await saveKV('custom',S.custom);}
   toast('Backup importado.');H.route();

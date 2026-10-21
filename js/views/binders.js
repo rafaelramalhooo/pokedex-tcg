@@ -7,6 +7,9 @@ import {coverHTML} from '../covers.js';
 import {saveBinders} from '../db.js';
 import {S, soft} from '../state.js';
 import {imgTag, noteHTML, sizeCtl} from '../ui.js';
+import {customCard} from '../custom.js';
+import {imgOf, snapOf} from '../trades.js';
+import {openExport} from '../exportimg.js';
 import {$, $$, live, ICON, esc, fmtN, pct} from '../util.js';
 import {slotHTML} from './set.js';
 import {dexArt, dexName, loadDexNames, matchQuery, pad4, parseQuery} from './dex.js';
@@ -42,7 +45,7 @@ export function viewBinder(id){
  S.cur={name:'binder',id,soft:renderBinderBody,refresh:renderBinderBody};
  $('#view').innerHTML=`<a class="back" href="#/binders">${ICON.back} Fichários</a>
   <div class="top"><div><h1 id="bname"></h1><div class="chips" id="bchips"></div></div>
-  <div class="tools"><button class="btn" type="button" data-act="edit-binder" data-id="${esc(id)}">Editar regras</button>${b.mode==='manual'?`<button class="btn" type="button" data-act="add-cards" data-id="${esc(id)}">Adicionar cartas</button>`:''}<button class="btn danger" type="button" data-act="del-binder" data-id="${esc(id)}">Excluir</button></div></div>
+  <div class="tools"><button class="btn" type="button" data-act="binder-export" data-id="${esc(id)}">Exportar imagem</button><button class="btn" type="button" data-act="edit-binder" data-id="${esc(id)}">Editar regras</button>${b.mode==='manual'?`<button class="btn" type="button" data-act="add-cards" data-id="${esc(id)}">Adicionar cartas</button>`:''}<button class="btn danger" type="button" data-act="del-binder" data-id="${esc(id)}">Excluir</button></div></div>
   <div id="bsum"></div>
   <div class="toolbar"><div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="bfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="bfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="bfilter" data-v="miss" aria-pressed="false">Faltam</button></div><input class="field" id="bq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar no fichário"><span class="sortctl" id="bsortctl"></span><span class="grow"></span><span class="bookctl" id="bookctl"></span></div>
   <div id="bgrid"></div>`;
@@ -167,4 +170,34 @@ export function dexSlotHTML(x,binderId){
 }
 export function slotHTMLCtx(c,binderId){
  return slotHTML(c,null).replace('data-act="open"',`data-act="open" data-binder="${esc(binderId)}"`);
+}
+
+/* Exportar imagem das cartas do fichário aberto (respeita a busca; o filtro vira a opção "Quais cartas"). */
+export function binderExport(id){
+ const b=S.binders.find(x=>x.id===id);if(!b)return;
+ const r=evalBinder(b);const q=parseQuery(S.ui.binderQ);
+ const entry=(cid,qty,f,l)=>{const sn=snapOf(cid);return{url:customCard(cid)||(sn.i?sn.i+'/high.webp':''),n:sn.n,no:sn.no,q:qty,f,l};};
+ const ownedEntries=cid=>{
+  const e=S.collection[cid];const out=[];
+  if(e)for(const f in e.f){const x=e.f[f];if(x&&x.q>0)out.push(entry(cid,x.q,f,x.l||''));}
+  return out;
+ };
+ let ids,scopes=null;
+ if(r.dex){
+  ids=r.dex.filter(x=>x.rep&&x.owned&&slotMatches(x,q)).map(x=>x.rep);
+  return openExport({title:b.name,scopes:null,build:()=>ids.flatMap(ownedEntries)});
+ }
+ ids=r.ids.filter(cid=>cardMatches(cid,q));
+ scopes=[{v:'own',l:'Só as que tenho'},{v:'miss',l:'Só as que faltam (×1 cada)'},{v:'all',l:'Todas'}];
+ const view=S.ui.binderFilter;
+ if(view==='miss')scopes.unshift(scopes.splice(1,1)[0]);
+ openExport({title:b.name,scopes,build:sc=>{
+  const out=[];
+  for(const cid of ids){
+   const own=isOwned(cid);
+   if(own&&sc!=='miss')out.push(...ownedEntries(cid));
+   else if(!own&&sc!=='own')out.push(entry(cid,sc==='miss'?1:0,'normal',''));
+  }
+  return out;
+ }});
 }

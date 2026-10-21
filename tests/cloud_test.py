@@ -43,13 +43,13 @@ export function createClient(url,key,opts){
 
 users = {}      # email -> {pw, id, confirmed}
 db = {}         # uid -> table -> key -> row
-state = {"signups": True, "down": False, "log": []}
+state = {"signups": True, "down": False, "log": [], "missing": []}
 def jsonb(v):   # imita o jsonb do Postgres: reordena as chaves
     if isinstance(v, dict): return {k: jsonb(v[k]) for k in sorted(v, key=lambda x: (len(x), x))}
     if isinstance(v, list): return [jsonb(x) for x in v]
     return v
 def key_of(t, r):
-    return {"collection": lambda: r["card_id"], "binders": lambda: r["id"], "user_settings": lambda: "me", "custom_images": lambda: r["kind"] + "/" + r["id"]}[t]()
+    return {"collection": lambda: r["card_id"], "binders": lambda: r["id"], "trade_lists": lambda: r["id"], "user_settings": lambda: "me", "custom_images": lambda: r["kind"] + "/" + r["id"]}[t]()
 
 def api(route):
     h = {"access-control-allow-origin": "*", "content-type": "application/json"}
@@ -78,6 +78,8 @@ def api(route):
         if not uid: out = {"error": "JWT required"}
         else:
             q = b["q"]; t = q["t"]; tab = db.setdefault(uid, {}).setdefault(t, {})
+            if t in state["missing"]:
+                route.fulfill(status=200, headers=h, body=json.dumps({"error": 'relation "public.%s" does not exist' % t})); return
             if q["op"] == "select":
                 rows = list(tab.values())[q["a"]:q["z"] + 1]; out = {"data": rows}
             elif q["op"] == "upsert":
@@ -139,6 +141,7 @@ with sync_playwright() as p:
     A.evaluate("""Promise.all([import('./js/collection.js'),import('./js/db.js'),import('./js/state.js'),import('./js/custom.js')]).then(async([c,d,st,cu])=>{
       c.setFin('sv01-1','normal',{q:2});c.setFin('sv01-2','reverse',{q:1,c:'LP',l:'en'});c.setFin('sv02-3','normal',{q:1});
       st.S.binders=[{id:'b1',name:'Meu fichário',mode:'manual',match:'all',conds:[],cardIds:['sv01-1'],gens:[],pick:{},created:1}];await d.saveBinders();
+      st.S.trades=[{id:'t1',name:'Vendo teste',kind:'sell',items:[{id:'sv01-1',f:'normal',l:'pt',q:3,n:'Carta 1',i:'',no:'1',s:'sv01'}],created:1}];await d.saveKV('trades',st.S.trades);
       st.S.settings.mySets=['sv01','sv02'];await d.saveSettings();
       await cu.setCustom('logo','sv01','data:image/png;base64,AAAA');
     })""")
@@ -186,7 +189,16 @@ with sync_playwright() as p:
     B.fill("#au-em", "rafael@teste.com"); B.fill("#au-pw", "senha-boa-123"); B.locator('#auth button[type=submit]').click()
     B.wait_for_selector("#auth.on", state="detached", timeout=10000); wait_idle(B)
     check(count_coll(B) == 3, "aparelho novo recebe as 3 cartas")
+    check(B.evaluate("import('./js/state.js').then(m=>m.S.trades.length===1&&m.S.trades[0].items[0].q===3)"), "lista de negociação sincroniza para o aparelho novo")
     check(B.evaluate("import('./js/state.js').then(m=>m.S.binders.length+':'+JSON.stringify(m.S.settings.mySets)+':'+!!m.S.custom.logos.sv01)") == '1:["sv01","sv02"]:true', "aparelho novo recebe fichário, seleção de coleções e logo")
+    # tabela de negociação ainda não criada no Supabase: o resto continua sincronizando
+    state["missing"] = ["trade_lists"]
+    B.evaluate("Promise.all([import('./js/collection.js'),import('./js/state.js'),import('./js/db.js')]).then(async([c,st,d])=>{c.setFin('sv01-1','normal',{q:7});st.S.trades.push({id:'t2',name:'Outra',kind:'want',items:[],created:2});await d.saveKV('trades',st.S.trades);})")
+    B.wait_for_timeout(3500)
+    uidB = [k for k, v in db.items() if v.get("collection")][0]
+    check(db[uidB]["collection"]["sv01-1"]["finishes"]["normal"]["q"] == 7, "sem a tabela de negociação, a coleção ainda sincroniza")
+    check(B.locator("#acct .acct-st.error").count() == 0, "tabela ausente não vira erro de sincronização")
+    state["missing"] = []
     check(B.locator(".set").count() >= 0 and B.locator(".top h1").inner_text() == "Coleções", "tela inicial chama-se Coleções")
 
     # ---- alteração em B chega em A; remoção também ----

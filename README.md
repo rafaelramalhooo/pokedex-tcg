@@ -48,6 +48,7 @@ Requer Python com Playwright instalado:
 
 - **Minhas coleções:** você escolhe quais carregar; só elas aparecem e são baixadas.
 - **Set e Master Set**, com cartas cinza (faltam) e coloridas (tenho), quantidade, acabamento, condição e idioma.
+- **Negociação**: listas "Vendo / Troco" e "Procuro" (com quantidade, acabamento e idioma), separadas da coleção. **Exportar imagem** (até 10 colunas, quantidade sobre cada carta) nas listas e nos fichários, para compartilhar. Precisa rodar `supabase/atualizacao-negociacao.sql` uma vez para sincronizar as listas na nuvem.
 - **Fichários** por regras (tipo, Pokémon por nome, geração, ilustrador, raridade, coleção, Standard…), manuais ou no modo **Pokédex**.
 - **Visual de fichário:** grades 2×2, 3×3, 3×4, 4×4, 5×4 ou personalizada, páginas, setas, teclado, deslize e página dupla no computador.
 - **Popup da carta:** centralizado, com inclinação 3D e brilho (respeita "reduzir movimento"), carta anterior/próxima.
@@ -67,7 +68,7 @@ Hoje a coleção fica no navegador (IndexedDB), com exportação e importação 
 ## Login e sincronização (versão 1.0)
 
 - O login usa o Supabase (e-mail e senha). A conexão fica em `js/config.js` (só a Project URL e a chave pública). Enquanto o arquivo estiver vazio, o app funciona só no aparelho, sem login.
-- O que sincroniza: coleção, fichários, ajustes e imagens próprias. O catálogo de cartas continua vindo da TCGdex em cada aparelho.
+- O que sincroniza: coleção, fichários, listas de negociação, ajustes e imagens próprias. O catálogo de cartas continua vindo da TCGdex em cada aparelho.
 - Funciona offline: as alterações ficam guardadas e sobem quando a conexão volta.
 - Ao sair da conta, os dados do aparelho são apagados (continuam na nuvem).
 - Guia de configuração: `docs/COMO-CRIAR-O-SUPABASE.md`. Tabelas e regras de segurança: `supabase/schema.sql`.

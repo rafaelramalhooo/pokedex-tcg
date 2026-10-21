@@ -3,7 +3,7 @@ import {S} from './state.js';
 
 /* O sincronizador (cloud.js) se registra aqui para saber quando algo mudou. */
 export const hooks={change:null};
-const WATCH=(s,k)=>s==='coll'||(s==='kv'&&(k==='binders'||k==='settings'||k==='custom'));
+const WATCH=(s,k)=>s==='coll'||(s==='kv'&&(k==='binders'||k==='trades'||k==='settings'||k==='custom'));
 const ping=(s,k)=>{if(!WATCH(s,k))return;try{if(hooks.change)hooks.change();}catch(e){}};
 
 export const DB=(()=>{
