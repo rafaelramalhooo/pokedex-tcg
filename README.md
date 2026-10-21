@@ -48,7 +48,7 @@ Requer Python com Playwright instalado:
 
 - **Minhas coleções:** você escolhe quais carregar; só elas aparecem e são baixadas.
 - **Set e Master Set**, com cartas cinza (faltam) e coloridas (tenho), quantidade, acabamento, condição e idioma.
-- **Decks**: monte decks de 60 cartas, busque pelo nome (inclusive só as que você tem) e veja na hora se ele respeita 60 cartas, 4 cópias por nome, Pokémon Básico, ACE SPEC/Radiante e o Standard (marcas editáveis; cartas reimpressas aparecem como aviso, por inferência). Exporta e importa no formato de texto do Pokémon TCG Live (`4 Nome SIGLA 123`) e gera uma página para imprimir ou salvar em PDF. Precisa rodar `supabase/atualizacao-decks.sql` uma vez para sincronizar os decks na nuvem.
+- **Decks**: monte decks de 60 cartas, busque pelo nome (inclusive só as que você tem) e veja na hora se ele respeita 60 cartas, 4 cópias por nome, Pokémon Básico, ACE SPEC/Radiante e o Standard (marcas editáveis; cartas reimpressas aparecem como aviso, por inferência). Exporta e importa no formato de texto do Pokémon TCG Live (`4 Nome SIGLA 123`) e gera uma página para imprimir ou salvar em PDF. Precisa rodar `supabase/atualizacao-decks.sql` uma vez para sincronizar os decks na nuvem. Dá para criar uma lista de Vendo/Troco ou Procuro a partir de um deck (Negociação).
 - **Negociação**: listas "Vendo / Troco" e "Procuro" (com quantidade, acabamento e idioma), separadas da coleção. **Exportar imagem** (até 10 colunas, quantidade sobre cada carta) nas listas e nos fichários, para compartilhar. Precisa rodar `supabase/atualizacao-negociacao.sql` uma vez para sincronizar as listas na nuvem.
 - **Fichários** por regras (tipo, Pokémon por nome, geração, ilustrador, raridade, coleção, Standard…), manuais ou no modo **Pokédex**.
 - **Visual de fichário:** grades 2×2, 3×3, 3×4, 4×4, 5×4 ou personalizada, páginas, setas, teclado, deslize e página dupla no computador.
@@ -74,3 +74,6 @@ Hoje a coleção fica no navegador (IndexedDB), com exportação e importação 
 - Ao sair da conta, os dados do aparelho são apagados (continuam na nuvem).
 - Guia de configuração: `docs/COMO-CRIAR-O-SUPABASE.md`. Tabelas e regras de segurança: `supabase/schema.sql`.
 - Testes: `python3 tests/mock_test.py` (app) e `python3 tests/cloud_test.py` (login e sincronização, com Supabase simulado).
+
+- **Link público (Negociação)**: em uma lista, *Compartilhar link* gera um endereço só de leitura (nome, tipo, cartas e quantidades; sem login nem dados da conta). O link só muda quando você aperta *Atualizar link*, e *Parar de compartilhar* o derruba. Precisa rodar `supabase/atualizacao-link-publico.sql` uma vez.
+- **30 Anos**: a Coleção da Celebração de 30 Anos vale no Standard por exceção (Ajustes); a Coleção Clássica nunca.

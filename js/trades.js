@@ -52,3 +52,14 @@ export function pullMine(t){
  return n;
 }
 export const imgOf=it=>customCard(it.id)||(it.i?it.i+'/high.webp':'');
+
+/* ---------- link público ---------- */
+/* Código longo e aleatório (24 caracteres). Quem tem o código vê a cópia da lista; ele não dá acesso a mais nada. */
+export function newShareCode(){
+ const b=new Uint8Array(18);crypto.getRandomValues(b);
+ let s='';for(const x of b)s+=String.fromCharCode(x);
+ return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+export const shareLink=code=>`${location.origin}${location.pathname}#/v/${code}`;
+/* A cópia leva só o que é visível: nome, tipo e cartas com quantidade, acabamento e idioma. */
+export const shareSnapshot=t=>({v:1,name:t.name,kind:t.kind,at:Date.now(),items:t.items.map(i=>({n:i.n,no:i.no,i:i.i,q:i.q,f:i.f,l:i.l}))});

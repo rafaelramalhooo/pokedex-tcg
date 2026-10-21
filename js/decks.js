@@ -3,6 +3,7 @@ import {S} from './state.js';
 import {saveKV} from './db.js';
 import {api} from './api.js';
 import {snapOf} from './trades.js';
+import {langOf} from './cardlabel.js';
 import {debounce, nz, uid} from './util.js';
 
 export const DECK_SIZE=60;
@@ -53,11 +54,16 @@ export async function ensureReprint(info){
  info.rp=rp;saveInfoSoon();return rp;
 }
 export const legalMarks=()=>S.settings.legalMarks.map(m=>m.toUpperCase());
-/* 'ok' (marca legal ou energia básica), 'reprint' (inferido), 'no', ou 'wait' (ainda sem dados) */
+/* Coleções liberadas por exceção (a TCGdex não traz a marca delas). A Coleção Clássica (30th-c) nunca entra: não vale em torneio. */
+export const CLASSIC_30='30th-c';
+export const legalSetOk=sid=>!!sid&&sid!==CLASSIC_30&&(S.settings.legalSets||[]).map(x=>String(x).toLowerCase()).includes(String(sid).toLowerCase());
+/* 'ok' (marca legal ou energia básica), 'exc' (coleção liberada por exceção), 'reprint' (inferido), 'no', ou 'wait' (ainda sem dados) */
 export function legalOf(info){
  if(!info)return'wait';
  if(info.be)return'ok';
  if(legalMarks().includes(info.mk))return'ok';
+ if(info.set===CLASSIC_30)return'no';
+ if(legalSetOk(info.set))return'exc';
  if(info.rp===true)return'reprint';
  if(info.rp===false)return'no';
  return info.mk===''&&info.rp===undefined?'wait':'wait';
@@ -66,7 +72,7 @@ export function legalOf(info){
 export async function resolveDeck(d,onStep){
  const ids=[...new Set(d.items.map(i=>i.id))];
  await pool(ids,6,async id=>{await ensureInfo(id);if(onStep)onStep();});
- const need=ids.map(id=>S.dinfo[id]).filter(i=>i&&!i.be&&!legalMarks().includes(i.mk)&&i.rp===undefined);
+ const need=ids.map(id=>S.dinfo[id]).filter(i=>i&&legalOf(i)==='wait'&&i.rp===undefined);
  await pool(need,4,async i=>{await ensureReprint(i);if(onStep)onStep();});
 }
 
@@ -90,12 +96,14 @@ export function validate(d){
  if(ace>1)issues.push({lvl:'err',msg:`ACE SPEC: ${ace} cartas (só 1 por deck).`});
  if(rad>1)issues.push({lvl:'err',msg:`Radiante: ${rad} cartas (só 1 por deck).`});
  if(d.format==='standard'){
-  const bad=[],rep=[];
+  const bad=[],rep=[],cls=[];let exc=0;
   const seen=new Set();
   for(const it of d.items){
    const i=S.dinfo[it.id];const L=legalOf(i);if(seen.has(it.n+L))continue;seen.add(it.n+L);
-   if(L==='no')bad.push(i?i.ne:it.n);else if(L==='reprint')rep.push(i.ne);
+   if(L==='no'){if(i&&i.set===CLASSIC_30)cls.push(i.ne);else bad.push(i?i.ne:it.n);}else if(L==='reprint')rep.push(i.ne);else if(L==='exc')exc++;
   }
+  if(cls.length)issues.push({lvl:'err',msg:`Coleção Clássica da Celebração de 30 Anos não vale em torneio: ${cls.join(', ')}.`});
+  if(exc)issues.push({lvl:'info',msg:`${exc} carta${exc===1?'':'s'} da Celebração de 30 Anos contam como legais por exceção (a TCGdex não traz a marca delas). Dá para desligar isso nos Ajustes.`});
   if(bad.length)issues.push({lvl:'err',msg:`Fora do Standard: ${bad.join(', ')}.`});
   if(rep.length)issues.push({lvl:'warn',msg:`Legais por reimpressão (inferido pelo nome e texto, confira no jogo): ${rep.join(', ')}.`});
  }
@@ -123,4 +131,39 @@ export function ownByName(){
   const k=nameKey(snapOf(id).n);m.set(k,(m.get(k)||0)+q);
  }
  return m;
+}
+
+/* ---------- lista de negociação a partir do deck ---------- */
+/* Procuro: o que falta (por nome). Vendo/Troco: o que você tem do deck, usando as impressões que estão na sua coleção. */
+export function tradeFromDeck(d,kind){
+ const own=ownByName();
+ const groups=new Map();
+ for(const it of d.items){const k=nameKey(it.n);const g=groups.get(k)||{k,q:0,items:[]};g.q+=it.q;g.items.push(it);groups.set(k,g);}
+ const items=[];let cards=0;const names=new Set();
+ if(kind==='want'){
+  for(const g of groups.values()){
+   let miss=Math.max(0,g.q-(own.get(g.k)||0));
+   for(const it of g.items){
+    if(miss<=0)break;
+    const take=Math.min(it.q,miss);miss-=take;
+    items.push({id:it.id,f:'normal',l:langOf(it.id),q:take});cards+=take;names.add(g.k);
+   }
+  }
+ }else{
+  const rows=new Map();
+  for(const id in S.collection){
+   const e=S.collection[id];const k=nameKey(snapOf(id).n);if(!groups.has(k))continue;
+   for(const f in e.f){const x=e.f[f];if(!x||x.q<=0)continue;(rows.get(k)||rows.set(k,[]).get(k)).push({id,f,l:x.l||langOf(id),q:x.q,pref:d.items.some(i=>i.id===id)?1:0});}
+  }
+  for(const g of groups.values()){
+   let need=g.q;
+   const list=(rows.get(g.k)||[]).sort((a,b)=>b.pref-a.pref||b.q-a.q);
+   for(const r of list){
+    if(need<=0)break;
+    const take=Math.min(need,r.q);need-=take;
+    items.push({id:r.id,f:r.f,l:r.l,q:take});cards+=take;names.add(g.k);
+   }
+  }
+ }
+ return{items,cards,names:names.size};
 }

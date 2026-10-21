@@ -41,7 +41,7 @@ export function valuesOf(v,k){
   case 'rarity':return v.rarity?[v.rarity,v.rarityEn]:[v.rarity];
   case 'hp':return v.hp==null?[]:[v.hp];
   case 'regulationMark':return[nz(v.mark)];
-  case 'standard':return[S.settings.legalMarks.map(m=>m.toUpperCase()).includes(v.mark)?'sim':'nao'];
+  case 'standard':return[S.settings.legalMarks.map(m=>m.toUpperCase()).includes(v.mark)||(v.setId!=='30th-c'&&(S.settings.legalSets||[]).map(x=>String(x).toLowerCase()).includes(String(v.setId).toLowerCase()))?'sim':'nao'];
   case 'variant':return v.vars;
   case 'owned':return[isOwned(v.id)?'sim':'nao'];
  }

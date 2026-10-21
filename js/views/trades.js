@@ -5,7 +5,8 @@ import {flagHTML, langOf} from '../cardlabel.js';
 import {S, refreshAll} from '../state.js';
 import {imgTag, noteHTML, toast} from '../ui.js';
 import {$, ICON, esc, fmtN, live, nz} from '../util.js';
-import {KINDS, addItem, getTrade, imgOf, itemKey, newTrade, saveTrades, setQty, snapOf, totalQty, updateItem} from '../trades.js';
+import {KINDS, addItem, getTrade, imgOf, itemKey, newShareCode, newTrade, saveTrades, setQty, shareLink, shareSnapshot, snapOf, totalQty, updateItem} from '../trades.js';
+import {canShare, shareList, sharingMissing, unshareList} from '../cloud.js';
 import {openExport} from '../exportimg.js';
 
 const LANGS=[['pt','Português'],['en','Inglês'],['ja','Japonês'],['es','Espanhol'],['fr','Francês'],['de','Alemão'],['it','Italiano'],['ko','Coreano'],['zh','Chinês']];
@@ -34,7 +35,7 @@ export function viewTrade(id){
  S.cur={name:'trade',id,soft:renderTrade,refresh:renderTrade};
  $('#view').innerHTML=`<a class="back" href="#/negociacao">${ICON.back} Negociação</a>
   <div class="top"><div><h1 id="tname"></h1><div class="chips" id="tchips"></div></div>
-  <div class="tools"><button class="btn" type="button" data-act="trade-add" data-id="${esc(id)}">Adicionar cartas</button>${t.kind==='sell'?`<button class="btn" type="button" data-act="trade-pull" data-id="${esc(id)}">Puxar das minhas cartas</button>`:''}<button class="btn primary" type="button" data-act="trade-export" data-id="${esc(id)}">Exportar imagem</button><button class="btn" type="button" data-act="trade-edit-list" data-id="${esc(id)}">Editar lista</button></div></div>
+  <div class="tools"><button class="btn" type="button" data-act="trade-add" data-id="${esc(id)}">Adicionar cartas</button>${t.kind==='sell'?`<button class="btn" type="button" data-act="trade-pull" data-id="${esc(id)}">Puxar das minhas cartas</button>`:''}<button class="btn primary" type="button" data-act="trade-export" data-id="${esc(id)}">Exportar imagem</button><button class="btn" type="button" data-act="trade-share" data-id="${esc(id)}">Compartilhar link</button><button class="btn" type="button" data-act="trade-edit-list" data-id="${esc(id)}">Editar lista</button></div></div>
   <div id="tgrid"></div>`;
  renderTrade();
 }
@@ -50,7 +51,7 @@ export function tradeTile(t,it){
 export function renderTrade(){
  if(!S.cur||S.cur.name!=='trade')return;
  const t=getTrade(S.cur.id);if(!t)return;
- $('#tname').textContent=t.name;$('#tchips').innerHTML=kindChip(t.kind)+` <span class="lead" style="margin:0">${fmtN(t.items.length)} carta${t.items.length===1?'':'s'} · ${fmtN(totalQty(t))} unidade${totalQty(t)===1?'':'s'}</span>`;
+ $('#tname').textContent=t.name;$('#tchips').innerHTML=kindChip(t.kind)+(t.share?' <span class="ttag fmt">Link ativo</span>':'')+` <span class="lead" style="margin:0">${fmtN(t.items.length)} carta${t.items.length===1?'':'s'} · ${fmtN(totalQty(t))} unidade${totalQty(t)===1?'':'s'}</span>`;
  const g=live($('#tgrid'));
  if(!t.items.length){
   g.innerHTML=`<div class="empty"><h3>Lista vazia</h3><p>Use “Adicionar cartas” para buscar pelo nome${t.kind==='sell'?' ou “Puxar das minhas cartas” para copiar o que você tem':''}.</p></div>`;
@@ -282,6 +283,40 @@ function plAll(on){
  commit();renderPull();
 }
 
+/* ---------- link público ---------- */
+const SQL_MSG='Falta rodar o arquivo supabase/atualizacao-link-publico.sql no Supabase (SQL Editor → New query → colar → Run).';
+const fmtAt=ms=>new Date(ms).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+function shareDialog(id,msg){
+ const t=getTrade(id);if(!t)return;
+ S.ui.sh={id};
+ let body;
+ if(!canShare())body=`<p class="note warn">Para criar um link, entre na sua conta (menu Catálogo e ajustes). O link fica guardado na nuvem.</p>`;
+ else if(!t.share)body=`<p>O link abre uma página <b>só de leitura</b> com o nome da lista, o tipo, as cartas e as quantidades. Quem abre não vê sua conta, sua coleção, seus fichários nem seus decks, e não precisa de login.</p>
+  <p class="lead">O endereço é longo e aleatório, mas qualquer pessoa que receber o link consegue ver a lista. A página é uma cópia: ela só muda quando você usar “Atualizar o link”. Dá para parar de compartilhar a qualquer momento.</p>
+  <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="sh-create" data-id="${esc(id)}">Criar link</button></div>`;
+ else body=`<label class="lbl2" for="shl">Link da lista</label><input class="field" id="shl" readonly style="width:100%" value="${esc(shareLink(t.share.code))}" onfocus="this.select()">
+  <p class="lead" style="margin-top:8px">Última atualização do link: ${esc(fmtAt(t.share.at))}. ${t.items.length} carta${t.items.length===1?'':'s'} na lista agora.</p>
+  <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-act="sh-copy">Copiar link</button><button class="btn" type="button" data-act="sh-update" data-id="${esc(id)}">Atualizar o link com a lista atual</button><button class="btn" type="button" data-act="sh-stop" data-id="${esc(id)}">Parar de compartilhar</button></div>
+  <div class="actions"><span></span><button class="btn" type="button" data-ed-act="cancel">Fechar</button></div>`;
+ $('#dialog').innerHTML=`<h2>Compartilhar link</h2>${msg?`<p class="note err">${esc(msg)}</p>`:''}${body}`;
+ $('#modal').classList.add('on');
+}
+async function shareGo(id,fresh){
+ const t=getTrade(id);if(!t)return;
+ const code=fresh||!t.share?newShareCode():t.share.code;
+ try{await shareList(code,shareSnapshot(t));}
+ catch(e){shareDialog(id,sharingMissing(e)?SQL_MSG:'Não consegui criar o link agora. Confira a conexão e tente de novo.');return;}
+ t.share={code,at:Date.now()};saveTrades();
+ shareDialog(id);
+ if(S.cur&&S.cur.refresh)S.cur.refresh();
+}
+async function shareStop(id){
+ const t=getTrade(id);if(!t||!t.share)return;
+ try{await unshareList(t.share.code);}
+ catch(e){shareDialog(id,sharingMissing(e)?SQL_MSG:'Não consegui parar de compartilhar agora. Confira a conexão e tente de novo.');return;}
+ delete t.share;saveTrades();shareDialog(id);toast('O link deixou de funcionar.');
+}
+
 const closeDlg=()=>{$('#modal').classList.remove('on');S.ui.tr=null;S.ui.tradeAdd=null;S.ui.pull=null;};
 export const TRADE_ACT={
  'trade-new':()=>listDialog(newTrade('', 'sell'),true),
@@ -299,6 +334,7 @@ export const TRADE_ACT={
  'trade-del':t=>{
   const x=getTrade(t.dataset.id);if(!x)return;
   if(!confirm(`Excluir a lista “${x.name}”? Sua coleção e seus fichários não mudam.`))return;
+  if(x.share&&canShare())unshareList(x.share.code).catch(()=>{});
   S.trades=S.trades.filter(y=>y.id!==x.id);saveTrades();closeDlg();location.hash='#/negociacao';
  },
  'trade-add':t=>addDialog(t.dataset.id),
@@ -316,6 +352,11 @@ export const TRADE_ACT={
  'pl-all':()=>plAll(true),
  'pl-none':()=>plAll(false),
  'trade-export':t=>tradeExport(t.dataset.id),
+ 'trade-share':t=>shareDialog(t.dataset.id),
+ 'sh-create':t=>shareGo(t.dataset.id,true),
+ 'sh-update':t=>shareGo(t.dataset.id,false),
+ 'sh-stop':t=>shareStop(t.dataset.id),
+ 'sh-copy':async()=>{const i=$('#shl');if(!i)return;let ok=false;try{await navigator.clipboard.writeText(i.value);ok=true;}catch(e){i.select();try{ok=document.execCommand('copy');}catch(x){}}toast(ok?'Link copiado.':'Selecione o link e copie.');},
  'trade-inc':(t,e)=>{e&&e.stopPropagation();const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(!it)return;setQty(x,t.dataset.key,it.q+1);saveAndRefresh();},
  'trade-dec':(t,e)=>{e&&e.stopPropagation();const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(!it)return;setQty(x,t.dataset.key,it.q-1);saveAndRefresh();},
  'trade-item':t=>{const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(it)itemDialog(x,it);},

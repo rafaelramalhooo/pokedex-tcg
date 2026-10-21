@@ -46,6 +46,10 @@ export function renderSettings(){
   <div class="chips">${marks.map(m=>`<span class="mark">${esc(m)}<button type="button" data-act="rm-mark" data-v="${esc(m)}" aria-label="Remover marca ${esc(m)}">×</button></span>`).join('')||'<span class="lbl2">Nenhuma marca definida.</span>'}</div>
   <div class="row"><input class="field" id="newmark" maxlength="3" style="min-width:90px;width:90px" placeholder="Ex.: K" aria-label="Nova marca"><button class="btn" type="button" data-act="add-mark">Adicionar marca</button></div>
  </section>
+ <section class="panel-sec"><h2>Exceções de legalidade</h2>
+  <p>A TCGdex não traz a marca de regulamentação das cartas da <strong>Celebração de 30 Anos</strong> e as marca todas como fora do Standard, mas as cartas da coleção principal valem em torneios desde 25/09/2026. Por isso o app as trata como legais. A <strong>Coleção Clássica</strong> (as 30 reimpressões com o selo do Pikachu) não vale em torneio e continua de fora. Fontes: matérias de junho a setembro de 2026; a página oficial da Pokémon não pôde ser lida.</p>
+  <label class="chk"><input type="checkbox" data-legalset="30th" ${(S.settings.legalSets||[]).includes('30th')?'checked':''}> Tratar a Celebração de 30 Anos (coleção principal) como legal no Standard</label>
+ </section>
  <section class="panel-sec"><h2>Contagem e exibição</h2>
   <label class="chk"><input type="checkbox" data-set="masterReverse" ${S.settings.masterReverse?'checked':''}> Master Set inclui o reverse holo de cada carta</label>
   <p style="margin:0 0 8px">Master Set aqui significa: todas as cartas da coleção, inclusive as secretas, em cada acabamento que existe (normal, holo e reverse holo). Promos e cartas com carimbo especial não entram.</p>

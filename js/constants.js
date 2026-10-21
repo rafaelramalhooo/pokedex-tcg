@@ -37,7 +37,7 @@ export const FIELDS=[
  {k:'rarity',label:'Raridade',t:'text',d:true,def:'contains'},
  {k:'hp',label:'PS',t:'num',d:true,def:'gte'},
  {k:'regulationMark',label:'Marca de regulamentação',t:'text',d:true,def:'eq'},
- {k:'standard',label:'Legal no Standard',t:'bool',d:true,def:'eq',hint:'Calculado só pela marca impressa na carta, usando as marcas legais dos Ajustes. Reimpressões legais de cartas antigas não entram.'},
+ {k:'standard',label:'Legal no Standard',t:'bool',d:true,def:'eq',hint:'Calculado pela marca impressa na carta, usando as marcas legais dos Ajustes, mais as coleções liberadas por exceção (Celebração de 30 Anos). Reimpressões de cartas antigas não entram nos fichários; nos decks elas aparecem como aviso.'},
  {k:'variant',label:'Existe no acabamento',t:'enum',opts:VARS,d:true,def:'eq'},
  {k:'owned',label:'Eu tenho a carta',t:'bool',d:false,def:'eq'}
 ];

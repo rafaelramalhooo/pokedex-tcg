@@ -300,7 +300,7 @@ export async function wipeLocal(){
  S.trades=[];await saveTrades();
  S.decks=[];await saveDecks();
  S.custom={logos:{},cards:{},covers:{}};await saveKV('custom',S.custom);
- S.settings.mySets=null;S.settings.legalMarks=['H','I','J'];
+ S.settings.mySets=null;S.settings.legalMarks=['H','I','J'];S.settings.legalSets=['30th'];
  await saveSettings();
  await DB.del('kv','cloud');
 }
@@ -326,3 +326,23 @@ export async function doSignOut(){
  return{ok:true};
 }
 export const isSignedIn=()=>!!user;
+
+/* ---------- link público (lista de negociação só para leitura) ---------- */
+export const canShare=()=>enabled&&!!user&&!!sb;
+export const sharingMissing=e=>!!e&&(e.code==='42P01'||e.code==='PGRST205'||e.code==='PGRST202'||/does not exist|schema cache|could not find the (table|function)/i.test(String(e.message||'')));
+export async function shareList(code,data){
+ if(!canShare())throw new Error('login');
+ const {error}=await sb.from('shared_lists').upsert({id:code,data},{onConflict:'id'});
+ if(error)throw error;
+}
+export async function unshareList(code){
+ if(!canShare())throw new Error('login');
+ const {error}=await sb.from('shared_lists').delete().eq('id',code);
+ if(error)throw error;
+}
+export async function fetchShared(code){
+ if(!sb)throw new Error('offline');
+ const {data,error}=await sb.rpc('get_shared_list',{p_code:code});
+ if(error)throw error;
+ return data||null;
+}

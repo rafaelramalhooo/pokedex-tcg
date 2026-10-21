@@ -4,7 +4,8 @@ import {S} from '../state.js';
 import {imgTag, toast} from '../ui.js';
 import {$, ICON, esc, fmtN, live, nz} from '../util.js';
 import {exportRows, importInto, tcgText} from '../decktext.js';
-import {DECK_SIZE, MAX_COPIES, addCopy, ensureInfo, ensureReprint, getDeck, legalOf, nameKey, newDeck, ownByName, resolveDeck, saveDecks, setCopies, totalCards, validate, nameCounts} from '../decks.js';
+import {addItem, newTrade, saveTrades} from '../trades.js';
+import {DECK_SIZE, MAX_COPIES, addCopy, ensureInfo, ensureReprint, getDeck, legalOf, nameKey, newDeck, ownByName, resolveDeck, saveDecks, setCopies, totalCards, validate, nameCounts, tradeFromDeck} from '../decks.js';
 
 const FMT={standard:'Standard',livre:'Livre (sem validar o Standard)'};
 const CATS=[['pokemon','Pokémon'],['treinador','Treinador'],['energia','Energia']];
@@ -39,7 +40,7 @@ export function viewDeck(id){
  S.cur={name:'deck',id,soft:renderDeck,refresh:renderDeck};
  $('#view').innerHTML=`<a class="back" href="#/decks">${ICON.back} Decks</a>
   <div class="top"><div><h1 id="dname"></h1><div class="chips" id="dchips"></div></div>
-  <div class="tools"><button class="btn primary" type="button" data-act="deck-add" data-id="${esc(id)}">Adicionar cartas</button><button class="btn" type="button" data-act="deck-export" data-id="${esc(id)}">Exportar</button><button class="btn" type="button" data-act="deck-edit" data-id="${esc(id)}">Editar deck</button></div></div>
+  <div class="tools"><button class="btn primary" type="button" data-act="deck-add" data-id="${esc(id)}">Adicionar cartas</button><button class="btn" type="button" data-act="deck-export" data-id="${esc(id)}">Exportar</button><button class="btn" type="button" data-act="deck-trade" data-id="${esc(id)}">Criar lista de negociação</button><button class="btn" type="button" data-act="deck-edit" data-id="${esc(id)}">Editar deck</button></div></div>
   <div id="dvalid"></div><div id="dgrid"></div>`;
  renderDeck();
  resolveSoon(d);
@@ -136,7 +137,7 @@ export function renderAdd(){
  if(need.length)Promise.all(need.slice(0,80).map(id=>ensureInfo(id).catch(()=>null))).then(()=>addSoon());
  let list=shown;
  if(check){
-  const needR=shown.map(id=>S.dinfo[id]).filter(i=>i&&!i.be&&!['ok'].includes(legalOf(i))&&i.rp===undefined);
+  const needR=shown.map(id=>S.dinfo[id]).filter(i=>i&&!i.be&&!['ok','exc'].includes(legalOf(i))&&i.rp===undefined);
   if(needR.length)Promise.all(needR.slice(0,12).map(i=>ensureReprint(i))).then(()=>addSoon());
   list=shown.filter(id=>legalOf(S.dinfo[id])!=='no');
  }
@@ -227,6 +228,36 @@ async function deckImportGo(){
   <div class="actions"><span></span><button class="btn primary" type="button" data-act="di-open" data-id="${esc(d.id)}">Abrir o deck</button></div>`;
 }
 
+/* ---------- criar lista de negociação a partir do deck ---------- */
+function tradeDialog(id,kind){
+ const d=getDeck(id);if(!d)return;
+ kind=kind||'want';
+ S.ui.dt={id,kind};
+ const r=tradeFromDeck(d,kind);
+ const total=totalCards(d);
+ const msg=!d.items.length?'O deck está vazio.':kind==='want'
+  ?(r.cards?`Faltam ${r.cards} carta${r.cards===1?'':'s'} (${r.names} nome${r.names===1?'':'s'} diferente${r.names===1?'':'s'}) para você montar este deck com a sua coleção.`:'Você já tem todas as cartas deste deck. Não falta nada.')
+  :(r.cards?`Você tem ${r.cards} das ${total} cartas do deck. A lista leva as impressões que estão na sua coleção.`:'Você não tem nenhuma carta deste deck na coleção.');
+ $('#dialog').innerHTML=`<h2>Criar lista de negociação</h2>
+  <p class="lead">A lista é criada na área Negociação a partir de “${esc(d.name)}”. A sua coleção e o deck não mudam.</p>
+  <label class="lbl2">Tipo da lista</label>
+  <div class="seg" role="group" aria-label="Tipo da lista"><button type="button" data-act="dt-kind" data-v="want" aria-pressed="${kind==='want'}">Procuro (o que falta)</button><button type="button" data-act="dt-kind" data-v="sell" aria-pressed="${kind==='sell'}">Vendo / Troco (o que eu tenho)</button></div>
+  <p class="note ${r.cards?'':'warn'}" style="margin-top:14px">${esc(msg)}</p>
+  <label class="lbl2" for="dtn">Nome da lista</label><input class="field" id="dtn" style="width:100%" maxlength="40" value="${esc((d.name+(kind==='want'?' – faltam':' – vendo')).slice(0,40))}">
+  <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="dt-go" ${r.cards?'':'disabled'}>Criar lista</button></div>`;
+ $('#modal').classList.add('on');
+}
+function tradeGo(){
+ const st=S.ui.dt;const d=st&&getDeck(st.id);if(!d)return;
+ const r=tradeFromDeck(d,st.kind);if(!r.cards)return;
+ const name=($('#dtn').value||'').trim()||d.name;
+ const t=newTrade(name,st.kind);
+ r.items.forEach(x=>addItem(t,x.id,x.f,x.l,x.q));
+ S.trades.push(t);saveTrades();S.ui.dt=null;$('#modal').classList.remove('on');
+ location.hash='#/negociacao/'+t.id;
+ toast(`Lista criada com ${r.cards} carta${r.cards===1?'':'s'}.`);
+}
+
 export const DECK_ACT={
  'deck-new':()=>deckDialog(newDeck(''),true),
  'dk-fmt':t=>{document.querySelectorAll('[data-act=dk-fmt]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));if(S.ui.dk)S.ui.dk.d.format=t.dataset.v;},
@@ -250,6 +281,9 @@ export const DECK_ACT={
  'dk-inc':(t,e)=>{e&&e.stopPropagation();pick(t.dataset.id,1);},
  'dk-dec':(t,e)=>{e&&e.stopPropagation();pick(t.dataset.id,-1);},
  'deck-card':()=>{},
+ 'deck-trade':t=>tradeDialog(t.dataset.id),
+ 'dt-kind':t=>tradeDialog(S.ui.dt.id,t.dataset.v),
+ 'dt-go':()=>tradeGo(),
  'deck-export':t=>exportDialog(t.dataset.id),
  'dx-copy':async()=>{const st=S.ui.dx;if(!st||!st.text)return;toast(await copyText(st.text)?'Lista copiada.':'Não consegui copiar; selecione o texto e copie.');},
  'dx-txt':()=>{const st=S.ui.dx;const d=st&&getDeck(st.id);if(!d||!st.text)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([st.text],{type:'text/plain'}));a.download=fileName(d)+'.txt';document.body.appendChild(a);a.click();a.remove();},

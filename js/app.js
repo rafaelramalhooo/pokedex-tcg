@@ -2,6 +2,7 @@
 import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
 import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter} from './views/trades.js';
+import {viewShared, SHARED_ACT} from './views/shared.js';
 import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter, deckExportLang} from './views/decks.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
@@ -36,6 +37,7 @@ import {exportBackup, importBackup, renderSettings, viewSettings} from './views/
 const ACT={
  ...TRADE_ACT,
  ...DECK_ACT,
+ ...SHARED_ACT,
  'binder-export':t=>binderExport(t.dataset.id),
  'exp-go':()=>runExport(),
  'exp-share':()=>shareAgain(),
@@ -140,6 +142,7 @@ document.addEventListener('change',e=>{
  if(t.dataset.bk){bookSetting(t);return;}
  if(t.classList&&t.classList.contains('bookrange')){bookTo(+t.value);return;}
  if(t.dataset.ch){setFin(t.dataset.id,t.dataset.fin,{[t.dataset.ch]:t.value});return;}
+ if(t.dataset.legalset){const a=new Set(S.settings.legalSets||[]);if(t.checked)a.add(t.dataset.legalset);else a.delete(t.dataset.legalset);S.settings.legalSets=[...a];saveSettings();viewCache.clear();toast(t.checked?'Celebração de 30 Anos tratada como legal.':'Celebração de 30 Anos volta a seguir só a marca da carta.');return;}
  if(t.dataset.set){S.settings[t.dataset.set]=t.checked;saveSettings();viewCache.clear();
   if(t.dataset.set==='showPocket'&&t.checked)toast('Coleções do Pocket incluídas na lista.');
   refreshAll();return;}
@@ -201,7 +204,10 @@ function keepEnter(key){
  return true;
 }
 H.keepClear=()=>KEEP.clear();
+const PUBHASH=/^#\/v\/([A-Za-z0-9_-]{16,64})\/?$/;
+const PUB=PUBHASH.exec(location.hash);
 function route(fresh){
+ if(PUB)return;
  closePanel();
  const h=(location.hash||'#/').slice(1);const parts=h.split('/').filter(Boolean);
  const key=h||'/';
@@ -226,7 +232,7 @@ function route(fresh){
  else if(parts[0]==='ajustes')viewSettings();
  else viewHome();
 }
-window.addEventListener('hashchange',()=>route());
+window.addEventListener('hashchange',()=>{if(PUB){if(!PUBHASH.test(location.hash))location.reload();return;}route();});
 H.route=()=>route(true);
 H.renderDex=()=>{if(S.ui.dexdlg)renderDexGrid();};
 
@@ -242,6 +248,7 @@ async function boot(){
   S.decks=(await DB.get('kv','decks'))||[];S.dinfo=(await DB.get('kv','dinfo'))||{};S.setab=(await DB.get('kv','setab'))||{};
   Object.assign(S.settings,(await DB.get('kv','settings'))||{});
   if(!Array.isArray(S.settings.legalMarks))S.settings.legalMarks=['H','I','J'];
+  if(!Array.isArray(S.settings.legalSets))S.settings.legalSets=['30th'];
   S.logoOk=(await DB.get('kv','logoOk'))||{};
   S.dexNames=(await DB.get('kv','dexNames'))||{};
   S.custom=Object.assign({logos:{},cards:{},covers:{}},(await DB.get('kv','custom'))||{});
@@ -270,6 +277,12 @@ function startApp(){
  if(!S.sets.length||stale)fetchCatalog();
  else preloadSetd();
 }
-boot();
+async function bootPublic(code){
+ document.body.classList.add('public');
+ try{await DB.open();}catch(e){S.persist=false;}
+ try{await initCloud();}catch(e){}
+ viewShared(code);
+}
+if(PUB)bootPublic(PUB[1]);else boot();
 
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
