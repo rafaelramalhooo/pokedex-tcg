@@ -40,7 +40,7 @@ export function viewDeck(id){
  S.cur={name:'deck',id,soft:renderDeck,refresh:renderDeck};
  $('#view').innerHTML=`<a class="back" href="#/decks">${ICON.back} Decks</a>
   <div class="top"><div><h1 id="dname"></h1><div class="chips" id="dchips"></div></div>
-  <div class="tools"><button class="btn primary" type="button" data-act="deck-add" data-id="${esc(id)}">Adicionar cartas</button><button class="btn" type="button" data-act="deck-export" data-id="${esc(id)}">Exportar</button><button class="btn" type="button" data-act="deck-trade" data-id="${esc(id)}">Criar lista de negociação</button><button class="btn" type="button" data-act="deck-edit" data-id="${esc(id)}">Editar deck</button></div></div>
+  <div class="tools"><button class="btn primary" type="button" data-act="deck-add" data-id="${esc(id)}">Adicionar cartas</button><button class="btn" type="button" data-act="deck-import" data-id="${esc(id)}">Importar</button><button class="btn" type="button" data-act="deck-export" data-id="${esc(id)}">Exportar</button><button class="btn" type="button" data-act="deck-trade" data-id="${esc(id)}">Criar lista de negociação</button><button class="btn" type="button" data-act="deck-edit" data-id="${esc(id)}">Editar deck</button></div></div>
   <div id="dvalid"></div><div id="dgrid"></div>`;
  renderDeck();
  resolveSoon(d);
@@ -200,32 +200,34 @@ function printSheet(d,rows){
  const el=$('#printsheet');
  el.innerHTML=`<h1>${esc(d.name)}</h1><p class="meta">${d.format==='standard'?'Standard':'Livre'} · ${rows.reduce((a,r)=>a+r.q,0)} cartas · ${stamp()}</p>${CATS.map(sec).join('')}<p class="foot">Lista gerada pelo app pessoal Pokemon TCG Gestão de Coleção. Não afiliado à The Pokémon Company.</p>`;
 }
-function deckImportDialog(){
- S.ui.di={busy:false};
- $('#dialog').innerHTML=`<h2>Importar do Pokémon TCG Live</h2>
+function deckImportDialog(id){
+ const cur=id?getDeck(id):null;
+ S.ui.di={busy:false,id:cur?cur.id:''};
+ $('#dialog').innerHTML=`<h2>${cur?`Importar para “${esc(cur.name)}”`:'Importar do Pokémon TCG Live'}</h2>
   <p class="lead">No jogo, abra o deck, use “Exportar” e cole o texto aqui. O app procura cada carta pela sigla da expansão e pelo número, e depois pelo nome.</p>
-  <label class="lbl2" for="din">Nome do deck</label><input class="field" id="din" style="width:100%" maxlength="40" placeholder="Ex.: Lucario ex">
+  ${cur?`<label class="chk" style="display:block"><input type="checkbox" id="direp" ${cur.items.length?'checked':''}> Substituir as cartas que já estão no deck</label>`:'<label class="lbl2" for="din">Nome do deck</label><input class="field" id="din" style="width:100%" maxlength="40" placeholder="Ex.: Lucario ex">'}
   <label class="lbl2" for="dit" style="margin-top:12px">Lista do deck</label><textarea class="field" id="dit" rows="14" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px" placeholder="Pokémon: 12&#10;4 Riolu PRE 50&#10;..."></textarea>
   <p class="lead" id="dimsg" style="margin-top:8px"></p>
   <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="di-go" id="digo">Importar</button></div>`;
- $('#modal').classList.add('on');setTimeout(()=>{const n=$('#din');if(n)n.focus();},30);
+ $('#modal').classList.add('on');setTimeout(()=>{const n=$('#din')||$('#dit');if(n)n.focus();},30);
 }
 async function deckImportGo(){
  const st=S.ui.di;if(!st||st.busy)return;
- const text=($('#dit').value||'');const name=($('#din').value||'').trim()||'Deck importado';
+ const text=($('#dit').value||'');const name=($('#din')?$('#din').value:'').trim()||'Deck importado';
+ const target=st.id?getDeck(st.id):null;
  if(!text.trim()){toast('Cole a lista do deck.');return;}
  st.busy=true;$('#digo').disabled=true;
- const d=newDeck(name);const msg=$('#dimsg');
+ const d=target?{...target,items:$('#direp')&&$('#direp').checked?[]:target.items.map(i=>({...i}))}:newDeck(name);const msg=$('#dimsg');
  const r=await importInto(d,text,t=>{if(msg)msg.textContent=t;});
  st.busy=false;
  if(!r.ok){if(msg)msg.textContent='Não consegui reconhecer nenhuma carta. Confira se o texto está no formato “4 Nome SIGLA 123”.';$('#digo').disabled=false;return;}
- S.decks.push(d);saveDecks();
+ if(target){target.items=d.items;}else S.decks.push(d);saveDecks();
  const rep=[`${r.ok} de ${r.total} linhas reconhecidas (${r.cards} cartas).`];
- $('#dialog').innerHTML=`<h2>Deck importado</h2><p>${esc(rep[0])}</p>
+ $('#dialog').innerHTML=`<h2>${target?'Cartas importadas':'Deck importado'}</h2><p>${esc(rep[0])}</p>
   ${r.bad.length?`<div class="note err"><b>Não encontrei:</b><br>${r.bad.map(esc).join('<br>')}</div>`:''}
   ${r.notes.length?`<div class="note warn"><b>Confira:</b><br>${r.notes.map(esc).join('<br>')}</div>`:''}
   ${r.skipped.length?`<div class="note"><b>Linhas ignoradas:</b><br>${r.skipped.map(esc).join('<br>')}</div>`:''}
-  <div class="actions"><span></span><button class="btn primary" type="button" data-act="di-open" data-id="${esc(d.id)}">Abrir o deck</button></div>`;
+  <div class="actions"><span></span><button class="btn primary" type="button" data-act="di-open" data-id="${esc(d.id)}">${target?'Ver o deck':'Abrir o deck'}</button></div>`;
 }
 
 /* ---------- criar lista de negociação a partir do deck ---------- */
@@ -288,9 +290,9 @@ export const DECK_ACT={
  'dx-copy':async()=>{const st=S.ui.dx;if(!st||!st.text)return;toast(await copyText(st.text)?'Lista copiada.':'Não consegui copiar; selecione o texto e copie.');},
  'dx-txt':()=>{const st=S.ui.dx;const d=st&&getDeck(st.id);if(!d||!st.text)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([st.text],{type:'text/plain'}));a.download=fileName(d)+'.txt';document.body.appendChild(a);a.click();a.remove();},
  'dx-print':()=>{const st=S.ui.dx;const d=st&&getDeck(st.id);if(!d||!st.rows)return;printSheet(d,st.rows);document.title=d.name;setTimeout(()=>window.print(),80);},
- 'deck-import':()=>deckImportDialog(),
+ 'deck-import':t=>deckImportDialog(t&&t.dataset?t.dataset.id:''),
  'di-go':()=>deckImportGo(),
- 'di-open':t=>{$('#modal').classList.remove('on');location.hash='#/decks/'+t.dataset.id;},
+ 'di-open':t=>{$('#modal').classList.remove('on');if(location.hash==='#/decks/'+t.dataset.id){resolveSoon(getDeck(t.dataset.id));renderDeck();}else location.hash='#/decks/'+t.dataset.id;},
  'deck-inc':(t,e)=>{e&&e.stopPropagation();const d=S.cur&&getDeck(S.cur.id);const it=d&&d.items.find(x=>x.id===t.dataset.id);if(!it)return;setCopies(d,it.id,it.q+1);commit(d);},
  'deck-dec':(t,e)=>{e&&e.stopPropagation();const d=S.cur&&getDeck(S.cur.id);const it=d&&d.items.find(x=>x.id===t.dataset.id);if(!it)return;setCopies(d,it.id,it.q-1);commit(d);}
 };
