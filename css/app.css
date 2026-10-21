@@ -522,3 +522,11 @@ body.public .app{grid-template-columns:1fr}
 body.public .rail{display:none}
 .pubwrap{max-width:1200px;margin:0 auto}
 .pubfoot{margin-top:28px;font-size:12.5px;color:var(--ink-2)}
+
+/* Fundo abstrato: o próprio logo da coleção, ampliado e bem desfocado, por trás do logo nítido */
+.set .logo,.pk .logo,.hero .hlogo{position:relative;overflow:hidden;isolation:isolate}
+.hero .hlogo{border-radius:12px;padding:6px}
+img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.hero .hlogo img.lgbg{position:absolute;left:50%;top:50%;width:250%;height:250%;max-width:none;max-height:none;transform:translate(-50%,-50%);object-fit:contain;filter:blur(16px) saturate(1.2);opacity:.4;pointer-events:none;z-index:0}
+.set .logo img.lgbg:not([src]),.pk .logo img.lgbg:not([src]),.hero .hlogo img.lgbg:not([src]){visibility:hidden}
+.set .logo>img[data-role="logo"],.pk .logo>img[data-role="logo"],.hero .hlogo>img[data-role="logo"]{position:relative;z-index:1}
+.set .logo::after,.pk .logo::after,.hero .hlogo::after{content:"";position:absolute;inset:0;z-index:0;background:radial-gradient(closest-side,rgba(255,255,255,.35),rgba(255,255,255,0) 80%);pointer-events:none}

@@ -31,7 +31,7 @@ export function logoFallback(name,sid){
 export function logoImg(s){
  const c=logoCandidates(s);
  if(!c.length)return logoFallback(s.name,s.id);
- return `<img alt="" decoding="async" loading="lazy" src="${esc(c[0])}" data-role="logo" data-sid="${esc(s.id)}" data-name="${esc(s.name)}" data-chain="${esc(c.join('|'))}" data-i="0">`;
+ return `<img class="lgbg" alt="" aria-hidden="true" decoding="async" data-role="logobg">`+`<img alt="" decoding="async" loading="lazy" src="${esc(c[0])}" data-role="logo" data-sid="${esc(s.id)}" data-name="${esc(s.name)}" data-chain="${esc(c.join('|'))}" data-i="0">`;
 }
 /* Chamado quando uma imagem de logo falha: tenta a próxima; no fim, mostra o nome. */
 export function logoFail(t){
@@ -44,6 +44,8 @@ document.addEventListener('load',e=>{
  const t=e.target;
  if(!t||t.tagName!=='IMG'||t.dataset.role!=='logo')return;
  const u=t.currentSrc||t.src;
+ /* o fundo desfocado usa a mesma imagem que deu certo no logo */
+ {const bg=t.previousElementSibling;if(bg&&bg.dataset.role==='logobg'&&bg.getAttribute('src')!==u)bg.src=u;}
  if(isSym(u)){t.classList.add('symlogo');return;}
  const id=t.dataset.sid;
  if(u.startsWith('data:'))return;
