@@ -56,6 +56,10 @@ def handle(route):
         return route.fulfill(status=404, body="", headers=h)
     if url.startswith("https://assets.tcgdex.net") and "/en/sv/sv02/" in url:
         return route.fulfill(status=404, body="", headers=h)
+    if url.startswith("https://assets.tcgdex.net") and "/sv01/7/" in url and url.endswith(".webp"):
+        return route.fulfill(status=404, body="", headers=h)
+    if url.startswith("https://assets.tcgdex.net") and "/sv01/8/" in url:
+        return route.fulfill(status=404, body="", headers=h)
     if url.startswith("https://assets.tcgdex.net"):
         n = url.split("/")[-2] if url.endswith(("low.webp","high.webp")) else url.split("/")[-1]
         hue = (sum(map(ord, url)) * 37) % 360
@@ -828,7 +832,18 @@ with sync_playwright() as p:
     r2 = sheet(1, "Bus", 10, "34_folha_1carta")
     check(r2["w"] >= 4 * 360, f"exportar: folha de 1 carta ({r2['w']}x{r2['h']})")
     r3 = sheet(40, "Vendo – outubro", 8, "35_folha_40cartas", "Vendo / Troco")
-    check(r3["parts"] == 1 and r3["miss"] == 0, f"exportar: folha de 40 cartas ({r3['w']}x{r3['h']})")
+    check(r3["parts"] == 1 and r3["miss"] == 1, f"exportar: folha de 40 cartas ({r3['w']}x{r3['h']})")
+    # imagem só em PNG e imagem inexistente
+    page.set_viewport_size({"width": 1360, "height": 900})
+    page.evaluate("location.hash='#/set/sv01'"); page.wait_for_selector("#grid .slot", timeout=8000)
+    page.locator('[data-act="view"][data-v="list"]').click(); page.fill("#sq", ""); page.wait_for_timeout(1500)
+    page.evaluate("document.querySelector('#grid [data-id=sv01-7]')&&document.querySelector('#grid [data-id=sv01-7]').scrollIntoView()")
+    page.wait_for_function("(()=>{const i=document.querySelector('#grid [data-id=sv01-7] img');return !!i&&i.src.endsWith('.png')})()", timeout=8000)
+    check(True, "imagem só em PNG: o app usa o PNG quando o WebP falha")
+    page.wait_for_function("document.querySelector('#grid [data-id=sv01-8] .ph small')", timeout=8000)
+    check("indisponível" in page.locator('#grid [data-id=sv01-8] .ph').inner_text(), "sem nenhuma imagem: quadro mostra 'Imagem indisponível'")
+    rr = page.evaluate("""async()=>{const m=await import('./js/exportimg.js');const items=[7,8,2].map(i=>({url:'https://assets.tcgdex.net/pt/sv/sv01/'+i+'/high.webp',n:'Carta '+i,no:String(i),q:1,f:'normal',l:'pt'}));const r=await m.buildImages(items,{title:'Teste PNG'});return {files:r.files.length,miss:r.miss,fb:r.fb};}""")
+    check(rr["files"] == 1 and rr["miss"] == 1, f"exportar: carta só em PNG sai com imagem, só a inexistente fica sem ({rr})")
     # exportar a partir de um fichário
     page.evaluate("location.hash='#/binders'"); page.wait_for_selector(".binder"); page.locator(".binder").first.click(); page.wait_for_selector("#bgrid")
     check(page.locator('[data-act="binder-export"]').count() == 1, "fichário: botão Exportar imagem")

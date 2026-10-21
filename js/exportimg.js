@@ -38,15 +38,24 @@ async function toBitmap(blob){
   try{const im=new Image();im.src=u;await im.decode();return im;}finally{setTimeout(()=>URL.revokeObjectURL(u),2000);}
  }
 }
+/* Endereços possíveis para a mesma imagem: webp e png, alta e baixa, no idioma da carta e depois em inglês. */
+function candidates(url){
+ const m=/^(https:\/\/assets\.tcgdex\.net\/)([a-z-]+)\/(.+)\/(high|low)\.webp$/.exec(url);
+ if(!m)return[{u:url,fb:false}];
+ const [,host,lang,path]=m;
+ const langs=lang==='en'?['en']:[lang,'en'];
+ const out=[];
+ for(const q of ['high','low'])for(const l of langs)for(const ext of ['webp','png'])out.push({u:`${host}${l}/${path}/${q}.${ext}`,fb:l!==lang});
+ return out;
+}
 async function loadBitmap(url){
- const get=async u=>{const r=await fetch(u,{mode:'cors'});if(!r.ok)throw new Error('http '+r.status);return toBitmap(await r.blob());};
- try{return{bmp:await get(url),fallback:false};}
- catch(e){
-  if(/assets\.tcgdex\.net\/(?!en\/)[a-z-]+\//.test(url)){
-   try{return{bmp:await get(url.replace(/(assets\.tcgdex\.net\/)[a-z-]+\//,'$1en/')),fallback:true};}catch(e2){}
-  }
-  return null;
+ for(const c of candidates(url)){
+  try{
+   const r=await fetch(c.u,{mode:'cors'});if(!r.ok)continue;
+   return{bmp:await toBitmap(await r.blob()),fallback:c.fb};
+  }catch(e){}
  }
+ return null;
 }
 async function loadAll(items,onProgress){
  const out=new Array(items.length);let next=0,done=0,fb=0,miss=0;
@@ -118,7 +127,7 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty){
   const b=bmps[i];
   ctx.save();rr(ctx,x,yy,cw,s.ch,cw*0.045);ctx.clip();
   if(b)ctx.drawImage(b,x,yy,cw,s.ch);
-  else{ctx.fillStyle='#CBD2E0';ctx.fillRect(x,yy,cw,s.ch);ctx.fillStyle='#121A2B';ctx.font=`700 ${cw*0.085}px ${FONT}`;ctx.textAlign='center';ctx.fillText(fit(ctx,it.n,cw*0.86),x+cw/2,yy+s.ch/2);ctx.textAlign='left';}
+  else{ctx.fillStyle='#CBD2E0';ctx.fillRect(x,yy,cw,s.ch);ctx.fillStyle='#121A2B';ctx.font=`700 ${cw*0.085}px ${FONT}`;ctx.textAlign='center';ctx.fillText(fit(ctx,it.n,cw*0.86),x+cw/2,yy+s.ch/2);ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.06}px ${FONT}`;ctx.fillText('Imagem indisponível',x+cw/2,yy+s.ch/2+cw*0.1);ctx.textAlign='left';}
   ctx.restore();
   /* selo de quantidade: centralizado embaixo, sobre a carta */
   if(it.q>0){

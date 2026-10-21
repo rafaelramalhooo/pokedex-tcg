@@ -35,10 +35,16 @@ document.addEventListener('error',e=>{
  if(!t||t.tagName!=='IMG')return;
  if(t.dataset.role==='logo'){logoFail(t);return;}
  if(t.dataset.role==='sym'||t.dataset.role==='dexart'){t.remove();return;}
- const n=+t.dataset.t||0,b=t.dataset.b||'';
- if(n===0&&b.includes('/pt/')){t.dataset.t=1;t.src=`${b.replace('/pt/','/en/')}/${t.dataset.q}.webp`;return;}
+ const n=+t.dataset.t||0,b=t.dataset.b||'',q=t.dataset.q||'low';
+ /* tentativas, da melhor para a pior: webp e png, no idioma da carta e depois em inglês */
+ if(b&&t.dataset.role!=='own'){
+  const bases=b.includes('/pt/')?[b,b.replace('/pt/','/en/')]:[b];
+  const cand=[...bases.map(x=>`${x}/${q}.webp`),...bases.map(x=>`${x}/${q}.png`)];
+  if(n+1<cand.length){t.dataset.t=n+1;t.src=cand[n+1];return;}
+ }
  if(t.dataset.role==='own')return;
- const d=document.createElement('div');d.className='ph';d.dataset.noimg='1';const bb=document.createElement('b');bb.textContent=t.dataset.name||'';d.appendChild(bb);t.replaceWith(d);
+ const d=document.createElement('div');d.className='ph';d.dataset.noimg='1';const bb=document.createElement('b');bb.textContent=t.dataset.name||'';d.appendChild(bb);
+ const sm=document.createElement('small');sm.textContent='Imagem indisponível';d.appendChild(sm);t.replaceWith(d);
 },true);
 
 
