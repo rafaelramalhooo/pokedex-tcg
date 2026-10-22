@@ -37,7 +37,7 @@ document.addEventListener('error',e=>{
  if(t.dataset.role==='sym'||t.dataset.role==='dexart'){t.remove();return;}
  const n=+t.dataset.t||0,b=t.dataset.b||'',q=t.dataset.q||'low';
  /* tentativas, da melhor para a pior: webp e png, no idioma da carta e depois em inglês */
- if(b&&t.dataset.role!=='own'){
+ if(b&&t.dataset.role!=='own'&&!b.includes('dextcg.com')){
   const bases=b.includes('/pt/')?[b,b.replace('/pt/','/en/')]:[b];
   const cand=[...bases.map(x=>`${x}/${q}.webp`),...bases.map(x=>`${x}/${q}.png`)];
   if(n+1<cand.length){t.dataset.t=n+1;t.src=cand[n+1];return;}

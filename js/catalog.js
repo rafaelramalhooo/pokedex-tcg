@@ -4,13 +4,14 @@ import {groupBySet} from './collection.js';
 import {DB, saveKV} from './db.js';
 import {C, S, soft, softNow, viewCache} from './state.js';
 import {nz} from './util.js';
+import {extraCard,isExtraId,loadExtra,mergeExtra} from './extra.js';
 
 export function indexSets(){
  S.setMap={};S.setIdx={};
  S.sets.forEach((s,i)=>{S.setMap[s.id]=s;S.setIdx[s.id]=i;});
 }
 export function indexSetd(d){
- (d.cards||[]).forEach(c=>{S.briefs[c.id]={id:c.id,localId:String(c.localId),name:c.name,image:c.image,setId:d.id};});
+ (d.cards||[]).forEach(c=>{S.briefs[c.id]={id:c.id,localId:String(c.localId),name:c.name,image:c.image,setId:d.id,...(c.extra?{lang:'en',extra:true}:{})};});
 }
 export const isPocket=id=>{const s=S.serieOf[id];return !!s&&(s.id==='tcgp'||/pocket/i.test(s.name||''));};
 export const visibleSet=id=>S.settings.showPocket||!isPocket(id);
@@ -43,29 +44,33 @@ export async function fetchCatalog(){
  softNow();
  if(S.status.catalog==='ok')preloadSetd();
 }
-/* A TCGdex às vezes devolve a coleção em português com a lista de cartas incompleta (tradução pela metade).
-   Nesse caso completamos com a lista em inglês, mantendo o nome em português onde existir. */
+/* A TCGdex em português costuma ter menos cartas que a versão em inglês (promos e cartas novas ainda sem tradução).
+   Por isso toda coleção é completada com a lista em inglês, mantendo o nome em português onde existir.
+   Depois entram as cartas do complemento (js/extra.js), que a TCGdex ainda não cadastrou. */
 async function fetchSetFull(id){
  const path=`/sets/${encodeURIComponent(id)}`;
  const d=await getFB(path);
  const cc=d.cardCount||{};
- const want=Math.max(cc.total||0,cc.official||0);
- if(d.__lang!=='en'&&(d.cards||[]).length<want){
+ if(d.__lang!=='en'){
   const en=await getOrNull(path,'en');
-  if(en&&(en.cards||[]).length>(d.cards||[]).length){
+  if(en&&(en.cards||[]).length){
    const pt=new Map((d.cards||[]).map(c=>[c.id,c]));
-   d.cards=en.cards.map(c=>pt.get(c.id)||c);
-   const ec=en.cardCount||{};
-   d.cardCount={...cc,total:Math.max(cc.total||0,ec.total||0),official:cc.official||ec.official||0};
-   d.completedFromEn=true;
+   const enIds=new Set(en.cards.map(c=>c.id));
+   if(en.cards.some(c=>!pt.has(c.id))){
+    d.cards=[...en.cards.map(c=>pt.get(c.id)||c),...(d.cards||[]).filter(c=>!enIds.has(c.id))];
+    const ec=en.cardCount||{};
+    d.cardCount={...cc,total:Math.max(cc.total||0,ec.total||0,d.cards.length),official:cc.official||ec.official||0};
+    d.completedFromEn=true;
+   }
   }
  }
- d.fullChecked=2;
+ await mergeExtra(d);
+ d.fullChecked=3;
  return d;
 }
 export async function ensureSetd(id,force){
  const old=S.setd[id];
- if(old&&old.fullChecked===2&&!force)return old;
+ if(old&&old.fullChecked===3&&!force)return old;
  let d;
  try{d=await fetchSetFull(id);}
  catch(e){if(old)return old;throw e;}
@@ -75,7 +80,7 @@ export async function ensureSetd(id,force){
 }
 export async function preloadSetd(force){
  if(S.status.pre)return;
- const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==2);
+ const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==3);
  if(!todo.length){loadSelectedCards();return;}
  S.status.pre={done:0,total:todo.length};S.status.preErr=0;softNow();
  await pool(todo,6,async s=>{
@@ -116,8 +121,8 @@ export function ensureCard(id,force){
  if(S.cards[id]&&!force)return Promise.resolve(S.cards[id]);
  if(inflight.has(id))return inflight.get(id);
  const p=(async()=>{
-  const raw=await getFB(`/cards/${encodeURIComponent(id)}`);
-  const c=trimCard(raw);
+  await loadExtra();
+  const c=isExtraId(id)?{...extraCard(id)}:trimCard(await getFB(`/cards/${encodeURIComponent(id)}`));
   S.cards[id]=c;viewCache.delete(id);C.opt=null;
   await DB.put('cards',id,c);
   return c;

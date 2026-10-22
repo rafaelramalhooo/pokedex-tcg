@@ -273,7 +273,7 @@ async function boot(){
 function startApp(){
  updateAcct();
  route();
- const stale=Date.now()-S.catalogAt>7*864e5;
+ const stale=Date.now()-S.catalogAt>2*864e5||S.catalogAt<Date.UTC(2026,9,21,23,0);
  if(!S.sets.length||stale)fetchCatalog();
  else preloadSetd();
 }

@@ -2,6 +2,7 @@
 import {S} from './state.js';
 import {saveKV} from './db.js';
 import {api} from './api.js';
+import {extraCard,isExtraId,loadExtra} from './extra.js';
 import {snapOf} from './trades.js';
 import {langOf} from './cardlabel.js';
 import {debounce, nz, uid} from './util.js';
@@ -32,7 +33,7 @@ export function infoFrom(c){
 export function ensureInfo(id){
  if(S.dinfo[id])return Promise.resolve(S.dinfo[id]);
  if(inflight.has(id))return inflight.get(id);
- const p=api(`/cards/${encodeURIComponent(id)}`,'en').then(c=>{const i=infoFrom(c);S.dinfo[id]=i;saveInfoSoon();return i;}).finally(()=>inflight.delete(id));
+ const p=loadExtra().then(()=>isExtraId(id)?({...extraCard(id),set:{id:extraCard(id).set}}):api(`/cards/${encodeURIComponent(id)}`,'en')).then(c=>{const i=infoFrom(c);S.dinfo[id]=i;saveInfoSoon();return i;}).finally(()=>inflight.delete(id));
  inflight.set(id,p);return p;
 }
 export async function pool(ids,n,fn){let i=0;await Promise.all(Array.from({length:n},async()=>{while(i<ids.length){const x=ids[i++];try{await fn(x);}catch(e){}}}));}
