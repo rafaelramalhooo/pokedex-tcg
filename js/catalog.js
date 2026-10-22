@@ -72,22 +72,24 @@ async function fetchSetFull(id){
  /* sem imagem na TCGdex: tenta a do Dex */
  (d.cards||[]).forEach(c=>{if(!c.image){const u=dexImage(d.id,c.localId);if(u)c.image=u;}});
  await mergeExtra(d);
- d.fullChecked=4;
+ d.fullChecked=5;
  return d;
 }
 export async function ensureSetd(id,force){
  const old=S.setd[id];
- if(old&&old.fullChecked===4&&!force)return old;
+ if(old&&old.fullChecked===5&&!force)return old;
  let d;
  try{d=await fetchSetFull(id);}
  catch(e){if(old)return old;throw e;}
  S.setd[id]=d;indexSetd(d);viewCache.clear();C.opt=null;
+ /* imagem do Dex guardada antes com o número errado: corrige nos detalhes já baixados */
+ (d.cards||[]).forEach(c=>{const k=S.cards[id+'-'+c.localId]||S.cards[c.id];if(k&&k.image&&c.image&&k.image!==c.image&&/dextcg\.com/.test(k.image)){k.image=c.image;DB.put('cards',k.id,k);}});
  await DB.put('setd',id,d);
  return d;
 }
 export async function preloadSetd(force){
  if(S.status.pre)return;
- const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==4);
+ const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==5);
  if(!todo.length){loadSelectedCards();return;}
  S.status.pre={done:0,total:todo.length};S.status.preErr=0;softNow();
  await pool(todo,6,async s=>{

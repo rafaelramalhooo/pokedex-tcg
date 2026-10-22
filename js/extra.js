@@ -76,8 +76,11 @@ export function dexSlug(setId){
  if(id==='swsh12.5gg')return'swsh12pt5gg';
  return id.replace(/^(me|sv|swsh|sm|xy|bw|dp|pl|ex|hgss)0+(\d)/,'$1$2').replace('.','');
 }
+/* Na Coleção Clássica de 30 Anos o Dex usa outra ordem que a TCGdex. Mapa conferido carta por carta, pelo nome (22/10/2026). */
+const MAP_30C={1:2,2:8,3:11,4:20,5:3,6:9,7:5,8:25,9:22,10:13,11:14,12:27,13:24,14:1,15:4,16:19,17:23,18:15,19:16,20:17,21:18,22:12,23:21,24:6,25:10,26:28,27:29,28:26,29:7,30:30};
 export function dexImage(setId,localId){
  const sl=dexSlug(setId);if(!sl||localId===undefined||localId==='')return'';
- const n=/^\d+$/.test(String(localId))?String(+localId):String(localId);
+ let n=/^\d+$/.test(String(localId))?String(+localId):String(localId);
+ if(setId==='30th-c'){if(!MAP_30C[n])return'';n=String(MAP_30C[n]);}
  return imageOf(sl,n);
 }
