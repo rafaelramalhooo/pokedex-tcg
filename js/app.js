@@ -1,5 +1,5 @@
 /* Eventos, rotas e início do app. */
-import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, preloadSetd, runSync} from './catalog.js';
+import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, loadOwnedCards, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
 import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter} from './views/trades.js';
 import {viewShared, SHARED_ACT} from './views/shared.js';
@@ -260,7 +260,8 @@ async function boot(){
  }else if(!Array.isArray(S.settings.mySets))S.settings.mySets=[];
  indexSets();Object.values(S.setd).forEach(indexSetd);
  const st=await initCloud();
- onCloud(c=>{if(c.recovery&&!document.querySelector('#auth.on'))showAuth();});
+ const ownedSoon=debounce(()=>loadOwnedCards(),1500);
+ onCloud(c=>{if(c.recovery&&!document.querySelector('#auth.on'))showAuth();if(c.state==='idle')ownedSoon();});
  if(S.cloud.recovery){showAuth(startApp);return;}
  if(st==='out'||(st==='offline'&&!(await DB.get('kv','cloud')))){showAuth(startApp);return;}
  if(st==='in'){

@@ -97,7 +97,7 @@ export function dexModel(b){
    let rep=null;
    const ow=cand.filter(isOwned);
    /* só vale a carta que você colocou neste espaço; as outras que você tem ficam como sugestão */
-   if(b.pick&&b.pick[n]&&ow.includes(b.pick[n]))rep=b.pick[n];
+   if(b.pick&&b.pick[n]&&(ow.includes(b.pick[n])||isOwned(b.pick[n])))rep=b.pick[n];
    let name='';
    cand.forEach(id=>{const nm=cleanName((S.cards[id]||{}).name);if(nm&&(!name||nm.length<name.length))name=nm;});
    slots.push({dex:n,gen:g,name,rep,cand,have:ow,owned:!!rep});

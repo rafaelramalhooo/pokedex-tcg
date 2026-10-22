@@ -140,7 +140,7 @@ export function dexToggle(id){
  if(here){delete b.pick[st.dex];saveBinders();viewCache.clear();refreshAll();return;}
  /* colocar neste espaço; se ainda não tinha a carta, ela passa a fazer parte da coleção */
  const fill=()=>{b.pick[st.dex]=id;saveBinders();viewCache.clear();refreshAll();};
- if(isOwned(id)){fill();return;}
+ if(isOwned(id)){fill();if(!S.cards[id])ensureCard(id).then(()=>{viewCache.clear();refreshAll();}).catch(()=>{});return;}
  toggleOwn(id);b.pick[st.dex]=id;saveBinders();
  ensureCard(id).then(c=>{
   const e=S.collection[id];

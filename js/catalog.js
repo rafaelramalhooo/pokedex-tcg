@@ -1,6 +1,6 @@
 /* Catálogo: coleções, cartas, sincronização. */
 import {getFB, getOrNull, pool} from './api.js';
-import {groupBySet} from './collection.js';
+import {groupBySet,isOwned} from './collection.js';
 import {DB, saveKV} from './db.js';
 import {C, S, soft, softNow, viewCache} from './state.js';
 import {nz} from './util.js';
@@ -90,18 +90,34 @@ export async function preloadSetd(force){
  S.status.pre=null;softNow();
  loadSelectedCards();
 }
+/* Cartas que você tem (marcadas neste ou em outro aparelho) mas cujos detalhes ainda não foram baixados aqui.
+   Sem os detalhes, o fichário de Pokédex e as regras não enxergam a carta. */
+const ownedFail=new Set();
+export const ownedMissing=()=>Object.keys(S.collection).filter(id=>isOwned(id)&&!S.cards[id]&&!ownedFail.has(id));
+export async function loadOwnedCards(){
+ if(S.status.own)return;
+ const ids=ownedMissing();
+ if(!ids.length)return;
+ S.status.own={done:0,total:ids.length,fail:0};softNow();
+ await pool(ids,8,async id=>{
+  try{await ensureCard(id);}catch(e){S.status.own.fail++;ownedFail.add(id);}
+  S.status.own.done++;if(S.status.own.done%10===0)soft();
+ });
+ S.status.own=null;viewCache.clear();softNow();
+}
 /* Baixa os detalhes de todas as cartas das coleções escolhidas (Master Set e regras dependem deles). */
 export async function loadSelectedCards(){
  if(S.status.cl)return;
  const ids=[];
  mySets().forEach(s=>{const d=S.setd[s.id];if(d)(d.cards||[]).forEach(c=>{if(!S.cards[c.id])ids.push(c.id);});});
- if(!ids.length)return;
+ if(!ids.length){loadOwnedCards();return;}
  S.status.cl={done:0,total:ids.length,fail:0};softNow();
  await pool(ids,8,async id=>{
   try{await ensureCard(id);}catch(e){S.status.cl.fail++;}
   S.status.cl.done++;if(S.status.cl.done%10===0)soft();
  });
  S.status.cl=null;viewCache.clear();softNow();
+ loadOwnedCards();
 }
 /* Padrões do Reverse Holo. Na TCGdex em português o texto vem traduzido ("Reverse", "Poké Bola", "Energia"), em inglês vem "reverse"/"pokeball". */
 const foilKey=f=>{let s=nz(String(f)).replace(/[^a-z0-9]/g,'');

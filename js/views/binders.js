@@ -112,6 +112,7 @@ export function renderBinderBody(){
   }
  }else if(cov.setsLoaded<cov.sets&&!r.dex)notes+=noteHTML('',`Só ${cov.setsLoaded} de ${cov.sets} coleções foram carregadas até agora; o fichário cresce conforme chegam.`);
  if(r.dex)loadDexNames();
+ if(r.dex&&S.status.own)notes+=noteHTML('',`Baixando os detalhes das cartas que você tem: ${S.status.own.done} de ${S.status.own.total}. Os espaços da Pokédex se completam à medida que chegam.`);
  if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas coleções: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
  live($('#bsum')).innerHTML=notes+statsHTML(r,own,tot);
  const g=live($('#bgrid'));
