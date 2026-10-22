@@ -3,7 +3,22 @@ import {api} from './api.js';
 
 export const API='https://api.tcgdex.net/v2';
 export const FIN=['normal','holo','reverse'];
-export const FIN_LABEL={normal:'Normal',holo:'Holo',reverse:'Reverse holo'};
+/* Padrões do Reverse Holo informados pela TCGdex (campo foil de variants_detailed). Só aparecem nas cartas que os têm. */
+export const PATTERNS=[['pokeball','Pokébola'],['masterball','Master Ball'],['energy','Energia'],['league','Liga'],['loveball','Love Ball'],['friendball','Friend Ball'],['quickball','Quick Ball'],['duskball','Dusk Ball'],['team-rocket','Equipe Rocket']];
+export const patFin=k=>'rv-'+k;
+const PAT_NAME=Object.fromEntries(PATTERNS);
+const patName=k=>PAT_NAME[k]||String(k).split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+const FIN_BASE={normal:'Normal',holo:'Holo',reverse:'Reverse holo'};
+export const FIN_LABEL=new Proxy(FIN_BASE,{get:(t,k)=>typeof k==='string'&&k.startsWith('rv-')?'Reverse '+patName(k.slice(3)):t[k]});
+/* Texto curto do acabamento (vazio para Normal). */
+export const finShort=f=>!f||f==='normal'?'':f==='reverse'?'Reverse':f==='holo'?'Holo':String(f).startsWith('rv-')?FIN_LABEL[f]:(FIN_LABEL[f]||f);
+export const isReverseFin=f=>f==='reverse'||String(f).startsWith('rv-');
+/* Acabamentos que uma carta tem: Normal, Holo, Reverse e os padrões do Reverse que a base confirma. */
+export function finsOfCard(c){
+ const base=c&&c.variants?FIN.filter(f=>c.variants[f]):[];
+ const pats=((c&&c.rvp)||[]).map(patFin);
+ return [...base,...pats.filter(f=>!base.includes(f))];
+}
 export const COND=[['M','Perfeita (M)'],['NM','Quase perfeita (NM)'],['LP','Levemente jogada (LP)'],['MP','Moderadamente jogada (MP)'],['HP','Muito jogada (HP)'],['DMG','Danificada (DMG)']];
 export const LANGS=[['pt','Português'],['en','Inglês'],['ja','Japonês'],['es','Espanhol'],['fr','Francês'],['de','Alemão'],['it','Italiano'],['ko','Coreano'],['zh','Chinês'],['xx','Outro']];
 export const TYPES=[['planta','Planta'],['fogo','Fogo'],['agua','Água'],['raios','Raios'],['luta','Luta'],['metal','Metal'],['psiquico','Psíquico'],['escuridao','Escuridão'],['incolor','Incolor'],['dragao','Dragão'],['fada','Fada']];

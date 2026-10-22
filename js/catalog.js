@@ -3,6 +3,7 @@ import {getFB, getOrNull, pool} from './api.js';
 import {groupBySet} from './collection.js';
 import {DB, saveKV} from './db.js';
 import {C, S, soft, softNow, viewCache} from './state.js';
+import {nz} from './util.js';
 
 export function indexSets(){
  S.setMap={};S.setIdx={};
@@ -97,16 +98,22 @@ export async function loadSelectedCards(){
  });
  S.status.cl=null;viewCache.clear();softNow();
 }
+/* Padrões do Reverse Holo. Na TCGdex em português o texto vem traduzido ("Reverse", "Poké Bola", "Energia"), em inglês vem "reverse"/"pokeball". */
+const foilKey=f=>{let s=nz(String(f)).replace(/[^a-z0-9]/g,'');
+ if(s==='energia')return'energy';if(s==='liga')return'league';if(/^(equipe|team)rocket$/.test(s))return'team-rocket';
+ return s.replace(/bola$/,'ball');};
+export const reversePatterns=c=>[...new Set((c.variants_detailed||[]).filter(v=>v&&nz(String(v.type))==='reverse'&&v.foil).map(v=>foilKey(v.foil)).filter(Boolean))];
 export const trimCard=c=>({
  id:c.id,localId:String(c.localId),name:c.name,image:c.image,category:c.category,illustrator:c.illustrator,rarity:c.rarity,
  set:c.set&&c.set.id,
  variants:c.variants?{normal:!!c.variants.normal,holo:!!c.variants.holo,reverse:!!c.variants.reverse,firstEdition:!!c.variants.firstEdition}:null,
+ rvp:reversePatterns(c),
  dexId:c.dexId,hp:c.hp,types:c.types,stage:c.stage,suffix:c.suffix,trainerType:c.trainerType,energyType:c.energyType,
  evolveFrom:c.evolveFrom,regulationMark:c.regulationMark,legal:c.legal,lang:c.__lang||'pt'
 });
 export const inflight=new Map();
-export function ensureCard(id){
- if(S.cards[id])return Promise.resolve(S.cards[id]);
+export function ensureCard(id,force){
+ if(S.cards[id]&&!force)return Promise.resolve(S.cards[id]);
  if(inflight.has(id))return inflight.get(id);
  const p=(async()=>{
   const raw=await getFB(`/cards/${encodeURIComponent(id)}`);

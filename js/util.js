@@ -3,7 +3,8 @@
 export const $=(s,r=document)=>r.querySelector(s);
 export const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 export const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export const nz=s=>String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+/* Sem acento, minúsculo; ♀ e ♂ viram " f" e " m" (Nidoran♀ = "nidoran f"). */
+export const nz=s=>String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s*♀/g,' f').replace(/\s*♂/g,' m').trim();
 export const canon=(map,v)=>{const k=nz(v).replace(/\s+/g,'');return map[k]||k;};
 export const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 export const uid=()=>Math.random().toString(36).slice(2,10);

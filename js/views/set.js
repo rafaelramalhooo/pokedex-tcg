@@ -1,7 +1,7 @@
 /* Tela de uma coleção. */
 import {ensureSetCards, ensureSetd} from '../catalog.js';
 import {groupBySet, isOfficialNo, isOwned, ownedQty, setStat} from '../collection.js';
-import {FIN_LABEL} from '../constants.js';
+import {FIN_LABEL, finShort, isReverseFin} from '../constants.js';
 import {H, S, soft} from '../state.js';
 import {logoImg} from '../logos.js';
 import {customLogo} from '../custom.js';
@@ -96,7 +96,7 @@ export function slotHTML(c,fin){
  const e=S.collection[c.id];
  const q=fin?(e&&e.f[fin]?e.f[fin].q:0):ownedQty(c.id);
  const on=q>0;
- const chip=fin&&fin!=='normal'?`<span class="chip ${fin==='reverse'?'R':'H'}">${fin==='reverse'?'Reverse':'Holo'}</span>`:'';
+ const chip=fin&&fin!=='normal'?`<span class="chip ${isReverseFin(fin)?'R':'H'}">${finShort(fin)}</span>`:'';
  return `<div class="slot ${on?'on':'off'}" data-act="open" data-id="${esc(c.id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, número ${esc(c.localId)}${fin?', '+FIN_LABEL[fin]:''}, ${on?'tenho':'não tenho'}">
   <div class="pocket">${imgTag(c.image,'low',c.name,undefined,c.id)}${chip}${q>1?`<span class="qty">×${q}</span>`:''}
    <button type="button" class="tg" data-act="tog" data-id="${esc(c.id)}" ${fin?`data-fin="${fin}"`:''} aria-label="${on?'Remover da coleção':'Marcar como tenho'}">${ICON.check}</button></div>

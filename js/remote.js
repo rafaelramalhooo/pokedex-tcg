@@ -3,6 +3,7 @@
 import {api} from './api.js';
 import {loadIds} from './catalog.js';
 import {S, soft} from './state.js';
+import {extraIdsFor} from './dex30.js';
 
 const TYPE_EN={planta:'Grass',fogo:'Fire',agua:'Water',raios:'Lightning',luta:'Fighting',metal:'Metal',psiquico:'Psychic',escuridao:'Darkness',incolor:'Colorless',dragao:'Dragon',fada:'Fairy'};
 const CAT_EN={pokemon:'Pokemon',treinador:'Trainer',energia:'Energy'};
@@ -67,6 +68,7 @@ function start(key,qs){
    for(const q of qs){
     const rows=await enqueue(()=>api('/cards?'+q,'en',4));
     (rows||[]).forEach(r=>e.ids.add(r.id));
+    const dm=String(q).match(/^dexId=eq:(\d+)$/);if(dm)extraIdsFor(dm[1]).forEach(id=>e.ids.add(id));
    }
    e.status='ok';
   }catch(err){e.status='err';}

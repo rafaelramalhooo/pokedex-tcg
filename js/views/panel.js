@@ -1,6 +1,6 @@
 /* Painel de detalhes da carta. */
 import {ensureCard} from '../catalog.js';
-import {COND, FIN, FIN_LABEL, LANGS, rarityPt, typePt} from '../constants.js';
+import {COND, FIN, FIN_LABEL, LANGS, finsOfCard, rarityPt, typePt} from '../constants.js';
 import {numLabel} from '../cardlabel.js';
 import {H, S} from '../state.js';
 import {imgTag, noteHTML} from '../ui.js';
@@ -12,7 +12,7 @@ import {$, esc} from '../util.js';
 export function openPanel(id,ctx){
  S.ui.panelId=id;S.ui.panelCtx=ctx||null;
  renderPanel();
- if(!S.cards[id])ensureCard(id).then(()=>{if(S.ui.panelId===id)renderPanel();if(S.cur&&S.cur.refresh)S.cur.refresh();}).catch(()=>{if(S.ui.panelId===id)renderPanel(true);});
+ if(!S.cards[id]||S.cards[id].rvp===undefined)ensureCard(id,true).then(()=>{if(S.ui.panelId===id)renderPanel();if(S.cur&&S.cur.refresh)S.cur.refresh();}).catch(()=>{if(S.ui.panelId===id)renderPanel(true);});
 }
 export function closePanel(){S.ui.panelId=null;renderPanel();}
 /* Carta anterior/seguinte dentro da lista que está na tela, sem fechar o popup. */
@@ -39,7 +39,7 @@ export function renderPanel(failed){
  const e=S.collection[id];
  let fins=null;
  if(c){
-  fins=c.variants?FIN.filter(f=>c.variants[f]):[];
+  fins=finsOfCard(c);
   if(!fins.length)fins=['normal'];
   if(e)Object.keys(e.f).forEach(f=>{if(!fins.includes(f))fins.push(f);});
  }

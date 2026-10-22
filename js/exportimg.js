@@ -1,5 +1,5 @@
 /* Exportar imagem: monta uma folha com as cartas (até 10 colunas) para compartilhar em trocas e vendas. */
-import {FIN_LABEL} from './constants.js';
+import {finShort} from './constants.js';
 import {toast} from './ui.js';
 import {$, esc} from './util.js';
 
@@ -76,7 +76,7 @@ function fit(ctx,text,maxW){
  let t=text;while(t.length>1&&ctx.measureText(t+'…').width>maxW)t=t.slice(0,-1);
  return t+'…';
 }
-const finTxt=f=>f&&f!=='normal'?(f==='reverse'?'Reverse':f==='holo'?'Holo':(FIN_LABEL[f]||f)):'';
+const finTxt=f=>finShort(f);
 
 /* Quebra o texto em até maxLines linhas; a última leva "…" se faltar espaço. */
 function wrap(ctx,text,maxW,maxLines){

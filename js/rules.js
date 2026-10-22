@@ -5,6 +5,7 @@ import {rarityEn, rarityPt, BOOL, CAT_ALIAS, FIN, FM, GENS, OPS, STAGE_ALIAS, TY
 import {C, S, viewCache} from './state.js';
 import {canon, esc, natCmp, nz} from './util.js';
 import {remoteFor} from './remote.js';
+import {dexIdsOf} from './dex30.js';
 
 export function viewOf(id){
  let v=viewCache.get(id);if(v)return v;
@@ -15,7 +16,7 @@ export function viewOf(id){
   name:nz(b.name||(c&&c.name)),setName:nz(set?set.name:setId),setKey:nz(setId),serie:nz(se?se.name:''),full:!!c,
   dex:[],types:[],cat:'',stage:'',suffix:'',trainer:'',illus:'',rarity:'',hp:null,mark:'',vars:[]};
  if(c){
-  v.dex=Array.isArray(c.dexId)?c.dexId.map(Number):[];
+  v.dex=dexIdsOf(c,id);
   v.types=(c.types||[]).map(t=>canon(TYPE_ALIAS,t));
   v.cat=canon(CAT_ALIAS,c.category);v.stage=canon(STAGE_ALIAS,c.stage||'');
   v.suffix=nz(c.suffix);v.trainer=nz(c.trainerType);v.illus=nz(c.illustrator);v.rarity=nz(rarityPt(c.rarity));v.rarityEn=nz(rarityEn(c.rarity));
@@ -84,9 +85,9 @@ export function dexModel(b){
  const byDex=new Map();
  for(const id in S.cards){
   const c=S.cards[id];
-  if(!Array.isArray(c.dexId)||!c.dexId.length)continue;
+  const dids=dexIdsOf(c,id);if(!dids.length)continue;
   const sid=c.set||(S.briefs[id]||{}).setId;if(sid&&!visibleSet(sid))continue;
-  c.dexId.forEach(n=>{n=Number(n);if(!byDex.has(n))byDex.set(n,[]);byDex.get(n).push(id);});
+  dids.forEach(n=>{n=Number(n);if(!byDex.has(n))byDex.set(n,[]);byDex.get(n).push(id);});
  }
  const slots=[];
  GENS.filter(([g])=>gens.includes(g)).forEach(([g,a,z])=>{

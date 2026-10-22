@@ -1,6 +1,6 @@
 /* Negociação: listas para vender/trocar ou procurar. Não afetam a coleção, a Dex nem os fichários. */
-import {visibleSet,loadAllSetLists} from '../catalog.js';
-import {COND, FIN_LABEL} from '../constants.js';
+import {ensureCard, visibleSet,loadAllSetLists} from '../catalog.js';
+import {COND, FIN_LABEL, finShort, finsOfCard} from '../constants.js';
 import {flagHTML, langOf} from '../cardlabel.js';
 import {S, refreshAll} from '../state.js';
 import {imgTag, noteHTML, toast} from '../ui.js';
@@ -42,7 +42,7 @@ export function viewTrade(id){
 export function tradeTile(t,it){
  const key=itemKey(it);
  const sell=t.kind==='sell';
- const tag=[it.f!=='normal'?(it.f==='reverse'?'Reverse':'Holo'):'',it.l&&it.l!=='xx'?it.l.toUpperCase():'',sell&&it.c?it.c:''].filter(Boolean).join(' · ');
+ const tag=[finShort(it.f),it.l&&it.l!=='xx'?it.l.toUpperCase():'',sell&&it.c?it.c:''].filter(Boolean).join(' · ');
  return`<div class="slot on tradeslot" data-act="trade-item" data-trade="${esc(t.id)}" data-key="${esc(key)}" role="button" tabindex="0" aria-label="${esc(it.n)}, ${it.q} unidade${it.q===1?'':'s'}. Editar">
   <div class="pocket">${imgTag(it.i,'low',it.n,undefined,it.id)}<span class="qty tq">×${it.q}</span></div>
   <div class="num"><b>${esc(it.n)}</b><span>${esc(it.no)} ${flagHTML(it.l||'xx')}</span></div>
@@ -145,7 +145,7 @@ async function allCollections(){
 function showVariation(){
  const st=S.ui.tradeAdd;const t=st&&getTrade(st.id);const id=st&&st.pick;if(!t||!id)return;
  const sn=snapOf(id);const v=S.cards[id]&&S.cards[id].variants;
- let fins=['normal','holo','reverse'].filter(f=>!v||v[f]);if(!fins.length)fins=['normal','holo','reverse'];
+ let fins=S.cards[id]&&S.cards[id].variants?finsOfCard(S.cards[id]):['normal','holo','reverse'];if(!fins.length)fins=['normal','holo','reverse'];
  const lang=st.lang||langOf(id);
  const inList=f=>t.items.filter(i=>i.id===id&&i.f===f&&i.l===lang).reduce((a,i)=>a+i.q,0);
  const sum=fins.reduce((a,f)=>a+(st.fin[f]||0),0);
@@ -165,6 +165,7 @@ function tvPick(id){
  const st=S.ui.tradeAdd;if(!st)return;
  st.pick=id;st.lang=langOf(id);st.fin={normal:0,holo:0,reverse:0};
  showVariation();
+ if(!S.cards[id]||S.cards[id].rvp===undefined)ensureCard(id,true).then(()=>{if(st.pick===id)showVariation();}).catch(()=>{});
 }
 function tvStep(f,d){
  const st=S.ui.tradeAdd;if(!st||!st.pick)return;
@@ -185,7 +186,7 @@ function itemDialog(t,it){
  $('#dialog').innerHTML=`<h2>${esc(it.n)}</h2><p class="lead">${esc(it.no)}</p>
   <div class="row" style="gap:12px;flex-wrap:wrap">
    <label class="size">Quantidade <input class="field mini" id="tiq" type="number" min="1" max="999" value="${it.q}"></label>
-   <label class="size">Acabamento <select class="field" id="tif">${Object.entries(FIN_LABEL).map(([k,l])=>`<option value="${k}" ${it.f===k?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label class="size">Acabamento <select class="field" id="tif">${[...new Set(['normal','holo','reverse',...finsOfCard(S.cards[it.id]),it.f])].map(k=>`<option value="${k}" ${it.f===k?'selected':''}>${FIN_LABEL[k]}</option>`).join('')}</select></label>
    <label class="size">Idioma <select class="field" id="til">${LANGS.map(([k,l])=>`<option value="${k}" ${it.l===k?'selected':''}>${l}</option>`).join('')}</select></label>
    ${t.kind==='sell'?`<label class="size">Condição <select class="field" id="tic"><option value="">Não informada</option>${COND.map(([k,l])=>`<option value="${k}" ${it.c===k?'selected':''}>${l}</option>`).join('')}</select></label>
    <label class="size">Valor pedido (R$, por carta) <input class="field mini" id="tip" type="text" inputmode="decimal" placeholder="0,00" value="${hasPrice(it)?String(it.p).replace('.',','):''}" style="width:110px"></label>`:''}</div>
@@ -203,7 +204,7 @@ const sel=(id,opts)=>`<select class="field" id="${id}">${opts.map(([k,l])=>`<opt
 function bulkRows(t,st){
  return t.items.map(it=>{
   const key=itemKey(it),on=st.sel.has(key);
-  const tag=[it.f!=='normal'?(it.f==='reverse'?'Reverse':'Holo'):'',it.l&&it.l!=='xx'?it.l.toUpperCase():'',it.c||''].filter(Boolean).join(' · ');
+  const tag=[finShort(it.f),it.l&&it.l!=='xx'?it.l.toUpperCase():'',it.c||''].filter(Boolean).join(' · ');
   return`<button type="button" class="bkrow ${on?'on':''}" data-act="bk-toggle" data-key="${esc(key)}" aria-pressed="${on}"><span class="bkchk" aria-hidden="true">${on?'✓':''}</span><span class="bkname"><b>${esc(it.n)}</b> <small>${esc(it.no)}${tag?' · '+esc(tag):''}</small></span><span class="bkq">×${it.q}</span><span class="bkp">${hasPrice(it)?esc(brl(it.p)):'—'}</span></button>`;
  }).join('');
 }
@@ -303,7 +304,7 @@ export function renderPull(){
  const vis=pullVisible();const list=vis.slice(0,PULL_MAX);
  el.innerHTML=vis.length?`<p class="lbl2">${fmtN(vis.length)} carta${vis.length===1?'':'s'}${vis.length>list.length?', mostrando as primeiras '+list.length+'. Use a busca ou o filtro para achar as outras':''}.</p><div class="cards" style="--tile:118px">${list.map(r=>{
   const its=itemsOf(t,st,r);const on=its.length>0;const q=its.reduce((a,i)=>a+i.q,0);
-  const tag=st.split?[r.f!=='normal'?(r.f==='reverse'?'Reverse':'Holo'):'',r.l&&r.l!=='xx'?r.l.toUpperCase():''].filter(Boolean).join(' · '):(r.l&&r.l!=='xx'?r.l.toUpperCase():'');
+  const tag=st.split?[finShort(r.f),r.l&&r.l!=='xx'?r.l.toUpperCase():''].filter(Boolean).join(' · '):(r.l&&r.l!=='xx'?r.l.toUpperCase():'');
   return`<div class="slot on plslot ${on?'sel':''}" data-act="pl-toggle" data-key="${esc(r.key)}" role="button" tabindex="0" aria-label="${esc(r.sn.n)}, você tem ${r.own}, ${on?'na lista, toque para tirar':'toque para adicionar'}">
    <div class="pocket">${imgTag(r.sn.i,'low',r.sn.n,undefined,r.id)}${on?CHECK:''}<span class="qty tq">×${on?q:r.own}</span></div>
    <div class="num"><b>${esc(r.sn.n)}</b><span>${esc(r.sn.no)}</span></div>${tag?`<div class="num"><span>${esc(tag)}</span></div>`:''}

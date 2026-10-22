@@ -1,6 +1,7 @@
 /* Pokédex: arte e nome dos Pokémon, e a janela com as cartas de um Pokémon para marcar as que você tem. */
 import {getOrNull} from '../api.js';
-import {ensureCard, visibleSet} from '../catalog.js';
+import {ensureCard, ensureSetd, visibleSet} from '../catalog.js';
+import {extraIdsFor} from '../dex30.js';
 import {defaultFin, isOwned, ownedQty, persistEntry, toggleOwn} from '../collection.js';
 import {saveKV} from '../db.js';
 import {S, viewCache, refreshAll} from '../state.js';
@@ -45,6 +46,13 @@ async function fetchDexCards(n){
   if(!S.briefs[c.id])S.briefs[c.id]=b;
   out.push(b);
  });
+ /* cartas sem dexId na TCGdex (Celebração de 30 Anos): vêm do mapa fixo */
+ for(const id of extraIdsFor(n)){
+  if(seen.has(id))continue;
+  const sid=id.slice(0,id.lastIndexOf('-'));
+  if(!S.briefs[id]){try{await ensureSetd(sid);}catch(e){}}
+  const b=S.briefs[id];if(b){seen.add(id);out.push(b);}
+ }
  /* mais nova primeiro (a lista de coleções vem da mais antiga para a mais nova) */
  out.sort((a,b)=>((S.setIdx[b.setId]??-1)-(S.setIdx[a.setId]??-1))||natCmp(a.localId,b.localId));
  return out;
