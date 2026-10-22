@@ -2,6 +2,7 @@
 import {getOrNull} from '../api.js';
 import {ensureCard, ensureSetd, visibleSet} from '../catalog.js';
 import {extraIdsFor} from '../dex30.js';
+import {dexImage} from '../extra.js';
 import {defaultFin, isOwned, ownedQty, persistEntry, toggleOwn} from '../collection.js';
 import {saveKV} from '../db.js';
 import {S, viewCache, refreshAll} from '../state.js';
@@ -38,11 +39,12 @@ async function fetchDexCards(n){
  const ptM=new Map((pt||[]).map(c=>[c.id,c]));
  const base=(en&&en.length>=(pt||[]).length)?en:(pt||[]);
  const seen=new Set();const out=[];
+ const enM=new Map((en||[]).map(c=>[c.id,c]));
  [...base.map(c=>ptM.get(c.id)||c),...(pt||[])].forEach(c=>{
   if(seen.has(c.id))return;seen.add(c.id);
   const localId=String(c.localId);
   const setId=c.id.slice(0,c.id.length-localId.length-1);
-  const b={id:c.id,localId,name:c.name,image:c.image,setId};
+  const b={id:c.id,localId,name:c.name,image:c.image||(enM.get(c.id)||{}).image||dexImage(setId,localId),setId};
   if(!S.briefs[c.id])S.briefs[c.id]=b;
   out.push(b);
  });

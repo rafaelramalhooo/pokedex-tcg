@@ -4,7 +4,7 @@ import {groupBySet,isOwned} from './collection.js';
 import {DB, saveKV} from './db.js';
 import {C, S, soft, softNow, viewCache} from './state.js';
 import {nz} from './util.js';
-import {extraCard,isExtraId,loadExtra,mergeExtra} from './extra.js';
+import {dexImage,extraCard,isExtraId,loadExtra,mergeExtra} from './extra.js';
 
 export function indexSets(){
  S.setMap={};S.setIdx={};
@@ -56,21 +56,28 @@ async function fetchSetFull(id){
   if(en&&(en.cards||[]).length){
    const pt=new Map((d.cards||[]).map(c=>[c.id,c]));
    const enIds=new Set(en.cards.map(c=>c.id));
-   if(en.cards.some(c=>!pt.has(c.id))){
-    d.cards=[...en.cards.map(c=>pt.get(c.id)||c),...(d.cards||[]).filter(c=>!enIds.has(c.id))];
-    const ec=en.cardCount||{};
-    d.cardCount={...cc,total:Math.max(cc.total||0,ec.total||0,d.cards.length),official:cc.official||ec.official||0};
-    d.completedFromEn=true;
+   const missing=en.cards.some(c=>!pt.has(c.id));
+   /* o nome vem do português; a imagem do inglês quando o português não tem */
+   const noImg=en.cards.some(c=>{const p=pt.get(c.id);return p&&!p.image&&c.image;});
+   if(missing||noImg){
+    d.cards=[...en.cards.map(c=>{const p=pt.get(c.id);return p?(p.image||!c.image?p:{...p,image:c.image}):c;}),...(d.cards||[]).filter(c=>!enIds.has(c.id))];
+    if(missing){
+     const ec=en.cardCount||{};
+     d.cardCount={...cc,total:Math.max(cc.total||0,ec.total||0,d.cards.length),official:cc.official||ec.official||0};
+     d.completedFromEn=true;
+    }
    }
   }
  }
+ /* sem imagem na TCGdex: tenta a do Dex */
+ (d.cards||[]).forEach(c=>{if(!c.image){const u=dexImage(d.id,c.localId);if(u)c.image=u;}});
  await mergeExtra(d);
- d.fullChecked=3;
+ d.fullChecked=4;
  return d;
 }
 export async function ensureSetd(id,force){
  const old=S.setd[id];
- if(old&&old.fullChecked===3&&!force)return old;
+ if(old&&old.fullChecked===4&&!force)return old;
  let d;
  try{d=await fetchSetFull(id);}
  catch(e){if(old)return old;throw e;}
@@ -80,7 +87,7 @@ export async function ensureSetd(id,force){
 }
 export async function preloadSetd(force){
  if(S.status.pre)return;
- const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==3);
+ const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==4);
  if(!todo.length){loadSelectedCards();return;}
  S.status.pre={done:0,total:todo.length};S.status.preErr=0;softNow();
  await pool(todo,6,async s=>{
@@ -139,6 +146,7 @@ export function ensureCard(id,force){
  const p=(async()=>{
   await loadExtra();
   const c=isExtraId(id)?{...extraCard(id)}:trimCard(await getFB(`/cards/${encodeURIComponent(id)}`));
+  if(!c.image){const b=S.briefs[id];c.image=(b&&b.image)||dexImage(c.set,c.localId)||c.image;}
   S.cards[id]=c;viewCache.delete(id);C.opt=null;
   await DB.put('cards',id,c);
   return c;

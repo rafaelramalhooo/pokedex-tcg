@@ -63,3 +63,21 @@ export async function mergeExtra(d){
  }
  return n;
 }
+
+/* Imagem do Dex para cartas que a TCGdex não tem (nem em português nem em inglês). Só monta o endereço; se o Dex não tiver,
+   o app mostra o espaço reservado. Coleções que sabidamente não existem no Dex ficam de fora. */
+const NO_DEX=/^(tk-|20\d\d|miscp|bog|exu|ex5\.5|mfb|ecard3|xya|bwp|hgssp|cel25cc|sve|P-|A\d|B\d)/;
+export function dexSlug(setId){
+ const id=String(setId||'');
+ if(!id||NO_DEX.test(id))return'';
+ if(id==='30th')return'me55';
+ if(id==='30th-c')return'me55cc';
+ if(id==='swsh12.5')return'swsh12pt5';
+ if(id==='swsh12.5gg')return'swsh12pt5gg';
+ return id.replace(/^(me|sv|swsh|sm|xy|bw|dp|pl|ex|hgss)0+(\d)/,'$1$2').replace('.','');
+}
+export function dexImage(setId,localId){
+ const sl=dexSlug(setId);if(!sl||localId===undefined||localId==='')return'';
+ const n=/^\d+$/.test(String(localId))?String(+localId):String(localId);
+ return imageOf(sl,n);
+}
