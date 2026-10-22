@@ -1,7 +1,7 @@
 /* Tela de uma coleção. */
 import {ensureSetCards, ensureSetd} from '../catalog.js';
 import {groupBySet, isOfficialNo, isOwned, ownedQty, setStat} from '../collection.js';
-import {FIN_LABEL, finShort, isReverseFin} from '../constants.js';
+import {FIN_LABEL, finShort, isReverseFin, patFin} from '../constants.js';
 import {H, S, soft} from '../state.js';
 import {logoImg} from '../logos.js';
 import {customLogo} from '../custom.js';
@@ -37,12 +37,12 @@ export function renderSetHero(){
  const se=S.serieOf[id]||(d.serie&&{name:d.serie.name});
  const m=modeOf(id);
  const logo=logoImg({...d,...set,id,name:d.name,logo:d.logo||set.logo});
- const stat=(k,label,own,tot)=>`<button type="button" class="hstat ${m===k?'active':''}" data-act="mode" data-v="${k}" style="background:none;border:0;text-align:left;cursor:pointer;padding:0"><div class="lbl">${label}</div><div class="count"><strong>${fmtN(own)}</strong><span>${tot==null?'de …':'de '+fmtN(tot)}</span></div><div class="bar ${tot>0&&own>=tot?'done':''}"><i style="width:${pct(own,tot)}%"></i></div></button>`;
+ const stat=(k,label,own,tot,part)=>`<button type="button" class="hstat ${m===k?'active':''}" data-act="mode" data-v="${k}" style="background:none;border:0;text-align:left;cursor:pointer;padding:0"><div class="lbl">${label}</div><div class="count"><strong>${fmtN(own)}</strong><span>${tot==null?'de …':'de '+fmtN(tot)+(part?'+':'')}</span></div><div class="bar ${tot>0&&own>=tot?'done':''}"><i style="width:${pct(own,tot)}%"></i></div></button>`;
  el.innerHTML=`<div class="hero">
   <div class="hlogo">${logo}</div>
   <div class="htext"><h1 style="font-size:clamp(26px,3vw,36px)">${esc(d.name)}</h1>
    <p class="lead" style="margin-top:4px">${se?esc(se.name)+'. ':''}${d.releaseDate?'Lançada em '+fmtDate(d.releaseDate)+'. ':''}${fmtN(st.total)} cartas no total, ${fmtN(st.tot)} numeradas.</p></div>
-  <div class="hstats">${stat('set','Set (cartas numeradas)',st.own,st.tot)}${stat('master','Master Set',st.ownM,st.masterTot)}</div></div>`;
+  <div class="hstats">${stat('set','Set (cartas numeradas)',st.own,st.tot)}${stat('master','Master Set',st.ownM,st.masterTot,st.masterPartial&&S.settings.masterPatterns!==false)}</div></div>`;
 }
 export function renderSetGrid(){
  const g=live($('#grid'));if(!g||!S.cur||S.cur.name!=='set')return;
@@ -57,7 +57,7 @@ export function renderSetGrid(){
  const load=S.setLoad[id];
  if(note){
   if(mode==='master'&&load)note.innerHTML=noteHTML('',`Baixando os detalhes das cartas para montar o Master Set: ${load.done} de ${load.total}.`);
-  else if(mode==='master'&&cards.some(c=>!S.cards[c.id]))note.innerHTML=noteHTML('warn',`Algumas cartas ainda não têm detalhes de acabamento. <button class="btn small" data-act="load-set-cards" type="button">Baixar agora</button>`);
+  else if(mode==='master'&&cards.some(c=>!S.cards[c.id]||(S.settings.masterPatterns!==false&&S.cards[c.id].rvp===undefined)))note.innerHTML=noteHTML('warn',`Algumas cartas ainda não têm detalhes de acabamento. <button class="btn small" data-act="load-set-cards" type="button">Baixar agora</button>`);
   else note.innerHTML='';
  }
  const slots=[];
@@ -69,6 +69,7 @@ export function renderSetGrid(){
     if(full.variants.normal)fin.push('normal');
     if(full.variants.holo)fin.push('holo');
     if(full.variants.reverse&&S.settings.masterReverse)fin.push('reverse');
+    if(S.settings.masterPatterns!==false)(full.rvp||[]).forEach(p=>fin.push(patFin(p)));
     if(!fin.length)fin.push('normal');
    }else fin.push('normal');
   }

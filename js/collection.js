@@ -52,23 +52,34 @@ export function saveNote(id,text){
 
 /* contagem por coleção */
 export const isOfficialNo=(lid,official)=>/^\d+$/.test(lid)?parseInt(lid,10)<=official:true;
+/* Padrões do Reverse (Pokébola, Energia, Liga…) de uma coleção: só contam as cartas em que a TCGdex confirma o padrão.
+   Só dá o total quando os detalhes de todas as cartas já foram baixados (complete). */
+export function patternTotals(setId){
+ if(S.settings.masterPatterns===false)return{tot:0,complete:true,off:true};
+ const d=S.setd[setId];const cards=(d&&d.cards)||[];
+ if(!cards.length)return{tot:0,complete:false};
+ let tot=0,complete=true;
+ for(const c of cards){const f=S.cards[c.id];if(!f||f.rvp===undefined){complete=false;break;}tot+=f.rvp.length;}
+ return{tot:complete?tot:0,complete};
+}
 export function setStat(set,bySet){
  const d=S.setd[set.id];
  const cc=(d&&d.cardCount)||set.cardCount||{};
  const official=cc.official||cc.total||0;
  let own=0,ownM=0;
+ const pt=patternTotals(set.id);
  for(const id of (bySet[set.id]||[])){
   const e=S.collection[id];const fins=Object.keys(e.f);
   if(!fins.length)continue;
   if(isOfficialNo(id.slice(set.id.length+1),official))own++;
-  for(const f of fins){if(f==='reverse'&&!S.settings.masterReverse)continue;ownM++;}
+  for(const f of fins){if(f==='reverse'&&!S.settings.masterReverse)continue;if(String(f).startsWith('rv-')&&!pt.complete)continue;if(String(f).startsWith('rv-')&&pt.off)continue;ownM++;}
  }
  let masterTot=null;
  if(d&&d.cardCount){
   const c=d.cardCount;
   let sum=(c.normal||0)+(c.holo||0)+(S.settings.masterReverse?(c.reverse||0):0);
   if(!sum)sum=c.total||official;
-  masterTot=sum;
+  masterTot=sum+pt.tot;
  }
- return{own,tot:official,ownM,masterTot,total:cc.total||official};
+ return{own,tot:official,ownM,masterTot,masterPartial:!pt.complete,total:cc.total||official};
 }

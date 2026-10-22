@@ -127,12 +127,12 @@ export function ensureCard(id,force){
 }
 export async function ensureSetCards(setId){
  const d=S.setd[setId];if(!d)return;
- const todo=(d.cards||[]).map(c=>c.id).filter(id=>!S.cards[id]);
+ const todo=(d.cards||[]).map(c=>c.id).filter(id=>!S.cards[id]||S.cards[id].rvp===undefined);
  if(!todo.length)return;
  if(S.setLoad[setId])return;
  S.setLoad[setId]={done:0,total:todo.length};soft();
  await pool(todo,8,async id=>{
-  try{await ensureCard(id);}catch(e){}
+  try{await ensureCard(id,!!S.cards[id]);}catch(e){}
   S.setLoad[setId].done++;soft();
  });
  delete S.setLoad[setId];viewCache.clear();softNow();

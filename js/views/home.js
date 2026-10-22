@@ -79,7 +79,7 @@ export function setTile(s,st,mode){
  }else{
   own=st.own;tot=st.tot;
   main=`<strong>${fmtN(own)}</strong><span>de ${fmtN(tot)}</span>`;
-  sub=st.masterTot==null?'Master Set: …':`Master Set: ${st.ownM} de ${st.masterTot}`;
+  sub=st.masterTot==null?'Master Set: …':`Master Set: ${st.ownM} de ${st.masterTot}${st.masterPartial&&S.settings.masterPatterns!==false?'+':''}`;
  }
  const complete=tot>0&&own>=tot;
  return `<a class="set ${complete?'done':''}" style="--h:${hueOf((S.serieOf[s.id]||{}).id||s.id)}" href="#/set/${encodeURIComponent(s.id)}" aria-label="${esc(s.name)}: ${own} de ${tot==null?'?':tot}">

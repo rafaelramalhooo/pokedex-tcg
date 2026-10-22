@@ -52,6 +52,7 @@ export function renderSettings(){
  </section>
  <section class="panel-sec"><h2>Contagem e exibição</h2>
   <label class="chk"><input type="checkbox" data-set="masterReverse" ${S.settings.masterReverse?'checked':''}> Master Set inclui o reverse holo de cada carta</label>
+  <label class="chk"><input type="checkbox" data-set="masterPatterns" ${S.settings.masterPatterns!==false?'checked':''}> Master Set inclui os padrões do Reverse (Pokébola, Energia, Liga…) nas cartas que os têm</label>
   <p style="margin:0 0 8px">Master Set aqui significa: todas as cartas da coleção, inclusive as secretas, em cada acabamento que existe (normal, holo e reverse holo). Promos e cartas com carimbo especial não entram.</p>
   <label class="chk"><input type="checkbox" data-set="showPocket" ${S.settings.showPocket?'checked':''}> Mostrar coleções do Pokémon TCG Pocket (jogo de celular)</label>
  </section>
