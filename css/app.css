@@ -338,7 +338,9 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .binder{flex-direction:row;align-items:center;gap:14px;padding:12px;border-left:0}
 .binder .cover{flex:none;width:96px;height:96px;border-radius:12px;overflow:hidden;background:var(--pocket);display:flex;align-items:center;justify-content:center}
 .binder .cover img,.binder .cover svg{width:100%;height:100%;object-fit:contain;display:block}
-.binder .cover img[data-role=dexart]{padding:6px;background:linear-gradient(135deg,#EEF2FB,#DDE5F6)}
+.binder .cover,.cover.sm{position:relative}
+.cover .fitbox img{object-fit:cover!important;padding:0!important;background:none!important}
+.cover svg{object-fit:cover}
 .binder .bmeta{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
 .binder h3{margin:0;overflow-wrap:anywhere}
 .cover.sm{width:44px;height:44px;border-radius:10px;overflow:hidden;display:inline-flex;background:var(--pocket);flex:none}
@@ -605,3 +607,6 @@ img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.coverpage .cvlogo img.lgbg,.her
 .cvzoom{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .cvzoom input[type=range]{width:min(220px,50vw)}
 @media (max-width:720px){.cvwrap{grid-template-columns:1fr}.cvprev{width:min(220px,60vw)}}
+
+.cvprev.sq{aspect-ratio:1/1;width:min(200px,100%)}
+.cvtabs{margin:6px 0 4px}

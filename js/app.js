@@ -61,7 +61,7 @@ const ACT={
  'panel-nav':t=>panelNav(+t.dataset.d),
  'book-go':t=>bookGo(+t.dataset.d),
  'cover-open':()=>coverAct('open'),
- 'cv-kind':t=>coverAct('kind',t),'cv-card':t=>coverAct('card',t),'cv-preset':t=>coverAct('preset',t),
+ 'cv-kind':t=>coverAct('kind',t),'cv-tab':t=>coverAct('tab',t),'cv-card':t=>coverAct('card',t),'cv-preset':t=>coverAct('preset',t),
  'cv-upload':()=>coverAct('upload'),'cv-center':()=>coverAct('center'),'cv-save':()=>coverAct('save'),'cv-rm-img':()=>coverAct('rmimg'),
  'immerse':()=>setImmersive(!S.ui.immersive),
  'dex-pick':t=>{const b=S.binders.find(x=>x.id===t.dataset.binder);if(!b)return;b.pick=b.pick||{};if(t.dataset.id)b.pick[t.dataset.dex]=t.dataset.id;else delete b.pick[t.dataset.dex];saveBinders();viewCache.clear();refreshAll();},

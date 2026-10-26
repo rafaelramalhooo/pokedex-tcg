@@ -31,14 +31,14 @@ function autoCover(b){
  return{kind:'preset',k:b.mode==='pokedex'?'ball':'cards'};
 }
 export function coverOf(b){return b.cover&&b.cover.kind&&b.cover.kind!=='auto'?b.cover:autoCover(b);}
-export function coverHTML(b){
+/* Miniatura do fichário (lista e editor): a mesma imagem da capa recortada em quadrado, ou outra imagem. */
+export function thumbCfg(b){
+ const t=b.thumb;
+ if(t&&t.kind&&t.kind!=='same')return{cfg:t,key:'thumb:'+b.id};
  const c=coverOf(b);
- if(c.kind==='img'&&S.custom.covers&&S.custom.covers[b.id])return`<img src="${esc(S.custom.covers[b.id])}" alt="" data-role="own">`;
- if(c.kind==='card'&&c.card){const im=cardImg(c.card);if(im)return`<img src="${esc(im)}/low.webp" alt="" loading="lazy">`;}
- if(c.kind==='dex'&&c.dex)return`<img src="${dexArt(c.dex)}" alt="" loading="lazy" data-role="dexart" title="${esc(dexName(c.dex))}">${''}`;
- return presetSvg(c.k||'cards');
+ return{cfg:t&&t.fit?{...c,fit:t.fit}:c,key:b.id};
 }
-
+export function coverHTML(b){const {cfg,key}=thumbCfg(b);return coverMedia(cfg,{key,name:''}).html;}
 
 /* ---------- capa grande (primeira página do fichário) e enquadramento ---------- */
 export const cardImg=id=>{const c=S.cards[id]||S.briefs[id]||{};return c.image||'';};
