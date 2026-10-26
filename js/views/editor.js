@@ -44,7 +44,7 @@ function coverCtl(b){
  const seg=[['auto','Automática'],['dex','Arte de um Pokémon'],['img','Minha imagem'],['preset','Imagens do app']];
  let sub='';
  if(k==='dex')sub=`<input class="field" data-edcover="q" type="text" value="${esc(cv.q||'')}" placeholder="Nome em inglês ou número da Pokédex. Ex.: Gengar ou 94" aria-label="Pokémon da capa" style="min-width:260px">${cv.dex?'':`<span class="lbl2">${cv.q?'Não achei esse Pokémon.':'Digite um nome ou número.'}</span>`}`;
- else if(k==='img')sub=`<button class="btn small" type="button" data-act="upload" data-kind="cover" data-id="${esc(b.id)}">${S.custom.covers&&S.custom.covers[b.id]?'Trocar imagem':'Enviar imagem'}</button>`;
+ else if(k==='img')sub=`<button class="btn small" type="button" data-act="upload" data-kind="cover" data-id="${esc(b.id)}">${S.custom.covers&&S.custom.covers[b.id]?'Trocar imagem':'Enviar imagem'}</button><small class="lbl2" style="flex-basis:100%">Melhor tamanho: imagem vertical (proporção 3:4), por exemplo 900 × 1200 px, em JPG ou PNG. Ela aparece grande como capa do fichário aberto em página dupla.</small>`;
  else if(k==='preset')sub=`<span class="covpick">${PRESETS.map(([pk,l,svg])=>`<button type="button" class="covp" data-ed-act="coverp" data-k="${pk}" aria-pressed="${cv.k===pk}" aria-label="${l}">${svg}</button>`).join('')}</span>`;
  return`<div class="row" style="margin-bottom:14px;align-items:center"><span class="cover sm">${coverHTML(b)}</span><span>Capa</span>
   <div class="seg" role="group" aria-label="Capa do fichário">${seg.map(([v,l])=>`<button type="button" data-ed-act="cover" data-v="${v}" aria-pressed="${k===v}">${l}</button>`).join('')}</div>${sub}</div>`;

@@ -9,6 +9,7 @@ import {imgTag, modeSeg, noteHTML, sizeCtl} from '../ui.js';
 import {modeOf} from '../modes.js';
 import {capRight} from '../cardlabel.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
+import {saveSettings} from '../db.js';
 import {$, $$, live, ICON, esc, fmtDate, fmtN, nz, pct} from '../util.js';
 import {matchQuery, parseQuery} from './dex.js';
 
@@ -85,7 +86,7 @@ export function renderSetGrid(){
  });
  if(!filtered.length){g.innerHTML=`<div class="empty"><h3>Nenhuma carta aqui</h3><p>${S.ui.setFilter==='have'?'Você ainda não marcou cartas desta coleção.':'Ajuste o filtro ou a busca.'}</p></div>`;return;}
  S.cur.nav=filtered.filter((x,i)=>!i||x.c.id!==filtered[i-1].c.id).map(x=>({id:x.c.id}));
- if(isBook()&&!hasQ){g.innerHTML=bookHTML(filtered.map(({c,f})=>slotHTML(c,f)),'set:'+id+':'+mode);return;}
+ if(isBook()&&!hasQ){g.innerHTML=bookHTML(filtered.map(({c,f})=>slotHTML(c,f)),'set:'+id+':'+mode,setCover(id));return;}
  let html=`<div class="cards"${hasQ?' style="--tile:230px"':''}>`;let secShown=false;
  filtered.forEach(({c,f,sec})=>{
   if(sec&&!secShown){secShown=true;html+=`<div class="divider">Cartas secretas, numeradas acima de ${official}</div>`;}
@@ -102,4 +103,34 @@ export function slotHTML(c,fin){
   <div class="pocket">${imgTag(c.image,'low',c.name,undefined,c.id)}${chip}${q>1?`<span class="qty">×${q}</span>`:''}
    <button type="button" class="tg" data-act="tog" data-id="${esc(c.id)}" ${fin?`data-fin="${fin}"`:''} aria-label="${on?'Remover da coleção':'Marcar como tenho'}">${ICON.check}</button></div>
   <div class="num"><b>${esc(c.name)}</b>${capRight(c)}</div></div>`;
+}
+
+/* Capa do fichário desta coleção: o logo (padrão) ou a arte de uma carta que você escolher. */
+function setCover(id){
+ const d=S.setd[id]||{};const set=S.setMap[id]||{id,name:id};
+ const pick=S.settings.setCover&&S.settings.setCover[id];
+ if(pick){
+  const c=(d.cards||[]).find(x=>x.id===pick);const img=c&&(c.image||(S.cards[pick]&&S.cards[pick].image));
+  if(img)return{html:imgTag(img,'high',c.name,undefined,pick),title:d.name||set.name,cls:'cov-card'};
+ }
+ return{html:`<div class="cvlogo">${logoImg({...d,...set,id,name:d.name||set.name,logo:d.logo||set.logo})}</div>`,title:'',cls:'cov-logo'};
+}
+export function openSetCover(){
+ const id=S.cur&&S.cur.name==='set'&&S.cur.id;const d=id&&S.setd[id];if(!d)return;
+ const pick=S.settings.setCover&&S.settings.setCover[id];
+ const cards=(d.cards||[]).filter(c=>c.image);
+ $('#dialog').innerHTML=`<h2>Capa do fichário</h2>
+  <p class="lead">Por padrão a capa mostra o logo da coleção. Se preferir, escolha a arte de uma das cartas.</p>
+  <div class="row" style="margin-bottom:10px"><button type="button" class="btn ${pick?'':'primary'}" data-act="set-cover-pick" data-id="">Usar o logo da coleção</button></div>
+  <div class="covgrid">${cards.map(c=>`<button type="button" class="covc ${pick===c.id?'sel':''}" data-act="set-cover-pick" data-id="${esc(c.id)}" aria-label="${esc(c.name)}" aria-pressed="${pick===c.id}">${imgTag(c.image,'low',c.name,undefined,c.id)}</button>`).join('')||'<p class="lead">Esta coleção ainda não tem imagens de cartas.</p>'}</div>
+  <div class="actions"><span></span><button class="btn" type="button" data-ed-act="cancel">Fechar</button></div>`;
+ $('#modal').classList.add('on');
+}
+export function pickSetCover(cardId){
+ const id=S.cur&&S.cur.name==='set'&&S.cur.id;if(!id)return;
+ S.settings.setCover=S.settings.setCover||{};
+ if(cardId)S.settings.setCover[id]=cardId;else delete S.settings.setCover[id];
+ saveSettings();
+ $('#modal').classList.remove('on');
+ if(S.cur.refresh)S.cur.refresh();
 }

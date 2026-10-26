@@ -6,6 +6,7 @@ import {viewShared, SHARED_ACT} from './views/shared.js';
 import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter, deckExportLang} from './views/decks.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
+import {openSetCover, pickSetCover} from './views/set.js';
 import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl, setImmersive} from './views/book.js';
 import {setCfg} from './modes.js';
 import {checkLogos} from './logos.js';
@@ -59,6 +60,8 @@ const ACT={
  'dex-retry':()=>retryDex(),
  'panel-nav':t=>panelNav(+t.dataset.d),
  'book-go':t=>bookGo(+t.dataset.d),
+ 'set-cover':()=>openSetCover(),
+ 'set-cover-pick':t=>pickSetCover(t.dataset.id),
  'immerse':()=>setImmersive(!S.ui.immersive),
  'dex-pick':t=>{const b=S.binders.find(x=>x.id===t.dataset.binder);if(!b)return;b.pick=b.pick||{};if(t.dataset.id)b.pick[t.dataset.dex]=t.dataset.id;else delete b.pick[t.dataset.dex];saveBinders();viewCache.clear();refreshAll();},
  bsortdir:()=>{const b=S.cur&&S.binders.find(x=>x.id===S.cur.id);setBinderSort({dir:b&&b.sort&&b.sort.dir==='desc'?'asc':'desc'});},

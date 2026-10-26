@@ -3,7 +3,7 @@ import {catalogCoverage, visibleSets} from '../catalog.js';
 import {isOwned} from '../collection.js';
 import {SORTS, evalBinder, ruleChips, scopeIds} from '../rules.js';
 import {AUTO_MAX, autoResolve} from '../remote.js';
-import {coverHTML} from '../covers.js';
+import {bookCover, coverHTML} from '../covers.js';
 import {saveBinders} from '../db.js';
 import {S, soft} from '../state.js';
 import {imgTag, noteHTML, sizeCtl} from '../ui.js';
@@ -121,7 +121,7 @@ export function renderBinderBody(){
   const list=r.dex.filter(x=>(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned))&&slotMatches(x,q));
   S.cur.nav=list.filter(x=>x.rep).map(x=>({id:x.rep,dex:x.dex}));
   const shown=list.slice(0,S.ui.binderShown);
-  if(list.length&&isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
+  if(list.length&&isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter,bookCover(b));return;}
   g.innerHTML=list.length?`<div class="cards"${noQ(q)?'':' style="--tile:230px"'}>${shown.map(x=>dexSlotHTML(x,b.id)).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`
    :`<div class="empty"><h3>Nada por aqui</h3><p>Ajuste o filtro.</p></div>`;
   return;
@@ -134,7 +134,7 @@ export function renderBinderBody(){
   return;
  }
  S.cur.nav=list.map(id=>({id}));
- if(isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(id=>slotHTMLCtx(S.briefs[id]||{id,name:id,localId:''},b.id)),'binder:'+b.id+':'+S.ui.binderFilter);return;}
+ if(isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(id=>slotHTMLCtx(S.briefs[id]||{id,name:id,localId:''},b.id)),'binder:'+b.id+':'+S.ui.binderFilter,bookCover(b));return;}
  const shown=list.slice(0,S.ui.binderShown);
  g.innerHTML=`<div class="cards"${noQ(q)?'':' style="--tile:230px"'}>${shown.map(id=>{
   const br=S.briefs[id]||{id,name:id,localId:''};

@@ -104,7 +104,7 @@ export const shareLink=code=>`${location.origin}${location.pathname}#/v/${code}`
 export const shareSnapshot=(t,opts)=>{
  const o=t.kind==='sell'?(opts||{}):{};
  return{v:1,name:t.name,kind:t.kind,at:Date.now(),items:t.items.map(i=>{
-  const x={n:i.n,no:i.no,i:i.i,q:i.q,f:i.f,l:i.l};
+  const x={id:i.id,n:i.n,no:i.no,i:i.i,q:i.q,f:i.f,l:i.l};
   if(o.c&&i.c)x.c=i.c;
   if(o.v&&hasPrice(i))x.p=i.p;
   return x;

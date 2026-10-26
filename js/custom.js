@@ -42,7 +42,7 @@ export function pickImage(kind,id,done,fail){
   const f=inp.files&&inp.files[0];inp.remove();
   if(!f)return;
   try{
-   const url=await shrinkImage(f,...(kind==='logo'?[520,260]:kind==='cover'?[480,480]:[640,900]));
+   const url=await shrinkImage(f,...(kind==='logo'?[520,260]:kind==='cover'?[900,1200]:[640,900]));
    await setCustom(kind,id,url);done&&done();
   }catch(e){fail&&fail(e);}
  });

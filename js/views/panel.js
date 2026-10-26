@@ -8,8 +8,11 @@ import {dexModel} from '../rules.js';
 import {customCard} from '../custom.js';
 import {getTrade, hasPrice, itemKey} from '../trades.js';
 import {derivedImage} from '../reprints.js';
-import {$, esc} from '../util.js';
+import {$, brl, esc} from '../util.js';
 
+/* Página pública de lista compartilhada: o painel mostra os dados da lista só para leitura. */
+let PUBLIC=null;
+export const setPublicItems=a=>{PUBLIC=a;};
 export function openPanel(id,ctx){
  S.ui.panelId=id;S.ui.panelCtx=ctx||null;
  renderPanel();
@@ -74,7 +77,7 @@ export function renderPanel(failed){
   ${tctx||rows}
   ${tctx?'':`<div style="margin-top:14px"><label class="lbl2" for="note">Observações</label><textarea class="field" id="note" rows="3" data-id="${esc(id)}" placeholder="Ex.: comprada em feira, assinatura, ponto de dobra">${esc(e?e.n:'')}</textarea></div>`}
   ${tctx?'':dexPick(ctx,id)}
-  ${photoCtl(id,!!image)}
+  ${ctx&&ctx.pub?'':photoCtl(id,!!image)}
   ${manual?`<div style="margin-top:14px"><button class="btn danger" type="button" data-act="unbind" data-id="${esc(id)}">Tirar do fichário</button></div>`:''}`;
  if(p.dataset.id===id&&$('.pinfo',p)){
   $('.phead',p).outerHTML=phead;$('.pinfo',p).innerHTML=info;
@@ -89,7 +92,16 @@ export function renderPanel(failed){
 
 
 /* Aberta pela Negociação: no lugar de "Tenho", só o que está nesta lista. A coleção não é tocada. */
+function pubBlock(ctx){
+ const it=PUBLIC&&PUBLIC[+String(ctx.tradeKey).slice(1)];if(!it)return null;
+ const L=Object.fromEntries(LANGS);const C=Object.fromEntries(COND);
+ const row=(k,v)=>`<div class="row" style="justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line-2)"><span class="lbl2" style="margin:0">${k}</span><b>${v}</b></div>`;
+ return`<div class="fin has tpanel"><div class="fin-head"><h3>Nesta lista</h3></div>
+  ${row('Quantidade','×'+esc(it.q))}${row('Acabamento',esc(FIN_LABEL[it.f]||it.f||'Normal'))}${row('Idioma',esc(L[it.l]||'Não informado'))}
+  ${it.c?row('Condição',esc(C[it.c]||it.c)):''}${typeof it.p==='number'?row('Valor pedido (por carta)',esc(brl(it.p))):''}</div>`;
+}
 function tradeBlock(ctx,id,c){
+ if(ctx.pub)return pubBlock(ctx);
  const t=getTrade(ctx.tradeId);if(!t)return null;
  const it=t.items.find(x=>itemKey(x)===ctx.tradeKey);if(!it)return null;
  const sell=t.kind==='sell';

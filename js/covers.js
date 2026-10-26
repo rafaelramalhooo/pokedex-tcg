@@ -36,3 +36,9 @@ export function coverHTML(b){
  if(c.kind==='dex'&&c.dex)return`<img src="${dexArt(c.dex)}" alt="" loading="lazy" data-role="dexart" title="${esc(dexName(c.dex))}">${''}`;
  return presetSvg(c.k||'cards');
 }
+
+/* Capa grande, para a primeira página do fichário aberto em página dupla. */
+export function bookCover(b){
+ const c=coverOf(b);
+ return{html:coverHTML(b),title:b.name,cls:c.kind==='img'?'cov-img':c.kind==='dex'?'cov-dex':'cov-svg'};
+}

@@ -17,7 +17,7 @@ export function setSetMode(id,m){
 export const ctxKey=()=>S.cur&&(S.cur.name==='set'||S.cur.name==='binder')&&S.cur.id?S.cur.name+':'+S.cur.id:'';
 export function cfg(){
  const k=ctxKey();const own=(k&&S.settings.ctx&&S.settings.ctx[k])||{};
- return{view:own.view||S.settings.view,grid:own.grid||S.settings.grid||{p:'3x3'},spread:own.spread!==undefined?own.spread:!!S.settings.spread,tile:own.tile||S.settings.tile};
+ return{view:own.view||S.settings.view,grid:own.grid||S.settings.grid||{p:'3x3'},spread:own.spread!==undefined?own.spread:!!S.settings.spread,first:own.first!==undefined?own.first:S.settings.first!==false,tile:own.tile||S.settings.tile};
 }
 export function setCfg(patch){
  const k=ctxKey();
