@@ -583,8 +583,6 @@ img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.coverpage .cvlogo img.lgbg,.her
 .coverpage .covbody{position:absolute;inset:0}
 .coverpage .covbody>img,.coverpage .covbody>svg{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;display:block;padding:0;background:none;border-radius:0}
 .coverpage h2{position:absolute;left:0;right:0;bottom:0;margin:0;padding:34px 14px 16px;font-size:clamp(18px,2.2vw,28px);line-height:1.15;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.7));text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.coverpage.cov-card .covbody{overflow:hidden}
-.coverpage.cov-card .covbody>img{transform:scale(1.9);transform-origin:50% 33%;object-fit:cover}
 .coverpage .cvlogo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:0;padding:0;background:linear-gradient(135deg,hsl(var(--h,220) 55% 88%),hsl(var(--h,220) 35% 97%))}
 .coverpage .cvlogo img[data-role="logo"]{position:relative;max-width:82%;max-height:46%;object-fit:contain}
 .coverpage .cvlogo .lgfb b{font-size:clamp(22px,3vw,38px)}
@@ -592,3 +590,18 @@ img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.coverpage .cvlogo img.lgbg,.her
 .covc{border:2px solid transparent;border-radius:8px;background:var(--pocket);padding:0;cursor:pointer;overflow:hidden;aspect-ratio:245/337}
 .covc img{width:100%;height:100%;object-fit:contain;display:block}
 .covc.sel{border-color:var(--red)}
+
+/* ---------- v4.3: janela de capa com enquadramento ---------- */
+.coverpage .covbody{overflow:hidden}
+.fitbox{position:absolute;inset:0;transform-origin:50% 50%;transform:translate(var(--tx,0%),var(--ty,0%)) scale(var(--z,1));will-change:transform}
+.fitbox img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;max-width:none;max-height:none;padding:0;border-radius:0;background:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.cvprev{position:relative;aspect-ratio:3/4;width:min(260px,100%);margin:0 auto;overflow:hidden;border-radius:12px;background:var(--rail-2);box-shadow:0 10px 24px -14px rgba(18,26,43,.6)}
+.cvprev.drag{cursor:grab;touch-action:none}
+.cvprev.drag:active{cursor:grabbing}
+.cvwrap{display:grid;grid-template-columns:minmax(0,270px) minmax(0,1fr);gap:18px;align-items:start;margin-top:8px}
+.cvright{display:flex;flex-direction:column;gap:12px;min-width:0}
+.cvright .seg{flex-wrap:wrap}
+.cvsub .covgrid{max-height:34vh}
+.cvzoom{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cvzoom input[type=range]{width:min(220px,50vw)}
+@media (max-width:720px){.cvwrap{grid-template-columns:1fr}.cvprev{width:min(220px,60vw)}}

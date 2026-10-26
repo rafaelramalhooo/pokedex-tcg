@@ -2,6 +2,7 @@
 import {S} from './state.js';
 import {dexArt, dexName} from './views/dex.js';
 import {nz, esc} from './util.js';
+import {imgTag} from './ui.js';
 
 /* Três imagens genéricas, desenhadas para o app (não reproduzem cartas, personagens ou logos). */
 export const PRESETS=[
@@ -33,12 +34,30 @@ export function coverOf(b){return b.cover&&b.cover.kind&&b.cover.kind!=='auto'?b
 export function coverHTML(b){
  const c=coverOf(b);
  if(c.kind==='img'&&S.custom.covers&&S.custom.covers[b.id])return`<img src="${esc(S.custom.covers[b.id])}" alt="" data-role="own">`;
+ if(c.kind==='card'&&c.card){const im=cardImg(c.card);if(im)return`<img src="${esc(im)}/low.webp" alt="" loading="lazy">`;}
  if(c.kind==='dex'&&c.dex)return`<img src="${dexArt(c.dex)}" alt="" loading="lazy" data-role="dexart" title="${esc(dexName(c.dex))}">${''}`;
  return presetSvg(c.k||'cards');
 }
 
-/* Capa grande, para a primeira página do fichário aberto em página dupla. */
+
+/* ---------- capa grande (primeira página do fichário) e enquadramento ---------- */
+export const cardImg=id=>{const c=S.cards[id]||S.briefs[id]||{};return c.image||'';};
+export const DEF_FIT={card:{x:.5,y:.36,z:1.9},img:{x:.5,y:.5,z:1},dex:{x:.5,y:.5,z:1}};
+export const clampFit=f=>{const z=Math.max(1,Math.min(4,+f.z||1));const lo=.5/z,hi=1-.5/z;return{z,x:Math.max(lo,Math.min(hi,+f.x||.5)),y:Math.max(lo,Math.min(hi,+f.y||.5))};};
+export const fitOf=cfg=>clampFit(cfg.fit||DEF_FIT[cfg.kind]||{x:.5,y:.5,z:1});
+export const fitStyle=f=>{f=clampFit(f);return`--z:${f.z.toFixed(3)};--tx:${(-(f.x-.5)*f.z*100).toFixed(2)}%;--ty:${(-(f.y-.5)*f.z*100).toFixed(2)}%`;};
+/* Monta o miolo da capa a partir da configuração. opts: {key, draft (imagem enviada ainda não salva), logo (HTML do logo), name} */
+export function coverMedia(cfg,opts={}){
+ const k=cfg.kind;const framed=h=>`<div class="fitbox" style="${fitStyle(fitOf(cfg))}">${h}</div>`;
+ if(k==='img'){const u=opts.draft||(S.custom.covers&&S.custom.covers[opts.key]);if(u)return{html:framed(`<img src="${esc(u)}" alt="">`),title:opts.name||'',cls:'cov-img'};}
+ if(k==='card'&&cfg.card){const im=cardImg(cfg.card);if(im)return{html:framed(imgTag(im,'high','',undefined,cfg.card)),title:'',cls:'cov-card'};}
+ if(k==='dex'&&cfg.dex)return{html:framed(`<img src="${dexArt(cfg.dex)}" alt="" data-role="dexart">`),title:opts.name||'',cls:'cov-dex'};
+ if(k==='logo'&&opts.logo)return{html:`<div class="cvlogo">${opts.logo}</div>`,title:'',cls:'cov-logo'};
+ const svg=presetSvg(k==='preset'?(cfg.k||'cards'):'cards').replace(/^<svg /,'<svg preserveAspectRatio="xMidYMid slice" ');
+ return{html:svg,title:opts.name||'',cls:'cov-svg'};
+}
+/* Capa grande de um fichário. */
 export function bookCover(b){
  const c=coverOf(b);
- return{html:coverHTML(b).replace(/^<svg /,'<svg preserveAspectRatio="xMidYMid slice" '),title:b.name,cls:c.kind==='img'?'cov-img':c.kind==='dex'?'cov-dex':'cov-svg'};
+ return coverMedia(c,{key:b.id,name:b.name});
 }

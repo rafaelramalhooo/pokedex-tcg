@@ -26,7 +26,7 @@ export function bookCtlHTML(){
  if(g.p==='custom'){const {cols,rows}=gridOf();h+=`<label class="size">Colunas <input class="field mini" type="number" min="1" max="8" value="${cols}" data-bk="cols" aria-label="Colunas"></label><label class="size">Linhas <input class="field mini" type="number" min="1" max="8" value="${rows}" data-bk="rows" aria-label="Linhas"></label>`;}
  h+=`<label class="size wide-only"><input type="checkbox" data-bk="spread" ${cfg().spread?'checked':''}> Página dupla</label>`;
  if(cfg().spread)h+=`<label class="size wide-only"><input type="checkbox" data-bk="first" ${cfg().first!==false?'checked':''}> Primeira página única (capa)</label>`;
- if(cfg().spread&&cfg().first!==false&&S.cur&&S.cur.name==='set')h+=`<button type="button" class="btn small wide-only" data-act="set-cover">Capa…</button>`;
+ if(cfg().spread&&cfg().first!==false&&S.cur&&(S.cur.name==='set'||S.cur.name==='binder'))h+=`<button type="button" class="btn small wide-only" data-act="cover-open">Capa…</button>`;
  return h;
 }
 /* O botão Tela cheia fica logo depois do campo de busca. */

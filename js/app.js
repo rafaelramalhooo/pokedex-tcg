@@ -6,7 +6,7 @@ import {viewShared, SHARED_ACT} from './views/shared.js';
 import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter, deckExportLang} from './views/decks.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
-import {openSetCover, pickSetCover} from './views/set.js';
+import {coverChange, coverAct} from './coverdlg.js';
 import {bookGo, bookKey, bookSetting, bookTo, renderBookCtl, setImmersive} from './views/book.js';
 import {setCfg} from './modes.js';
 import {checkLogos} from './logos.js';
@@ -60,8 +60,9 @@ const ACT={
  'dex-retry':()=>retryDex(),
  'panel-nav':t=>panelNav(+t.dataset.d),
  'book-go':t=>bookGo(+t.dataset.d),
- 'set-cover':()=>openSetCover(),
- 'set-cover-pick':t=>pickSetCover(t.dataset.id),
+ 'cover-open':()=>coverAct('open'),
+ 'cv-kind':t=>coverAct('kind',t),'cv-card':t=>coverAct('card',t),'cv-preset':t=>coverAct('preset',t),
+ 'cv-upload':()=>coverAct('upload'),'cv-center':()=>coverAct('center'),'cv-save':()=>coverAct('save'),'cv-rm-img':()=>coverAct('rmimg'),
  'immerse':()=>setImmersive(!S.ui.immersive),
  'dex-pick':t=>{const b=S.binders.find(x=>x.id===t.dataset.binder);if(!b)return;b.pick=b.pick||{};if(t.dataset.id)b.pick[t.dataset.dex]=t.dataset.id;else delete b.pick[t.dataset.dex];saveBinders();viewCache.clear();refreshAll();},
  bsortdir:()=>{const b=S.cur&&S.binders.find(x=>x.id===S.cur.id);setBinderSort({dir:b&&b.sort&&b.sort.dir==='desc'?'asc':'desc'});},
@@ -139,6 +140,7 @@ document.addEventListener('change',e=>{
  if(t.dataset.dk==='own'){deckAddFilter('own',t.checked);return;}
  if(t.dataset.dk==='legal'){deckAddFilter('legal',t.checked);return;}
  if(t.dataset.tp){tradePanelChange(t);return;}
+ if(t.dataset.cv){coverChange(t);return;}
  if(t.dataset.ta==='set'){tradeSetFilter(t.value);return;}
  if(t.dataset.pl==='set'){pullFilter('set',t.value);return;}
  if(t.dataset.pl==='rep'){pullFilter('rep',t.checked);return;}
