@@ -577,21 +577,16 @@ img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.coverpage .cvlogo img.lgbg,.her
 .stepper .btn{padding-bottom:2px}
 
 /* ---------- v4.1: capa na primeira página (página dupla) ---------- */
-.bpage.coverpage{position:relative;overflow:hidden;text-align:center;background:linear-gradient(160deg,var(--sheet),var(--pocket))}
+.bpage.coverpage{position:relative;overflow:hidden;padding:0;border:0;background:var(--rail-2)}
 .coverpage .bempty{visibility:hidden;border:0}
-.coverpage .covabs{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:18px}
-.coverpage .covbody{flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
-.coverpage h2{margin:0;font-size:clamp(18px,2.2vw,28px);line-height:1.15}
-.coverpage .covbody img,.coverpage .covbody svg{max-width:100%;max-height:100%;object-fit:contain;display:block}
-.coverpage.cov-img .covabs{padding:0}.coverpage.cov-img .covbody{position:absolute;inset:0}
-.coverpage.cov-img .covbody img{width:100%;height:100%;object-fit:cover;max-height:none}
-.coverpage.cov-img h2{position:relative;z-index:1;margin-top:auto;padding:30px 14px 14px;width:100%;box-sizing:border-box;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65));text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.coverpage{position:relative}
-.coverpage.cov-dex .covbody img{padding:14px;background:linear-gradient(135deg,#EEF2FB,#DDE5F6);border-radius:14px;width:100%;height:100%}
-.coverpage.cov-svg .covbody svg{width:70%;height:auto}
-.coverpage.cov-card .covbody img{border-radius:12px;box-shadow:0 18px 30px -18px rgba(18,26,43,.6)}
-.coverpage .cvlogo{width:100%;aspect-ratio:3/2;display:flex;align-items:center;justify-content:center;border-radius:14px;padding:18px;background:linear-gradient(135deg,hsl(var(--h,220) 55% 93%),hsl(var(--h,220) 35% 97%))}
-.coverpage .cvlogo img[data-role="logo"]{max-width:88%;max-height:240px;object-fit:contain}
+.coverpage .covabs{position:absolute;inset:0;display:block}
+.coverpage .covbody{position:absolute;inset:0}
+.coverpage .covbody>img,.coverpage .covbody>svg{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;display:block;padding:0;background:none;border-radius:0}
+.coverpage h2{position:absolute;left:0;right:0;bottom:0;margin:0;padding:34px 14px 16px;font-size:clamp(18px,2.2vw,28px);line-height:1.15;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.7));text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.coverpage.cov-card .covbody{overflow:hidden}
+.coverpage.cov-card .covbody>img{transform:scale(1.9);transform-origin:50% 33%;object-fit:cover}
+.coverpage .cvlogo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:0;padding:0;background:linear-gradient(135deg,hsl(var(--h,220) 55% 88%),hsl(var(--h,220) 35% 97%))}
+.coverpage .cvlogo img[data-role="logo"]{position:relative;max-width:82%;max-height:46%;object-fit:contain}
 .coverpage .cvlogo .lgfb b{font-size:clamp(22px,3vw,38px)}
 .covgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;max-height:52vh;overflow:auto;padding:2px}
 .covc{border:2px solid transparent;border-radius:8px;background:var(--pocket);padding:0;cursor:pointer;overflow:hidden;aspect-ratio:245/337}

@@ -40,5 +40,5 @@ export function coverHTML(b){
 /* Capa grande, para a primeira página do fichário aberto em página dupla. */
 export function bookCover(b){
  const c=coverOf(b);
- return{html:coverHTML(b),title:b.name,cls:c.kind==='img'?'cov-img':c.kind==='dex'?'cov-dex':'cov-svg'};
+ return{html:coverHTML(b).replace(/^<svg /,'<svg preserveAspectRatio="xMidYMid slice" '),title:b.name,cls:c.kind==='img'?'cov-img':c.kind==='dex'?'cov-dex':'cov-svg'};
 }

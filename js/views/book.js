@@ -25,7 +25,7 @@ export function bookCtlHTML(){
  h+=`<label class="size">Grade <select class="field" data-bk="preset" aria-label="Grade da página">${PRESETS.map(p=>`<option value="${p}" ${g.p===p?'selected':''}>${p.replace('x',' × ')}</option>`).join('')}<option value="custom" ${g.p==='custom'?'selected':''}>Personalizada</option></select></label>`;
  if(g.p==='custom'){const {cols,rows}=gridOf();h+=`<label class="size">Colunas <input class="field mini" type="number" min="1" max="8" value="${cols}" data-bk="cols" aria-label="Colunas"></label><label class="size">Linhas <input class="field mini" type="number" min="1" max="8" value="${rows}" data-bk="rows" aria-label="Linhas"></label>`;}
  h+=`<label class="size wide-only"><input type="checkbox" data-bk="spread" ${cfg().spread?'checked':''}> Página dupla</label>`;
- if(cfg().spread)h+=`<label class="size wide-only"><input type="checkbox" data-bk="first" ${cfg().first!==false?'checked':''}> Primeira página única</label>`;
+ if(cfg().spread)h+=`<label class="size wide-only"><input type="checkbox" data-bk="first" ${cfg().first!==false?'checked':''}> Primeira página única (capa)</label>`;
  if(cfg().spread&&cfg().first!==false&&S.cur&&S.cur.name==='set')h+=`<button type="button" class="btn small wide-only" data-act="set-cover">Capa…</button>`;
  return h;
 }
@@ -43,7 +43,7 @@ export function bookHTML(items,key,cover){
  const fc=sp&&cfg().first!==false&&!!cover;S.ui.fc=fc;
  const L=total+(fc?1:0);
  let p=Math.max(0,Math.min(S.ui.page||0,L-1));
- if(sp){if(fc){if(p>0&&p%2===0)p--;}else p-=p%2;}
+ if(sp)p-=p%2;
  S.ui.page=p;
  const dims=`style="--cols:${cols};--rows:${rows}"`;
  const cardPage=i=>{
@@ -58,10 +58,9 @@ export function bookHTML(items,key,cover){
   if(fc)return i===0?coverPage():cardPage(i-1);
   return cardPage(i);
  };
- const onCover=fc&&p===0;
 const n1=fc?p:p+1;
- const label=onCover?'Capa':sp&&p+1<L?`Páginas ${n1} e ${n1+1} de ${total}`:`Página ${n1} de ${total}`;
- const last=sp?p+(onCover?1:2)>=L:p+1>=L;
+ const label=fc&&p===0?(total>0?`Capa e página 1 de ${total}`:'Capa'):sp&&p+1<L?`Páginas ${n1} e ${n1+1} de ${total}`:`Página ${n1} de ${total}`;
+ const last=sp?p+2>=L:p+1>=L;
  const im=!!S.ui.immersive;
  const nav=pos=>`<div class="booknav" aria-label="Navegar pelas páginas">
   <button type="button" class="btn small" data-act="book-go" data-d="-1" ${p<=0?'disabled':''} aria-label="Página anterior">‹ Anterior</button>
@@ -70,11 +69,11 @@ const n1=fc?p:p+1;
   <button type="button" class="btn small" data-act="book-go" data-d="1" ${last?'disabled':''} aria-label="Próxima página">Próxima ›</button>
   ${im?`<select class="field imsel" data-bk="preset" aria-label="Grade da página">${PRESETS.map(q=>`<option value="${q}" ${cfg().grid.p===q?'selected':''}>${q.replace('x',' × ')}</option>`).join('')}${cfg().grid.p==='custom'?'<option value="custom" selected>Personalizada</option>':''}</select><button type="button" class="btn small" data-act="immerse" aria-label="Sair da tela cheia">✕ Sair</button>`:''}</div>`;
  const side=im?`<button type="button" class="bside l" data-act="book-go" data-d="-1" ${p<=0?'disabled':''} aria-label="Página anterior">‹</button><button type="button" class="bside r" data-act="book-go" data-d="1" ${last?'disabled':''} aria-label="Próxima página">›</button>`:'';
- return`<div class="bookwrap" tabindex="-1">${nav('top')}<div class="spread ${sp?'two':''}" style="--sp:${sp?2:1}">${onCover?ghost+page(0):page(p)+(sp?page(p+1):'')}</div>${L>1&&!im?nav('bottom'):''}${side}</div>`;
+ return`<div class="bookwrap" tabindex="-1">${nav('top')}<div class="spread ${sp?'two':''}" style="--sp:${sp?2:1}">${page(p)+(sp?page(p+1):'')}</div>${L>1&&!im?nav('bottom'):''}${side}</div>`;
 }
 export function bookGo(d){
  const sp=isSpread();let p=S.ui.page||0;
- if(sp&&S.ui.fc)p=d>0?(p===0?1:p+2):(p<=1?0:p-2);else p+=d*(sp?2:1);
+ p+=d*(sp?2:1);
  S.ui.page=Math.max(0,p);
  if(S.cur&&S.cur.refresh)S.cur.refresh();
 }

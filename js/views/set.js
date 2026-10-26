@@ -111,7 +111,7 @@ function setCover(id){
  const pick=S.settings.setCover&&S.settings.setCover[id];
  if(pick){
   const c=(d.cards||[]).find(x=>x.id===pick);const img=c&&(c.image||(S.cards[pick]&&S.cards[pick].image));
-  if(img)return{html:imgTag(img,'high',c.name,undefined,pick),title:d.name||set.name,cls:'cov-card'};
+  if(img)return{html:imgTag(img,'high',c.name,undefined,pick),title:'',cls:'cov-card'};
  }
  return{html:`<div class="cvlogo">${logoImg({...d,...set,id,name:d.name||set.name,logo:d.logo||set.logo})}</div>`,title:'',cls:'cov-logo'};
 }
