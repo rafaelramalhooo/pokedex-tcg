@@ -24,11 +24,12 @@ export function bookCtlHTML(){
  if(!book)return h+sizeCtl();
  h+=`<label class="size">Grade <select class="field" data-bk="preset" aria-label="Grade da página">${PRESETS.map(p=>`<option value="${p}" ${g.p===p?'selected':''}>${p.replace('x',' × ')}</option>`).join('')}<option value="custom" ${g.p==='custom'?'selected':''}>Personalizada</option></select></label>`;
  if(g.p==='custom'){const {cols,rows}=gridOf();h+=`<label class="size">Colunas <input class="field mini" type="number" min="1" max="8" value="${cols}" data-bk="cols" aria-label="Colunas"></label><label class="size">Linhas <input class="field mini" type="number" min="1" max="8" value="${rows}" data-bk="rows" aria-label="Linhas"></label>`;}
- h+=`<button type="button" class="btn small" data-act="immerse" title="Mostra só as cartas, em tela cheia">Tela cheia</button>`;
  h+=`<label class="size wide-only"><input type="checkbox" data-bk="spread" ${cfg().spread?'checked':''}> Página dupla</label>`;
  return h;
 }
-export function renderBookCtl(){const el=$('#bookctl');if(el)el.innerHTML=bookCtlHTML();document.documentElement.style.setProperty('--tile',tileOf()+'px');}
+/* O botão Tela cheia fica logo depois do campo de busca. */
+const fullBtn=()=>`<button type="button" class="btn small" data-act="immerse" title="Mostra só as cartas, em tela cheia">Tela cheia</button>`;
+export function renderBookCtl(){const el=$('#bookctl');if(el)el.innerHTML=bookCtlHTML();const fc=$('#fullctl');if(fc)fc.innerHTML=isBook()?fullBtn():'';document.documentElement.style.setProperty('--tile',tileOf()+'px');}
 
 /* Monta o livro com os itens (HTML de cada espaço) e guarda a página atual. */
 export function bookHTML(items,key){

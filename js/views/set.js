@@ -24,7 +24,7 @@ export async function viewSet(id){
  if(!S.cur||S.cur.id!==id)return;
  $('#settools').innerHTML=`<div class="toolbar">${modeSeg()}
   <div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="sfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="sfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="sfilter" data-v="miss" aria-pressed="false">Faltam</button></div>
-  <input class="field" id="sq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar carta">
+  <input class="field" id="sq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar carta"><span class="fullctl" id="fullctl"></span>
   <span class="grow"></span><span class="bookctl" id="bookctl"></span></div><div id="setnote"></div>`;
  renderBookCtl();
  renderSetHero();renderSetGrid();S.cur.ready=true;
