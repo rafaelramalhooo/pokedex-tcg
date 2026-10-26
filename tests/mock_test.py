@@ -118,6 +118,7 @@ def handle(route):
     if ms:
         sid = ms.group(1); hits["sets"] += 1
         if sid in EN_ONLY and lang == "pt": return nf()
+        if sid not in {**SETS, **EN_ONLY}: return nf()
         return ok(set_detail(sid, lang))
     ms = re.match(r"/cards/([\w.\-]+)$", path)
     if ms:
@@ -218,6 +219,9 @@ with sync_playwright() as p:
     # home com contadores
     page.goto(APP + "#/"); page.wait_for_selector(".set")
     page.wait_for_timeout(600)
+    lb = page.evaluate("""()=>[...document.querySelectorAll('.set .logo')].map(l=>{const b=l.querySelector('img.lgbg'),m=l.querySelector('img[data-role=logo]');return b&&m?[b.getAttribute('src')||'',m.currentSrc||m.src,getComputedStyle(b).filter.includes('blur'),getComputedStyle(b).pointerEvents]:null;}).filter(Boolean)""")
+    check(len(lb) >= 1 and all(x[0] == x[1] and x[2] and x[3] == "none" for x in lb if x[1]), f"logo das coleções: fundo desfocado com a mesma imagem {lb[:2]}")
+    page.screenshot(path=str(ROOT/"tests/40_logo_fundo.png"))
     page.locator('[data-act="mode"][data-v="master"]').first.click()
     tile = page.locator(".set", has=page.locator(".sname", has_text="Escarlate e Violeta")).first.inner_text()
     check("4" in tile and "de 16" in tile, "home (modo master) mostra 4 de 16")
@@ -379,7 +383,7 @@ with sync_playwright() as p:
     check(page.locator("#bgrid .slot.dexempty").first.inner_text().strip() != "", "nomes vindos da PokeAPI guardados")
     # janela sem cartas
     page.locator('#bgrid .slot.dexempty[data-dex="25"]').scroll_into_view_if_needed()
-    page.locator('#bgrid .slot.dexempty[data-dex="25"]').click(); page.wait_for_timeout(500)
+    page.locator('#bgrid .slot.dexempty[data-dex="25"]').click(); page.wait_for_function("document.querySelector('#dexgrid') && !document.querySelector('#dexgrid').innerText.includes('Buscando')", timeout=15000)
     check("Nenhuma carta" in page.locator("#dexgrid").inner_text(), "Pokémon sem cartas na TCGdex mostra aviso")
     page.screenshot(path=str(ROOT/"tests/16_dex_vazia.png"))
     page.keyboard.press("Escape")
@@ -710,6 +714,10 @@ with sync_playwright() as p:
     page.fill("#sq", ""); page.wait_for_timeout(200)
     page.locator('[data-act="view"][data-v="book"]').click(); page.wait_for_selector(".bpage")
     check(page.locator('[data-act="immerse"]').count() == 1, "tela cheia: botão aparece no modo fichário")
+    pos = page.evaluate("""()=>{const f=document.querySelector('#fullctl');const q=document.createElement('span');q.className='qty';document.body.appendChild(q);const cs=getComputedStyle(q);const r=[cs.backgroundColor,cs.color,cs.borderTopWidth,cs.borderTopColor];q.remove();
+      return {inside:!!f&&!!f.querySelector('[data-act="immerse"]'),afterSearch:!!f&&f.previousElementSibling&&f.previousElementSibling.matches('input[type=search]'),inBookctl:!!document.querySelector('#bookctl [data-act="immerse"]'),qty:r};}""")
+    check(pos["inside"] and pos["afterSearch"] and not pos["inBookctl"], f"tela cheia: botão logo depois do campo de busca {pos}")
+    check(pos["qty"] == ["rgb(214, 58, 47)", "rgb(255, 255, 255)", "2px", "rgb(255, 255, 255)"], f"números de quantidade: vermelho, texto branco, borda branca de 2px {pos['qty']}")
     page.locator('[data-act="immerse"]').click(); page.wait_for_timeout(400)
     check(page.evaluate("document.body.classList.contains('immersive')"), "tela cheia: ligada")
     check(not page.locator(".rail").is_visible() and not page.locator("#sethero").is_visible(), "tela cheia: menu e cabeçalho escondidos")
@@ -770,9 +778,42 @@ with sync_playwright() as p:
     check(page.locator("#tgrid .tradeslot").nth(1).locator(".qty").inner_text().strip() == "×2", "negociação: quantidade ×2 no selo")
     page.locator('#tgrid .tradeslot [data-act="trade-inc"]').nth(0).click(); page.wait_for_timeout(200)
     check(page.locator("#tgrid .tradeslot").nth(0).locator(".qty").inner_text().strip() == "×2", "negociação: botão + aumenta")
-    page.locator("#tgrid .tradeslot .pocket").nth(0).click(); page.wait_for_selector("#tiq")
-    page.fill("#tiq", "5"); page.select_option("#tif", "reverse"); page.locator('[data-act="tr-item-save"]').click(); page.wait_for_timeout(300)
+    col0 = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.collection))")
+    page.locator("#tgrid .tradeslot .pocket").nth(0).click(); page.wait_for_selector("#panel.open .tpanel")
+    check(page.locator("#panel .tcard img, #panel .tcard .ph").count() >= 1 and "de 2" in page.locator("#panel .pn").inner_text() and page.locator("#panel [data-act=inc]").count() == 0, "negociação: clicar na carta abre o painel da carta, com navegação e sem os controles de Tenho")
+    page.screenshot(path=str(ROOT/"tests/45_painel_negociacao.png"))
+    for _ in range(3): page.locator('#panel [data-act="tp-inc"]').click(); page.wait_for_timeout(120)
+    page.select_option('#panel [data-tp="f"]', "reverse"); page.wait_for_timeout(250)
+    page.locator('#panel [data-act="close"]').click(); page.wait_for_timeout(300)
+    check(page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.collection))") == col0, "negociação: o painel não altera a coleção")
     check("×5" in page.locator("#tgrid").inner_text() and "Reverse" in page.locator("#tgrid").inner_text(), "negociação: editar quantidade e acabamento")
+    # ---- valor e condição por carta, total e edição em massa ----
+    st0 = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>[i.id,i.f,i.l,i.q])))")
+    page.locator("#tgrid .tradeslot .pocket").nth(0).click(); page.wait_for_selector('#panel [data-tp="c"]')
+    page.select_option('#panel [data-tp="c"]', "NM"); page.fill('#panel [data-tp="p"]', "12,50"); page.press('#panel [data-tp="p"]', "Tab"); page.wait_for_timeout(300)
+    page.locator('#panel [data-act="close"]').click(); page.wait_for_timeout(300)
+    gt = page.locator("#tgrid").inner_text(); ch = page.locator("#tchips").inner_text()
+    check("NM" in gt and "12,50" in gt and "Sem valor" in gt and "62,50" in ch and "1 sem valor" in ch, f"valor e condição: aparecem na carta e o total soma valor x quantidade ({ch.strip()[:80]})")
+    page.once("dialog", lambda d: d.accept())
+    page.locator('[data-act="trade-bulk"]').click(); page.wait_for_selector("#bkl .bkrow")
+    check(page.locator("#bkl .bkrow").count() == 2 and page.locator("#bkgo").is_disabled(), "em massa: lista as cartas e só libera aplicar com cartas marcadas")
+    page.locator('[data-act="bk-all"]').click()
+    check("2 de 2" in page.locator("#bkn").inner_text() and not page.locator("#bkgo").is_disabled(), "em massa: marcar todas")
+    page.screenshot(path=str(ROOT/"tests/41_editar_em_massa.png"))
+    page.select_option("#bkc", "LP"); page.select_option("#bkqm", "add"); page.fill("#bkqv", "1"); page.select_option("#bkpm", "up"); page.fill("#bkpv", "10")
+    page.locator('[data-act="bk-apply"]').click(); page.wait_for_timeout(400)
+    ms = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>[i.c,i.p===undefined||i.p===null?null:i.p,i.q])))")
+    check(ms == '[["LP",13.75,6],["LP",null,3]]', f"em massa: condição, quantidade e +10% no valor (só em quem tem valor) {ms}")
+    page.once("dialog", lambda d: d.accept())
+    page.locator('[data-act="trade-bulk"]').click(); page.wait_for_selector("#bkl .bkrow"); page.locator('[data-act="bk-all"]').click()
+    page.select_option("#bkc", "__none"); page.select_option("#bkqm", "sub"); page.fill("#bkqv", "1"); page.select_option("#bkpm", "clear")
+    page.locator('[data-act="bk-apply"]').click(); page.wait_for_timeout(400)
+    st1 = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>[i.id,i.f,i.l,i.q])))")
+    check(st1 == st0 and "Total" not in page.locator("#tchips").inner_text(), "em massa: limpar condição e valor e subtrair devolve a lista ao que era")
+    ex = page.evaluate("import('./js/exportimg.js').then(m=>m.buildImages([{url:'',n:'Carta A',no:'1',q:2,f:'normal',l:'pt',c:'NM',p:12.5},{url:'',n:'Carta B',no:'2',q:1,f:'reverse',l:'pt'}],{title:'Teste',cols:2,labels:true,extra:true,kindLabel:'Vendo / Troco',kindColor:'#D93A2B'}).then(r=>[r.files.length,r.files[0].size>1000]))")
+    check(ex == [1, True], f"imagem da lista: gera com valor e condição {ex}")
+    shot = page.evaluate("import('./js/trades.js').then(m=>{const t={kind:'sell',name:'x',items:[{n:'A',no:'1',i:'',q:1,f:'normal',l:'pt',c:'NM',p:5}]};return [JSON.stringify(m.shareSnapshot(t,{v:true,c:true}).items[0]),JSON.stringify(m.shareSnapshot(t,{}).items[0]),JSON.stringify(m.shareSnapshot({...t,kind:'want'},{v:true,c:true}).items[0]),m.parsePrice('1.250,5'),m.parsePrice('12.5'),m.parsePrice('abc')]})")
+    check('"p":5' in shot[0] and '"c":"NM"' in shot[0] and '"p"' not in shot[1] and '"c"' not in shot[1] and '"p"' not in shot[2] and shot[3] == 1250.5 and shot[4] == 12.5 and shot[5] is None, f"link público: valor e condição só entram se escolhidos e só em Vendo/Troco {shot}")
     check(page.evaluate("document.querySelector('.ttag')&&getComputedStyle(document.querySelector('.ttag')).position")!="absolute" if page.locator(".ttag").count() else True, "negociação: tag do tipo não flutua fora do lugar")
     page.evaluate("import('./js/collection.js').then(m=>{m.setFin('sv02-3','normal',{q:2});m.setFin('sv02-3','reverse',{q:1});})"); page.wait_for_timeout(200)
     coll0 = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.collection))")
@@ -808,7 +849,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v2.0" in page.locator(".rail .ver").inner_text() and "Gestão de Coleção" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 2.0")
+    check("v4.0" in page.locator(".rail .ver").inner_text() and "Gestão de Coleção" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
     check(page.locator("#pullres", has_text="Já na lista").count() == 0, "puxar: sem o aviso Já na lista")
     page.locator('[data-act="pl-none"]').click(); page.wait_for_timeout(150)
@@ -984,6 +1025,173 @@ Total de cartas: 60"""
     check("Importado" in page.locator("#dname").inner_text() and "3/60" in page.locator("#dchips").inner_text(), "importar deck: deck criado com as cartas reconhecidas")
     check(page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.decks.find(d=>d.name==='Importado').items.map(i=>[i.id,i.q]).sort()))") == '[["sv02-3",2],["sv02-5",1]]', "importar deck: cartas e quantidades certas")
     page.screenshot(path=str(ROOT/"tests/39_deck_importado.png"))
+    # importar dentro do deck aberto (adiciona sem apagar e depois substitui)
+    page.locator('[data-act="deck-import"]').click(); page.wait_for_selector("#dit")
+    check(page.locator("#din").count() == 0 and page.locator("#direp").count() == 1, "importar no deck aberto: sem campo de nome, com opção de substituir")
+    page.locator("#direp").uncheck(); page.fill("#dit", "1 Carta sv02 5 SV02 5")
+    page.locator('[data-act="di-go"]').click(); page.wait_for_selector('[data-act="di-open"]', timeout=30000)
+    page.locator('[data-act="di-open"]').click(); page.wait_for_timeout(400)
+    check(page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.decks.find(d=>d.name==='Importado').items.map(i=>[i.id,i.q]).sort()))") == '[["sv02-3",2],["sv02-5",2]]', "importar no deck aberto: soma às cartas existentes")
+    page.locator('[data-act="deck-import"]').click(); page.wait_for_selector("#dit")
+    page.fill("#dit", "3 Carta sv02 3 SV02 3"); page.locator('[data-act="di-go"]').click(); page.wait_for_selector('[data-act="di-open"]', timeout=30000)
+    page.locator('[data-act="di-open"]').click(); page.wait_for_timeout(400)
+    check(page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.decks.find(d=>d.name==='Importado').items.map(i=>[i.id,i.q]).sort()))") == '[["sv02-3",3]]' and "3/60" in page.locator("#dchips").inner_text(), "importar no deck aberto: substituir troca as cartas")
+    # ---- decks: criar lista de negociação ----
+    tf = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
+      const own=m.ownByName();const have=own.get(m.nameKey('Carta sv02 3'))||0;
+      const d={id:'z',name:'z',format:'standard',items:[{id:'sv02-3',q:have+1,n:'Carta sv02 3',i:'',no:'3',s:'sv02'}]};
+      const w=m.tradeFromDeck(d,'want');const v=m.tradeFromDeck(d,'sell');
+      return {have,w:[w.cards,w.items.length],v:[v.cards,v.items.length,v.items.reduce((a,x)=>a+x.q,0)]};}""")
+    check(tf["have"] >= 1 and tf["w"] == [1, 1] and tf["v"][0] == tf["have"] and tf["v"][2] == tf["have"], f"deck para negociação: faltantes e o que eu tenho {tf}")
+    page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".binder"); page.locator(".binder").first.click(); page.wait_for_selector("#dname")
+    page.locator('[data-act="deck-trade"]').click(); page.wait_for_selector("#dtn")
+    check("Faltam" in page.locator("#dialog .note").inner_text(), "deck para negociação: janela mostra o que falta")
+    page.locator('[data-act="dt-kind"][data-v="sell"]').click(); page.wait_for_timeout(200)
+    check("Você tem" in page.locator("#dialog .note").inner_text(), "deck para negociação: trocar para Vendo/Troco")
+    page.locator('[data-act="dt-kind"][data-v="want"]').click(); page.wait_for_timeout(200)
+    ntr = page.evaluate("import('./js/state.js').then(m=>m.S.trades.length)")
+    page.locator('[data-act="dt-go"]').click(); page.wait_for_selector("#tgrid .tradeslot", timeout=5000)
+    check(page.evaluate("import('./js/state.js').then(m=>m.S.trades.length)") == ntr + 1 and "Procuro" in page.locator("#tchips").inner_text(), "deck para negociação: lista Procuro criada e aberta")
+    # ---- Pokédex: cartas da Celebração de 30 Anos (sem dexId na TCGdex) ----
+    dx = page.evaluate("""async()=>{const m=await import('./js/dex30.js');const r=await import('./js/rules.js');const st=(await import('./js/state.js')).S;
+      st.cards['30th-087']={id:'30th-087',name:'Nidoran♀',set:'30th',localId:'087',category:'Pokemon'};
+      st.briefs['30th-087']={id:'30th-087',localId:'087',name:'Nidoran♀',setId:'30th'};
+      const slot=r.dexModel({gens:[1]}).find(x=>x.dex===29);
+      const res=[m.dexIdsOf({id:'30th-087'}),m.dexIdsOf({id:'x',dexId:[3]}),m.extraIdsFor(25).length>=30,m.extraIdsFor(644).includes('30th-c-008'),slot.cand.includes('30th-087')];
+      delete st.cards['30th-087'];delete st.briefs['30th-087'];return res;}""")
+    nzt = page.evaluate("import('./js/util.js').then(m=>[m.nz('Nidoran♀'),m.nz('Nidoran ♂'),m.nz('Flabébé')])")
+    qm = page.evaluate("import('./js/views/dex.js').then(m=>[m.matchQuery({name:'Nidoran♀',localId:'087',setId:'30th'},m.parseQuery('Nidoran F')),m.matchQuery({name:'Nidoran♀',localId:'087',setId:'30th'},m.parseQuery('Nidoran F (087/128)'))])")
+    check(nzt == ["nidoran f", "nidoran m", "flabebe"] and qm[0] is True, f"busca: Nidoran F encontra Nidoran♀ {nzt} {qm}")
+    check(dx == [[29], [3], True, True, True], f"Pokédex: Nidoran♀ da Celebração de 30 Anos entra no espaço 029 {dx}")
+    # ---- padrões do Reverse (Pokébola, Energia, Liga...) quando a base confirma ----
+    pt = page.evaluate("""async()=>{const c=await import('./js/constants.js');const k=await import('./js/catalog.js');
+      const t=k.trimCard({id:'x-1',localId:'1',name:'A',set:{id:'x'},variants:{normal:true,reverse:true,holo:false},variants_detailed:[{type:'Normal'},{type:'Reverse'},{type:'Reverse',foil:'Poké Bola'},{type:'reverse',foil:'energy'},{type:'Reverse',foil:'Energia'},{type:'Reverse',foil:'Master Bola'},{type:'Reverse',foil:'league'},{type:'Holo',foil:'cosmos'}]});
+      const f=c.finsOfCard(t);const g=c.finsOfCard(k.trimCard({id:'y-1',localId:'1',name:'B',set:{id:'y'},variants:{normal:true,reverse:true,holo:false}}));
+      return [t.rvp,f,g,c.FIN_LABEL['rv-pokeball'],c.FIN_LABEL['rv-league'],c.FIN_LABEL['rv-novo-padrao'],c.finShort('rv-energy'),c.finShort('normal'),c.finShort('reverse')];}""")
+    check(pt == [["pokeball", "energy", "masterball", "league"], ["normal", "reverse", "rv-pokeball", "rv-energy", "rv-masterball", "rv-league"], ["normal", "reverse"], "Reverse Pokébola", "Reverse Liga", "Reverse Novo Padrao", "Reverse Energia", "", "Reverse"], f"padrões do Reverse: lidos da base, rótulos em português, sem padrão quando a base não informa {pt}")
+    page.evaluate("import('./js/state.js').then(m=>{m.S.cards['sv02-3'].rvp=['pokeball','league'];})")
+    page.evaluate("import('./js/views/panel.js').then(m=>m.openPanel('sv02-3'))"); page.wait_for_selector("#panel .fin")
+    ptxt = page.locator("#panel").inner_text()
+    check("Reverse Pokébola" in ptxt and "Reverse Liga" in ptxt and "Reverse Energia" not in ptxt, "painel da carta: mostra só os padrões que a base confirma")
+    page.locator('#panel [data-act="inc"][data-fin="rv-pokeball"]').click(); page.wait_for_timeout(200)
+    check(page.evaluate("import('./js/state.js').then(m=>m.S.collection['sv02-3'].f['rv-pokeball'].q)") == 1, "padrões do Reverse: registrar a carta em Reverse Pokébola")
+    page.locator('#panel [data-act="dec"][data-fin="rv-pokeball"]').click(); page.wait_for_timeout(200)
+    page.evaluate("import('./js/views/panel.js').then(m=>m.closePanel())")
+    # ---- Master Set: padrões do Reverse só onde existem ----
+    ms = page.evaluate("""async()=>{const c=await import('./js/collection.js');const st=(await import('./js/state.js')).S;
+      st.setd['zz9']={id:'zz9',cards:[{id:'zz9-1'},{id:'zz9-2'},{id:'zz9-3'}],cardCount:{official:3,total:3,normal:3,holo:0,reverse:0}};
+      st.cards['zz9-1']={id:'zz9-1',rvp:[]};st.cards['zz9-2']={id:'zz9-2',rvp:['pokeball']};st.cards['zz9-3']={id:'zz9-3',rvp:['pokeball','energy']};
+      st.collection['zz9-3']={s:'zz9',f:{normal:{q:1,c:'NM',l:'pt'},'rv-pokeball':{q:1,c:'NM',l:'pt'}},n:''};
+      const set={id:'zz9',cardCount:{official:3}};
+      st.settings.masterPatterns=true;const on=c.setStat(set,{zz9:['zz9-3']});const pt=c.patternTotals('zz9');
+      delete st.cards['zz9-2'].rvp;const part=c.setStat(set,{zz9:['zz9-3']});
+      st.cards['zz9-2'].rvp=['pokeball'];st.settings.masterPatterns=false;const off=c.setStat(set,{zz9:['zz9-3']});
+      st.settings.masterPatterns=true;delete st.setd['zz9'];delete st.collection['zz9-3'];['zz9-1','zz9-2','zz9-3'].forEach(i=>delete st.cards[i]);
+      return [pt.tot,pt.complete,on.masterTot,on.ownM,on.masterPartial,part.masterTot,part.ownM,part.masterPartial,off.masterTot,off.ownM];}""")
+    check(ms == [3, True, 6, 2, False, 3, 1, True, 3, 1], f"Master Set: padrões do Reverse entram só nas cartas que os têm e só com os detalhes completos {ms}")
+    # ---- legalidade: Celebração de 30 Anos ----
+    lg = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
+      const mk=(set)=>m.infoFrom({id:set+'-5',name:'Poké Pad',category:'Trainer',localId:'5',set:{id:set}});
+      s.settings.legalSets=['30th'];
+      const main=m.legalOf(mk('30th')),cls=m.legalOf(mk('30th-c'));
+      const d={id:'q',name:'q',format:'standard',items:[{id:'30th-5',q:1,n:'Poké Pad',i:'',no:'5',s:'30th'},{id:'30th-c-5',q:1,n:'Poké Pad C',i:'',no:'5',s:'30th-c'}]};
+      s.dinfo['30th-5']=mk('30th');s.dinfo['30th-c-5']=mk('30th-c');
+      const v=m.validate(d);
+      const hasCls=v.issues.some(x=>x.lvl==='err'&&x.msg.includes('Clássica'));const hasInfo=v.issues.some(x=>x.lvl==='info'&&x.msg.includes('exceção'));
+      const noMainErr=!v.issues.some(x=>x.lvl==='err'&&x.msg.startsWith('Fora do Standard'));
+      s.settings.legalSets=[];const off=m.legalOf(mk('30th'));
+      s.settings.legalSets=['30th'];delete s.dinfo['30th-5'];delete s.dinfo['30th-c-5'];
+      return {main,cls,hasCls,hasInfo,noMainErr,off};}""")
+    lt = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
+      s.settings.legalMarks=['H','I','J'];s.settings.legalSets=['30th'];
+      const mk=(set,mark,name='Poké Pad',cat='Trainer')=>m.infoFrom({id:set+'-'+mark+name,name,category:cat,localId:'5',set:{id:set},regulationMark:mark});
+      const H=m.legalOf(mk('sv01','H')),G=m.legalOf(mk('sv01','G')),J=m.legalOf(mk('sv01','j'));
+      const Gset=m.legalOf(mk('30th','G'));
+      const be=m.legalOf(mk('sv01','','Fighting Energy','Energy'));
+      const none=m.legalOf(mk('30th',''));
+      const gi=mk('sv01','G');gi.rp=false;const Gno=m.legalOf(gi);
+      return {H,G,J,Gset,be,none,Gno,txt:m.markTxt(gi)};}""")
+    check(lt["H"] == "ok" and lt["J"] == "ok" and lt["G"] == "wait" and lt["Gno"] == "no" and lt["Gset"] == "wait" and lt["be"] == "ok" and lt["none"] == "exc" and lt["txt"] == "letra G", f"legalidade pela letra: H/J valem, G não, energia básica vale, 30 Anos só sem letra {lt}")
+    check(lg["main"] == "exc" and lg["cls"] == "no" and lg["hasCls"] and not lg["hasInfo"] and lg["noMainErr"] and lg["off"] == "wait", f"legalidade: 30 Anos principal vale, Clássica não, exceção desligável {lg}")
+    page.evaluate("location.hash='#/ajustes'"); page.wait_for_selector("[data-legalset]")
+    check(page.locator("[data-legalset=\"30th\"]").is_checked(), "ajustes: exceção da Celebração de 30 Anos ligada por padrão")
+    page.locator("[data-legalset=\"30th\"]").uncheck(); page.wait_for_timeout(200)
+    check(page.evaluate("import('./js/state.js').then(m=>m.S.settings.legalSets.length)") == 0, "ajustes: desligar a exceção")
+    page.locator("[data-legalset=\"30th\"]").check(); page.wait_for_timeout(200)
+    rl = page.evaluate("""async()=>{const r=await import('./js/rules.js');const s=(await import('./js/state.js')).S;
+      s.settings.legalSets=['30th'];
+      const v={id:'30th-5',setId:'30th',mark:'',name:'',setName:'',setKey:'30th',serie:'',dex:[],types:[],cat:'',stage:'',suffix:'',trainer:'',illus:'',rarity:'',hp:null,vars:[]};
+      const a=r.valuesOf(v,'standard')[0];const c=r.valuesOf({...v,setId:'30th-c'},'standard')[0];return [a,c];}""")
+    check(rl == ["sim", "nao"], f"fichários: regra Legal no Standard respeita a exceção {rl}")
+    # ---- v3.7: cartas recentes que só existem em inglês e complemento de promos ----
+    def fake_set(route):
+        u = route.request.url; hh = {"access-control-allow-origin": "*", "content-type": "application/json"}
+        lang = "en" if "/v2/en/" in u else "pt"; sid = u.rsplit("/", 1)[1]
+        if sid == "zz1":
+            n = 3 if lang == "pt" else 5
+            cards = [{"id": f"zz1-{i}", "localId": str(i), "name": ("P" if lang == "pt" else "E") + str(i), **({} if (lang == "pt" and i <= 2) else {"image": f"https://assets.tcgdex.net/{lang}/x/zz1/{i}"})} for i in range(1, n + 1)]
+            return route.fulfill(status=200, headers=hh, body=json.dumps({"id": "zz1", "name": "ZZ1", "cardCount": {"official": 3, "total": 3 if lang == "pt" else 5}, "cards": cards}))
+        n = 3 if lang == "pt" else 4
+        cards = [{"id": f"mep-{i:03d}", "localId": f"{i:03d}", "name": "M" + str(i)} for i in range(1, n + 1)]
+        return route.fulfill(status=200, headers=hh, body=json.dumps({"id": "mep", "name": "Promos", "cardCount": {"official": n, "total": n}, "cards": cards}))
+    page.route(re.compile(r"https://api\.tcgdex\.net/v2/\w+/sets/(zz1|mep)$"), fake_set)
+    before_cards = hits["cards"]
+    ex = page.evaluate("""async()=>{const k=await import('./js/catalog.js');const s=(await import('./js/state.js')).S;
+      delete s.setd['zz1'];delete s.setd['mep'];
+      const a=await k.ensureSetd('zz1',true);const b=await k.ensureSetd('mep',true);
+      const c=await k.ensureCard('mep-101');const e=await k.ensureCard('mep-Z');
+      return {imgs:a.cards.map(x=>x.image||''),mimg:(b.cards.find(x=>x.id==='mep-003')||{}).image,ids:a.cards.map(x=>x.id),names:a.cards.map(x=>x.name),fc:a.fullChecked,tot:a.cardCount.total,en:a.completedFromEn,
+        mn:b.cards.length,has101:b.cards.some(x=>x.id==='mep-101'),brief:s.briefs['mep-101'],card:c};}""".replace("const e=await k.ensureCard('mep-Z');", ""))
+    check(ex["ids"] == [f"zz1-{i}" for i in range(1, 6)] and ex["names"] == ["P1", "P2", "P3", "E4", "E5"] and ex["fc"] == 5 and ex["tot"] == 5 and ex["en"] is True,
+          f"coleção com contagem igual no português completa com o inglês {ex['ids']} {ex['names']}")
+    check("/en/" in ex["imgs"][0] and "/en/" in ex["imgs"][1] and "/en/" not in ex["imgs"][2] and all(ex["imgs"]), f"imagem em inglês quando o português não tem {ex['imgs']}")
+    check("static.dextcg.com/cards/mep%2F3.png#" in ex["mimg"], f"imagem do Dex quando a TCGdex não tem nenhuma {ex['mimg']}")
+    d30 = page.evaluate("import('./js/extra.js').then(m=>[m.dexImage('30th-c','018'),m.dexImage('30th-c','001'),m.dexImage('30th-c','021'),m.dexImage('30th-c','031'),m.dexImage('mep','086'),m.dexImage('30th','053')])")
+    check("me55cc%2F15.png" in d30[0] and "me55cc%2F2.png" in d30[1] and "me55cc%2F18.png" in d30[2] and d30[3] == "" and "mep%2F86.png" in d30[4] and "me55%2F53.png" in d30[5], f"30 Anos Clássica: Gengar 018 usa a imagem 15 do Dex, N 021 usa a 18 {d30}")
+    check(ex["mn"] == 4 + 28 and ex["has101"] and ex["brief"]["extra"] is True and ex["brief"]["name"] == "Nidorina", f"complemento: Nidorina MEP 101 entra na coleção MEP ({ex['mn']} cartas)")
+    c = ex["card"]
+    check(c["name"] == "Nidorina" and c["dexId"] == [30] and c["illustrator"] == "Taiga Kasai" and c["regulationMark"] == "J" and c["category"] == "Pokemon" and "dextcg.com" in c["image"], f"complemento: dados da carta {c['name']} {c['dexId']}")
+    check(hits["cards"] == before_cards, "complemento: carta extra não consulta a TCGdex")
+    ig = page.evaluate("""async()=>{const u=await import('./js/ui.js');const h=u.imgTag((await import('./js/state.js')).S.cards['mep-101'].image,'low','Nidorina',undefined,'mep-101');
+      const d=await import('./js/decks.js');const i=await d.ensureInfo('mep-101');const dx=await import('./js/dex30.js');
+      return [h.includes('static.dextcg.com/cards/mep%2F101.png#/low.webp'),i.mk,i.cat,dx.dexIdsOf(null,'mep-101'),dx.extraIdsFor(30).includes('mep-101')];}""")
+    check(ig == [True, "J", "pokemon", [30], True], f"complemento: imagem do Dex, deck e Pokédex {ig}")
+    page.unroute(re.compile(r"https://api\.tcgdex\.net/v2/\w+/sets/(zz1|mep)$"))
+    # ---- v3.8: carta que você tem, sem detalhes neste aparelho, aparece no fichário de Pokédex ----
+    ow = page.evaluate("""async()=>{const s=(await import('./js/state.js')).S;const r=await import('./js/rules.js');const k=await import('./js/catalog.js');
+      await k.ensureCard('sv01-7');const had=!!s.cards['sv01-7'];delete s.cards['sv01-7'];
+      s.collection['sv01-7']={f:{normal:{q:1}}};
+      const b={mode:'pokedex',gens:[1],pick:{7:'sv01-7'}};
+      const rep=r.dexModel(b).find(x=>x.dex===7).rep;const miss=k.ownedMissing().includes('sv01-7');
+      await k.loadOwnedCards();const loaded=!!s.cards['sv01-7'];const after=r.dexModel(b).find(x=>x.dex===7);
+      delete s.collection['sv01-7'];return {had,rep,miss,loaded,cand:after.cand.includes('sv01-7')};}""")
+    check(ow["had"] and ow["rep"] == "sv01-7" and ow["miss"] and ow["loaded"] and ow["cand"], f"Pokédex: carta sua sem detalhes aparece e os detalhes são baixados sozinhos {ow}")
+    # ---- v4.0: efeito nas cartas, botões −/+ e menu retrátil em paisagem ----
+    page.set_viewport_size({"width": 1360, "height": 900})
+    page.evaluate("""()=>{const d=document.createElement('div');d.id='tt';d.style.cssText='position:fixed;left:100px;top:100px;width:120px;z-index:9';d.innerHTML='<div class="pocket"><span class="qty">x</span></div><div class="stepper"><button class="btn small">−</button></div>';document.body.appendChild(d);}""")
+    page.mouse.move(150, 160); page.mouse.move(160, 170); page.wait_for_timeout(150)
+    tv = page.evaluate("""()=>{const e=document.querySelector('#tt .pocket');const b=document.querySelector('#tt .stepper .btn');const cs=getComputedStyle(b);return [e.classList.contains('hot'),e.style.getPropertyValue('--rx')!=='',cs.justifyContent,cs.display]}""")
+    check(tv[0] and tv[1] and tv[2] == "center", f"v4.0: carta na grade inclina com o mouse e botão − fica centralizado {tv}")
+    page.mouse.move(700, 600); page.wait_for_timeout(100)
+    check(not page.evaluate("document.querySelector('#tt .pocket').classList.contains('hot')"), "v4.0: carta volta ao repouso ao sair")
+    page.evaluate("document.getElementById('tt').remove()")
+    lc = b.new_context(viewport={"width": 844, "height": 390}, is_mobile=True, has_touch=True, locale="pt-BR", service_workers="block")
+    lp = lc.new_page(); lp.route("**/*", handle); lp.goto(APP); lp.wait_for_selector(".empty .btn.primary", timeout=8000)
+    rb = lp.evaluate("(()=>{const r=document.querySelector('.rail').getBoundingClientRect();const m=document.getElementById('menubtn').getBoundingClientRect();return [r.right,m.width>0&&m.left<20&&m.top<20]})()")
+    check(rb[0] <= 0 and rb[1], f"paisagem no toque: menu lateral oculto e botão ☰ no canto ({rb})")
+    lp.screenshot(path=str(ROOT/"tests/46_paisagem_menu_fechado.png"))
+    lp.locator("#menubtn").click(); lp.wait_for_timeout(350)
+    ro = lp.evaluate("document.querySelector('.rail').getBoundingClientRect().left")
+    check(ro >= 0 and lp.locator(".rail a.nav").count() >= 5, "paisagem: ☰ abre a gaveta com os itens")
+    lp.screenshot(path=str(ROOT/"tests/47_paisagem_menu_aberto.png"))
+    lp.mouse.click(700, 200); lp.wait_for_timeout(350)
+    check(lp.evaluate("document.querySelector('.rail').getBoundingClientRect().right") <= 0, "paisagem: tocar fora fecha o menu")
+    lp.locator("#menubtn").click(); lp.wait_for_timeout(300); lp.locator('.rail a.nav[data-nav="decks"]').click(); lp.wait_for_timeout(400)
+    check(lp.evaluate("document.querySelector('.rail').getBoundingClientRect().right") <= 0 and "decks" in lp.url, "paisagem: escolher uma tela fecha o menu")
+    lp.set_viewport_size({"width": 390, "height": 844}); lp.wait_for_timeout(300)
+    pr = lp.evaluate("(()=>{const r=document.querySelector('.rail').getBoundingClientRect();return [r.bottom>=830,getComputedStyle(document.getElementById('menubtn')).display]})()")
+    check(pr[0] and pr[1] == "none", f"em pé: volta a barra de baixo e some o ☰ {pr}")
+    lc.close()
     b.close()
 
 SERVER.terminate()

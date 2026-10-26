@@ -6,6 +6,7 @@ import {H, S} from '../state.js';
 import {imgTag, noteHTML} from '../ui.js';
 import {dexModel} from '../rules.js';
 import {customCard} from '../custom.js';
+import {getTrade, hasPrice, itemKey} from '../trades.js';
 import {derivedImage} from '../reprints.js';
 import {$, esc} from '../util.js';
 
@@ -16,11 +17,12 @@ export function openPanel(id,ctx){
 }
 export function closePanel(){S.ui.panelId=null;renderPanel();}
 /* Carta anterior/seguinte dentro da lista que está na tela, sem fechar o popup. */
+const navIndex=(nav,id,ctx)=>ctx&&ctx.tradeId&&ctx.tradeKey?nav.findIndex(x=>x.tkey===ctx.tradeKey):nav.findIndex(x=>x.id===id);
 export function panelNav(d){
  const nav=(S.cur&&S.cur.nav)||[];if(!nav.length||!S.ui.panelId)return;
- const i=nav.findIndex(x=>x.id===S.ui.panelId);
+ const i=navIndex(nav,S.ui.panelId,S.ui.panelCtx);
  const j=i<0?0:i+d;if(j<0||j>=nav.length)return;
- const it=nav[j];const ctx=S.ui.panelCtx?{...S.ui.panelCtx,dex:it.dex||null}:null;
+ const it=nav[j];const ctx=S.ui.panelCtx?{...S.ui.panelCtx,dex:it.dex||null,...(it.tkey?{tradeKey:it.tkey}:{})}:null;
  openPanel(it.id,ctx);
 }
 export function renderPanel(failed){
@@ -60,16 +62,18 @@ export function renderPanel(failed){
    <label><span class="lbl2">Idioma</span><select class="field" data-ch="l" data-id="${esc(id)}" data-fin="${f}">${LANGS.map(([k,l])=>`<option value="${k}" ${cur.l===k?'selected':''}>${l}</option>`).join('')}</select></label></div>`:''}</div>`;
  }).join(''):(failed?noteHTML('err','Não consegui carregar os detalhes desta carta. Verifique a conexão e abra de novo.'):'<div class="skel" style="height:90px;margin-top:10px"></div>');
  const ctx=S.ui.panelCtx;
+ const tctx=ctx&&ctx.tradeId?tradeBlock(ctx,id,c):null;
+ if(ctx&&ctx.tradeId&&!tctx){S.ui.panelId=null;p.classList.remove('open');sc.classList.remove('on');delete p.dataset.id;return;}
  const manual=ctx&&ctx.binderId&&(S.binders.find(x=>x.id===ctx.binderId)||{}).mode==='manual';
- const nav=(S.cur&&S.cur.nav)||[];const ni=nav.findIndex(x=>x.id===id);
+ const nav=(S.cur&&S.cur.nav)||[];const ni=navIndex(nav,id,S.ui.panelCtx);
  const phead=`<div class="phead"><div class="pn"><button class="btn small" type="button" data-act="panel-nav" data-d="-1" ${ni<=0?'disabled':''} aria-label="Carta anterior">‹</button><span aria-live="polite">${ni>=0?`${ni+1} de ${nav.length}`:''}</span><button class="btn small" type="button" data-act="panel-nav" data-d="1" ${ni<0||ni>=nav.length-1?'disabled':''} aria-label="Próxima carta">›</button></div><button class="btn small close" type="button" data-act="close">Fechar</button></div>`;
  const info=`<h2>${esc(name)}</h2>
   <p class="lead" style="margin-top:2px">${esc(set.name)} · carta ${esc(numLabel({...b,id,setId:b.setId||(c&&c.set)||''}))}</p>
   ${c&&c.illustrator?`<p class="lead" style="margin-top:2px">Ilustração: ${esc(c.illustrator)}</p>`:''}
   <div class="facts">${facts.map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div>
-  ${rows}
-  <div style="margin-top:14px"><label class="lbl2" for="note">Observações</label><textarea class="field" id="note" rows="3" data-id="${esc(id)}" placeholder="Ex.: comprada em feira, assinatura, ponto de dobra">${esc(e?e.n:'')}</textarea></div>
-  ${dexPick(ctx,id)}
+  ${tctx||rows}
+  ${tctx?'':`<div style="margin-top:14px"><label class="lbl2" for="note">Observações</label><textarea class="field" id="note" rows="3" data-id="${esc(id)}" placeholder="Ex.: comprada em feira, assinatura, ponto de dobra">${esc(e?e.n:'')}</textarea></div>`}
+  ${tctx?'':dexPick(ctx,id)}
   ${photoCtl(id,!!image)}
   ${manual?`<div style="margin-top:14px"><button class="btn danger" type="button" data-act="unbind" data-id="${esc(id)}">Tirar do fichário</button></div>`:''}`;
  if(p.dataset.id===id&&$('.pinfo',p)){
@@ -83,6 +87,24 @@ export function renderPanel(failed){
  if(keep){const t=$(`#panel [data-act="${keep.a}"]${keep.f?`[data-fin="${keep.f}"]`:''}`);if(t)t.focus();}
 }
 
+
+/* Aberta pela Negociação: no lugar de "Tenho", só o que está nesta lista. A coleção não é tocada. */
+function tradeBlock(ctx,id,c){
+ const t=getTrade(ctx.tradeId);if(!t)return null;
+ const it=t.items.find(x=>itemKey(x)===ctx.tradeKey);if(!it)return null;
+ const sell=t.kind==='sell';
+ const fins=[...new Set(['normal','holo','reverse',...(c?finsOfCard(c):[]),it.f])];
+ return`<div class="fin has tpanel"><div class="fin-head"><h3>Nesta lista</h3><span class="ttag ${sell?'sell':'want'}">${esc(t.name)}</span></div>
+  <p class="lbl2" style="margin:0 0 8px">Estas mudanças valem só para a lista “${esc(t.name)}”. Sua coleção não é alterada.</p>
+  <div class="row" style="justify-content:space-between;align-items:center"><span class="lbl2" style="margin:0">Quantidade</span>
+   <div class="step"><button type="button" data-act="tp-dec" aria-label="Diminuir a quantidade na lista">−</button><output aria-live="polite">${it.q}</output><button type="button" data-act="tp-inc" aria-label="Aumentar a quantidade na lista">+</button></div></div>
+  <div class="fin-opts">
+   <label><span class="lbl2">Acabamento</span><select class="field" data-tp="f">${fins.map(k=>`<option value="${k}" ${it.f===k?'selected':''}>${FIN_LABEL[k]||k}</option>`).join('')}</select></label>
+   <label><span class="lbl2">Idioma</span><select class="field" data-tp="l">${LANGS.map(([k,l])=>`<option value="${k}" ${it.l===k?'selected':''}>${l}</option>`).join('')}</select></label>
+   ${sell?`<label><span class="lbl2">Condição</span><select class="field" data-tp="c"><option value="">Não informada</option>${COND.map(([k,l])=>`<option value="${k}" ${it.c===k?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label><span class="lbl2">Valor pedido (R$, por carta)</span><input class="field" data-tp="p" type="text" inputmode="decimal" placeholder="0,00" value="${hasPrice(it)?String(it.p).replace('.',','):''}"></label>`:''}</div>
+  <div style="margin-top:12px"><button class="btn danger" type="button" data-act="tp-remove">Remover da lista</button></div></div>`;
+}
 
 H.renderPanel=renderPanel;
 

@@ -3,6 +3,7 @@ import {ensureCard, visibleSet,loadAllSetLists} from '../catalog.js';
 import {COND, FIN_LABEL, finShort, finsOfCard} from '../constants.js';
 import {flagHTML, langOf} from '../cardlabel.js';
 import {S, refreshAll} from '../state.js';
+import {closePanel, openPanel, renderPanel} from './panel.js';
 import {imgTag, noteHTML, toast} from '../ui.js';
 import {$, ICON, brl, esc, fmtN, live, nz} from '../util.js';
 import {KINDS, addItem, bulkEdit, getTrade, hasPrice, imgOf, itemKey, newShareCode, newTrade, parsePrice, saveTrades, setQty, shareLink, shareSnapshot, snapOf, totalQty, tradeTotal, updateItem} from '../trades.js';
@@ -61,8 +62,23 @@ export function renderTrade(){
   return;
  }
  g.innerHTML=`<div class="cards">${t.items.map(it=>tradeTile(t,it)).join('')}</div>`;
+ S.cur.nav=t.items.map(it=>({id:it.id,tkey:itemKey(it)}));
 }
 const saveAndRefresh=()=>{saveTrades();if(S.cur&&S.cur.refresh)S.cur.refresh();};
+/* painel da carta aberto a partir de uma lista */
+function tpStep(d){
+ const c=S.ui.panelCtx;const x=c&&getTrade(c.tradeId);const it=x&&x.items.find(i=>itemKey(i)===c.tradeKey);if(!it)return;
+ if(it.q+d<1)return;
+ setQty(x,c.tradeKey,it.q+d);saveAndRefresh();renderPanel();
+}
+export function tradePanelChange(el){
+ const c=S.ui.panelCtx;const x=c&&getTrade(c.tradeId);const it=x&&x.items.find(i=>itemKey(i)===c.tradeKey);if(!it)return;
+ const k=el.dataset.tp,patch={};
+ if(k==='p')patch.p=parsePrice(el.value);else patch[k]=el.value;
+ const r=updateItem(x,c.tradeKey,patch);
+ if(r)c.tradeKey=itemKey(r);
+ saveAndRefresh();renderPanel();
+}
 
 /* ---------- janelas ---------- */
 function listDialog(t,isNew){
@@ -426,7 +442,10 @@ export const TRADE_ACT={
  'sh-copy':async()=>{const i=$('#shl');if(!i)return;let ok=false;try{await navigator.clipboard.writeText(i.value);ok=true;}catch(e){i.select();try{ok=document.execCommand('copy');}catch(x){}}toast(ok?'Link copiado.':'Selecione o link e copie.');},
  'trade-inc':(t,e)=>{e&&e.stopPropagation();const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(!it)return;setQty(x,t.dataset.key,it.q+1);saveAndRefresh();},
  'trade-dec':(t,e)=>{e&&e.stopPropagation();const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(!it)return;setQty(x,t.dataset.key,it.q-1);saveAndRefresh();},
- 'trade-item':t=>{const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(it)itemDialog(x,it);},
+ 'trade-item':t=>{const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(it)openPanel(it.id,{tradeId:x.id,tradeKey:t.dataset.key});},
+ 'tp-dec':()=>tpStep(-1),
+ 'tp-inc':()=>tpStep(1),
+ 'tp-remove':()=>{const c=S.ui.panelCtx;const x=c&&getTrade(c.tradeId);if(!x)return;setQty(x,c.tradeKey,0);saveAndRefresh();closePanel();},
  'tr-item-save':()=>{
   const st=S.ui.tr;const x=st&&getTrade(st.id);if(!x)return;
   const q=Math.max(1,Math.min(999,parseInt($('#tiq').value,10)||1));

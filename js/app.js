@@ -1,7 +1,7 @@
 /* Eventos, rotas e início do app. */
 import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, loadOwnedCards, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
-import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter} from './views/trades.js';
+import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter, tradePanelChange} from './views/trades.js';
 import {viewShared, SHARED_ACT} from './views/shared.js';
 import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter, deckExportLang} from './views/decks.js';
 import {binderExport} from './views/binders.js';
@@ -11,6 +11,7 @@ import {setCfg} from './modes.js';
 import {checkLogos} from './logos.js';
 import {pickImage, removeCustom} from './custom.js';
 import './lazyimg.js';
+import './menu.js';
 import {initCloud, onCloud, startSession} from './cloud.js';
 import {showAuth, updateAcct} from './views/auth.js';
 import {pickSave, pickSerie, pickToggle, renderPicker, viewPicker} from './views/picker.js';
@@ -134,6 +135,7 @@ document.addEventListener('change',e=>{
  if(t.dataset.dk==='set'){deckAddFilter('set',t.value);return;}
  if(t.dataset.dk==='own'){deckAddFilter('own',t.checked);return;}
  if(t.dataset.dk==='legal'){deckAddFilter('legal',t.checked);return;}
+ if(t.dataset.tp){tradePanelChange(t);return;}
  if(t.dataset.ta==='set'){tradeSetFilter(t.value);return;}
  if(t.dataset.pl==='set'){pullFilter('set',t.value);return;}
  if(t.dataset.pl==='rep'){pullFilter('rep',t.checked);return;}
