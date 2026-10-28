@@ -122,7 +122,7 @@ document.addEventListener('keydown',e=>{
   if(S.ui.panelId)closePanel();else if($('#modal').classList.contains('on')){const was=!!S.ui.dexdlg;closeModal();if(was){viewCache.clear();refreshAll();}}
   return;
  }
- if((e.key==='Enter'||e.key===' ')&&e.target.classList&&(e.target.classList.contains('slot')||e.target.classList.contains('dtile'))){
+ if((e.key==='Enter'||e.key===' ')&&e.target.classList&&(e.target.classList.contains('slot')||e.target.classList.contains('dtile')||e.target.classList.contains('tmrow'))){
   e.preventDefault();
   const a=e.target.dataset.edAct;
   if(a)editorAct(e.target);else if(ACT[e.target.dataset.act])ACT[e.target.dataset.act](e.target);else ACT.open(e.target);

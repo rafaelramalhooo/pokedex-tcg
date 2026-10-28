@@ -610,3 +610,11 @@ img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.coverpage .cvlogo img.lgbg,.her
 
 .cvprev.sq{aspect-ratio:1/1;width:min(200px,100%)}
 .cvtabs{margin:6px 0 4px}
+
+/* ---------- v4.5: juntar listas da Negociação em uma imagem ---------- */
+.tmbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--sheet);position:sticky;top:8px;z-index:5}
+.tmrow{position:relative;cursor:pointer;user-select:none}
+.tmrow .tmchk{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--ink-3);display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background:var(--sheet);margin-right:2px}
+.tmrow.on{border-color:var(--red);box-shadow:0 0 0 2px var(--red) inset}
+.tmrow.on .tmchk{background:var(--red);border-color:var(--red)}
+.tmrow:focus-visible{outline:3px solid var(--red);outline-offset:2px}

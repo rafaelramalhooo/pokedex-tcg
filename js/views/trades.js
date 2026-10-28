@@ -16,11 +16,27 @@ const kindChip=k=>`<span class="ttag ${k==='want'?'want':'sell'}">${KINDS[k]}</s
 export function viewTrades(){
  S.cur={name:'trades',soft:renderTrades,refresh:renderTrades};
  $('#view').innerHTML=`<div class="top"><div><h1>Negociação</h1><p class="lead">Listas para vender, trocar ou procurar cartas. Elas ficam separadas da sua coleção, então nada aqui muda o que você já marcou.</p></div>
-  <div class="tools"><button class="btn primary" type="button" data-act="trade-new">Nova lista</button></div></div><div id="tbody"></div>`;
+  <div class="tools"><button class="btn" type="button" data-act="tm-start" id="tmstart" hidden>Juntar listas em imagem</button><button class="btn primary" type="button" data-act="trade-new">Nova lista</button></div></div><div id="tmbar"></div><div id="tbody"></div>`;
+ S.ui.tmerge=null;
  renderTrades();
 }
 export function renderTrades(){
  const el=live($('#tbody'));if(!el)return;
+ const ms=$('#tmstart');if(ms)ms.hidden=S.trades.length<2||!!S.ui.tmerge;
+ const bar=$('#tmbar');
+ const mg=S.ui.tmerge;
+ if(bar){
+  if(mg){
+   const sel=S.trades.filter(t=>mg.sel.has(t.id));const cards=sel.reduce((a,t)=>a+t.items.length,0);
+   bar.innerHTML=`<div class="tmbar"><span><b>${sel.length}</b> lista${sel.length===1?'':'s'} marcada${sel.length===1?'':'s'} · ${fmtN(cards)} carta${cards===1?'':'s'}. ${sel.length<2?'Marque pelo menos duas listas.':''}</span><span class="row"><button class="btn small" type="button" data-act="tm-cancel">Cancelar</button><button class="btn small primary" type="button" data-act="tm-go" ${sel.length<2||!cards?'disabled':''}>Gerar imagem</button></span></div>`;
+  }else bar.innerHTML='';
+ }
+ if(mg&&S.trades.length){
+  el.innerHTML=`<div class="binders">${S.trades.map(t=>{const on=mg.sel.has(t.id);return`<div class="binder tmrow ${on?'on':''}" role="checkbox" aria-checked="${on}" tabindex="0" data-act="tm-toggle" data-id="${esc(t.id)}"><span class="tmchk" aria-hidden="true">${on?'✓':''}</span><div class="bmeta"><h3>${esc(t.name)}</h3>
+  <div class="chips" style="margin:0">${kindChip(t.kind)}</div>
+  <div class="count"><strong>${fmtN(t.items.length)}</strong><span>carta${t.items.length===1?'':'s'} · ${fmtN(totalQty(t))} unidade${totalQty(t)===1?'':'s'}</span></div></div></div>`;}).join('')}</div>`;
+  return;
+ }
  if(!S.trades.length){
   el.innerHTML=`<div class="empty"><h3>Você ainda não tem listas de negociação</h3><p>Crie uma lista “Vendo / Troco” com o que você quer oferecer ou uma lista “Procuro” com o que está atrás. Depois é só exportar como imagem e compartilhar.</p><button class="btn primary" type="button" data-act="trade-new">Criar a primeira lista</button></div>`;
   return;
@@ -208,6 +224,16 @@ function itemDialog(t,it){
    <label class="size">Valor pedido (R$, por carta) <input class="field mini" id="tip" type="text" inputmode="decimal" placeholder="0,00" value="${hasPrice(it)?String(it.p).replace('.',','):''}" style="width:110px"></label>`:''}</div>
   <div class="actions"><button class="btn" type="button" data-act="tr-remove">Remover da lista</button><span><button class="btn" type="button" data-ed-act="cancel">Cancelar</button> <button class="btn primary" type="button" data-act="tr-item-save">Salvar</button></span></div>`;
  $('#modal').classList.add('on');
+}
+/* Junta várias listas numa única imagem, cada uma na própria seção. */
+export function mergeExport(){
+ const mg=S.ui.tmerge;if(!mg)return;
+ const lists=S.trades.filter(t=>mg.sel.has(t.id)&&t.items.length);
+ if(lists.length<2){toast('Marque pelo menos duas listas com cartas.');return;}
+ const sections=lists.map(t=>({label:t.name,kindLabel:KINDS[t.kind],color:t.kind==='want'?'#2F6FDE':'#D93A2B'}));
+ const anyP=lists.some(t=>t.kind==='sell'&&t.items.some(hasPrice)),anyC=lists.some(t=>t.kind==='sell'&&t.items.some(i=>i.c));
+ openExport({title:lists.map(t=>t.name).join(' + '),kindLabel:null,sections,scopes:null,extras:anyP||anyC?{p:anyP,c:anyC,on:false}:null,
+  build:()=>lists.flatMap((t,si)=>{const sell=t.kind==='sell';return t.items.map(it=>({sec:si,url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l,...(sell&&it.c?{c:it.c}:{}),...(sell&&hasPrice(it)?{p:it.p}:{})}));})});
 }
 export function tradeExport(id){
  const t=getTrade(id);if(!t)return;
@@ -397,6 +423,10 @@ async function shareStop(id){
 const closeDlg=()=>{$('#modal').classList.remove('on');S.ui.tr=null;S.ui.tradeAdd=null;S.ui.pull=null;S.ui.bulk=null;};
 export const TRADE_ACT={
  'trade-new':()=>listDialog(newTrade('', 'sell'),true),
+ 'tm-start':()=>{S.ui.tmerge={sel:new Set()};renderTrades();},
+ 'tm-cancel':()=>{S.ui.tmerge=null;renderTrades();},
+ 'tm-toggle':t=>{const m=S.ui.tmerge;if(!m)return;const id=t.dataset.id;if(m.sel.has(id))m.sel.delete(id);else m.sel.add(id);renderTrades();},
+ 'tm-go':()=>mergeExport(),
  'tr-kind':t=>{document.querySelectorAll('[data-act=tr-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));if(S.ui.tr)S.ui.tr.t.kind=t.dataset.v;},
  'tr-save':()=>{
   const st=S.ui.tr;if(!st)return;

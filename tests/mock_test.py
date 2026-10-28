@@ -916,7 +916,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v4.4" in page.locator(".rail .ver").inner_text() and "Gestão de Coleção" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v4.5" in page.locator(".rail .ver").inner_text() and "Gestão de Coleção" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
     check(page.locator("#pullres", has_text="Já na lista").count() == 0, "puxar: sem o aviso Já na lista")
     page.locator('[data-act="pl-none"]').click(); page.wait_for_timeout(150)
@@ -940,6 +940,34 @@ with sync_playwright() as p:
     tab.screenshot(path=str(ROOT/"tests/31_export_negociacao.png")); tab.close()
     plan = page.evaluate("import('./js/exportimg.js').then(m=>{const a=m.planSheets(30,5,true),b=m.planSheets(3000,10,true);const s=m.sheetSize(b.parts[0],10,b.cw,true);return [a.cw,a.parts.length,b.parts.length>1,s.W*s.H<=64e6,m.autoCols(200)]})")
     check(plan[0] == 600 and plan[1] == 1 and plan[2] and plan[3] and plan[4] <= 10, f"exportar: planejamento de tamanho e divisão {plan}")
+    # juntar listas em uma imagem (v4.5)
+    page.evaluate("""import('./js/state.js').then(async m=>{const t=m.S.trades[0];const c=JSON.parse(JSON.stringify(t));c.id='merge2';c.name='Procuro mesclado';c.kind='want';c.items=c.items.slice(0,2).map(i=>({...i,p:undefined,c:undefined}));m.S.trades.push(c);})""")
+    page.evaluate("location.hash='#/binders'"); page.wait_for_selector("#bbody"); page.evaluate("location.hash='#/negociacao'"); page.wait_for_selector(".binder")
+    check(page.locator("#tmstart").is_visible(), "juntar listas: botão aparece com duas ou mais listas")
+    page.locator("#tmstart").click(); page.wait_for_selector(".tmrow")
+    check(page.locator('[data-act="tm-go"]').is_disabled(), "juntar listas: precisa marcar pelo menos duas")
+    page.locator(".tmrow").nth(0).click(); page.locator(".tmrow").nth(1).click(); page.wait_for_timeout(150)
+    check(not page.locator('[data-act="tm-go"]').is_disabled() and "2" in page.locator(".tmbar").inner_text(), "juntar listas: barra mostra as listas marcadas")
+    page.screenshot(path=str(ROOT/"tests/54_juntar_listas.png"))
+    page.locator('[data-act="tm-go"]').click(); page.wait_for_selector("#ext")
+    check("+" in page.input_value("#ext"), "juntar listas: título sugerido com os nomes das listas")
+    page.select_option("#exc", "4")
+    with ctx.expect_page(timeout=20000) as np2:
+        page.locator("#exgo").click()
+    tb = np2.value; tb.wait_for_function("location.href.startsWith('blob:')", timeout=20000); tb.wait_for_selector("img", timeout=10000)
+    d2 = tb.evaluate("[document.images[0].naturalWidth, document.images[0].naturalHeight]")
+    tb.screenshot(path=str(ROOT/"tests/55_export_listas_juntas.png")); tb.close()
+    check(d2[0] > 1000 and d2[1] > 800, f"juntar listas: imagem gerada com duas seções {d2}")
+    sp = page.evaluate("""async()=>{const m=await import('./js/exportimg.js');
+      const mk=(n,sec)=>Array.from({length:n},(_,i)=>({sec,url:'',n:'Carta '+i,no:String(i+1),q:1,f:'normal',l:'pt'}));
+      const items=[...mk(300,0),...mk(250,1)];
+      const r=await m.buildImages(items,{title:'Teste grande',cols:10,labels:true,sections:[{label:'A',kindLabel:'Procuro',color:'#2F6FDE'},{label:'B',kindLabel:'Vendo / Troco',color:'#D93A2B'}]});
+      const rows=m.layoutRows([{n:3},{n:4}],5);
+      return [r.files.length,rows.length,rows[1].sec];}""")
+    check(sp[0] >= 1 and sp[1] == 2 and sp[2] == 1, f"juntar listas: lista grande gera imagens e cada lista começa em linha nova {sp}")
+    page.locator('[data-act="tm-cancel"]').click()
+    page.evaluate("import('./js/state.js').then(m=>{m.S.trades=m.S.trades.filter(t=>t.id!=='merge2');m.S.ui.tmerge=null;if(m.S.cur&&m.S.cur.refresh)m.S.cur.refresh();})")
+    page.wait_for_timeout(200)
     # celular: abre o compartilhar do aparelho com a imagem
     page.evaluate("""(()=>{window.__shared=null;const mm=window.matchMedia.bind(window);
       window.matchMedia=q=>/pointer:\\s*coarse/.test(q)?{matches:true,media:q,addEventListener(){},removeEventListener(){}}:mm(q);
@@ -1233,14 +1261,14 @@ Total de cartas: 60"""
       await k.loadOwnedCards();const loaded=!!s.cards['sv01-7'];const after=r.dexModel(b).find(x=>x.dex===7);
       delete s.collection['sv01-7'];return {had,rep,miss,loaded,cand:after.cand.includes('sv01-7')};}""")
     check(ow["had"] and ow["rep"] == "sv01-7" and ow["miss"] and ow["loaded"] and ow["cand"], f"Pokédex: carta sua sem detalhes aparece e os detalhes são baixados sozinhos {ow}")
-    # ---- v4.4: efeito nas cartas, botões −/+ e menu retrátil em paisagem ----
+    # ---- v4.5: efeito nas cartas, botões −/+ e menu retrátil em paisagem ----
     page.set_viewport_size({"width": 1360, "height": 900})
     page.evaluate("""()=>{const d=document.createElement('div');d.id='tt';d.style.cssText='position:fixed;left:100px;top:100px;width:120px;z-index:9';d.innerHTML='<div class="pocket"><span class="qty">x</span></div><div class="stepper"><button class="btn small">−</button></div>';document.body.appendChild(d);}""")
     page.mouse.move(150, 160); page.mouse.move(160, 170); page.wait_for_timeout(150)
     tv = page.evaluate("""()=>{const e=document.querySelector('#tt .pocket');const b=document.querySelector('#tt .stepper .btn');const cs=getComputedStyle(b);return [e.classList.contains('hot'),e.style.getPropertyValue('--rx')!=='',cs.justifyContent,cs.display]}""")
-    check(tv[0] and tv[1] and tv[2] == "center", f"v4.4: carta na grade inclina com o mouse e botão − fica centralizado {tv}")
+    check(tv[0] and tv[1] and tv[2] == "center", f"v4.5: carta na grade inclina com o mouse e botão − fica centralizado {tv}")
     page.mouse.move(700, 600); page.wait_for_timeout(100)
-    check(not page.evaluate("document.querySelector('#tt .pocket').classList.contains('hot')"), "v4.4: carta volta ao repouso ao sair")
+    check(not page.evaluate("document.querySelector('#tt .pocket').classList.contains('hot')"), "v4.5: carta volta ao repouso ao sair")
     page.evaluate("document.getElementById('tt').remove()")
     lc = b.new_context(viewport={"width": 844, "height": 390}, is_mobile=True, has_touch=True, locale="pt-BR", service_workers="block")
     lp = lc.new_page(); lp.route("**/*", handle); lp.goto(APP); lp.wait_for_selector(".empty .btn.primary", timeout=8000)

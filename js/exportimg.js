@@ -13,11 +13,12 @@ export const autoCols=n=>Math.max(2,Math.min(10,Math.round(Math.sqrt(n*0.9))));
 /* Medidas da folha para n cartas em cols colunas com cartas de largura cw.
    A folha nunca fica mais estreita que MIN_COLS colunas, para o cabeçalho e o rodapé terem espaço. */
 const MIN_COLS=4;
-export function sheetSize(n,cols,cw,labels,lines,kind,extra){
+const SECH=0.36;   /* altura do cabeçalho de cada lista, em larguras de carta */
+export function sheetSize(n,cols,cw,labels,lines,kind,extra,nSec=0,rowsOv=0){
  const g=cw*0.045,pad=cw*0.07,ch=cw*1.375,lab=labels?cw*(0.38+(extra?0.1:0)):0,head=cw*(0.07+(kind?0.185:0)+(lines||1)*0.165+0.25),foot=cw*0.42;
- const rows=Math.ceil(n/cols);const gc=Math.max(cols,MIN_COLS);
+ const rows=rowsOv||Math.ceil(n/cols);const gc=Math.max(cols,MIN_COLS);
  const gridW=cols*cw+(cols-1)*g;
- return{g,pad,ch,lab,head,foot,rows,gc,gridW,W:Math.round(pad*2+gc*cw+(gc-1)*g),H:Math.round(head+rows*(ch+lab+g)+foot+pad*0.5)};
+ return{g,pad,ch,lab,head,foot,rows,gc,gridW,W:Math.round(pad*2+gc*cw+(gc-1)*g),sec:cw*SECH,H:Math.round(head+rows*(ch+lab+g)+nSec*cw*SECH+foot+pad*0.5)};
 }
 /* Escolhe a maior largura de carta em que tudo cabe numa imagem; se não couber, divide em partes. */
 export function planSheets(n,cols,labels,lines,kind,extra){
@@ -28,6 +29,29 @@ export function planSheets(n,cols,labels,lines,kind,extra){
  let rows=1;while(fits((rows+1)*cols,cw))rows++;
  const per=Math.max(cols,rows*cols);const parts=[];
  for(let left=n;left>0;left-=per)parts.push(Math.min(per,left));
+ return{cw,parts};
+}
+
+/* Linhas da grade quando há listas separadas: cada lista começa numa linha nova. sections: [{n}] */
+export function layoutRows(sections,cols){
+ const rows=[];let at=0;
+ sections.forEach((sc,si)=>{for(let i=0;i<sc.n;i+=cols)rows.push({sec:si,from:at+i,to:at+Math.min(sc.n,i+cols)});at+=sc.n;});
+ return rows;
+}
+const headersOf=rows=>{let h=0,prev=-1;rows.forEach(r=>{if(r.sec!==prev){h++;prev=r.sec;}});return h;};
+export function planSections(rows,cols,labels,lines,kind,extra){
+ const L=limits();
+ const fits=(rs,cw)=>{const s=sheetSize(0,cols,cw,labels,lines,kind,extra,headersOf(rs),rs.length);return s.W*s.H<=L.area&&s.W<=L.dim&&s.H<=L.dim;};
+ for(const cw of WIDTHS)if(fits(rows,cw))return{cw,parts:[rows]};
+ const cw=WIDTHS[WIDTHS.length-1];
+ const parts=[];let cur=[];
+ rows.forEach(r=>{
+  const next=cur.concat([r]);
+  if(cur.length&&!fits(next,cw)){parts.push(cur);cur=[{...r,cont:true}];}else cur=next;
+ });
+ if(cur.length)parts.push(cur);
+ /* a primeira linha de cada parte, quando continua uma lista, ganha o aviso de continuação */
+ parts.forEach((pt,i)=>{if(i>0){const prevSec=parts[i-1][parts[i-1].length-1].sec;pt[0]={...pt[0],cont:pt[0].sec===prevSec};}});
  return{cw,parts};
 }
 
@@ -91,13 +115,15 @@ function wrap(ctx,text,maxW,maxLines){
 }
 const linesGuess=t=>String(t||'').length>22?2:1;
 
-function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty){
+function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty,rowsIn,secs){
  const full=title+(partTotal>1?` (parte ${partNo}/${partTotal})`:'');
  const probe=document.createElement('canvas').getContext('2d');
  probe.font=`800 ${cw*0.16}px "Hanken Grotesk","Segoe UI",Roboto,Helvetica,Arial,sans-serif`;
- const w0=sheetSize(items.length,o.cols,cw,o.labels,1,!!o.kindLabel,o.extra);
+ const rowsL=rowsIn||Array.from({length:Math.ceil(items.length/o.cols)},(_,r)=>({sec:null,from:r*o.cols,to:Math.min(items.length,(r+1)*o.cols)}));
+ const nSec=secs?headersOf(rowsL):0;
+ const w0=sheetSize(items.length,o.cols,cw,o.labels,1,!!o.kindLabel,o.extra,nSec,rowsL.length);
  const nLines=wrap(probe,full,w0.W-w0.pad*2,2).length;
- const s=sheetSize(items.length,o.cols,cw,o.labels,nLines,!!o.kindLabel,o.extra);
+ const s=sheetSize(items.length,o.cols,cw,o.labels,nLines,!!o.kindLabel,o.extra,nSec,rowsL.length);
  const cv=document.createElement('canvas');cv.width=s.W;cv.height=s.H;
  const ctx=cv.getContext('2d');
  ctx.fillStyle='#F2F4F9';ctx.fillRect(0,0,s.W,s.H);
@@ -120,11 +146,29 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty){
  y+=cw*0.11;
  ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.078}px ${FONT}`;
  ctx.fillText(fit(ctx,`${totalCards} carta${totalCards===1?'':'s'}${totalQty!=null?' · '+totalQty+' unidade'+(totalQty===1?'':'s'):''}  ·  ${new Date().toLocaleDateString('pt-BR')}`,textW),s.pad,y);
- /* cartas */
- items.forEach((it,i)=>{
-  const col=i%o.cols,row=Math.floor(i/o.cols);
-  const x=x0+col*(cw+s.g),yy=s.head+row*(s.ch+s.lab+s.g);
-  const b=bmps[i];
+ /* cartas (cada lista começa na própria linha, com cabeçalho) */
+ let off=0,prevSec=-1;
+ rowsL.forEach((rw,ri)=>{
+  if(secs&&rw.sec!==prevSec){
+   prevSec=rw.sec;const sc=secs[rw.sec];const hy=s.head+off+ri*(s.ch+s.lab+s.g);
+   ctx.textAlign='left';
+   ctx.font=`800 ${cw*0.06}px ${FONT}`;const kt=(sc.kindLabel||'').toUpperCase();
+   const kh=cw*0.115;let tx=x0;
+   if(kt){const kw=ctx.measureText(kt).width+cw*0.2;rr(ctx,x0,hy+cw*0.02,kw,kh,kh/2);ctx.fillStyle=sc.color||'#D93A2B';ctx.fill();ctx.fillStyle='#fff';ctx.fillText(kt,x0+cw*0.1,hy+cw*0.02+kh*0.72);tx=x0+kw+cw*0.12;}
+   ctx.font=`800 ${cw*0.1}px ${FONT}`;ctx.fillStyle='#121A2B';
+   const lbl=sc.label+(rw.cont?' (continuação)':'');
+   const stat=`${sc.n} carta${sc.n===1?'':'s'} · ${sc.q} unidade${sc.q===1?'':'s'}`;
+   ctx.font=`600 ${cw*0.068}px ${FONT}`;const sw=ctx.measureText(stat).width;
+   ctx.font=`800 ${cw*0.1}px ${FONT}`;
+   ctx.fillText(fit(ctx,lbl,Math.max(cw,s.gridW-(tx-x0)-sw-cw*0.2)),tx,hy+cw*0.02+kh*0.82);
+   ctx.font=`600 ${cw*0.068}px ${FONT}`;ctx.fillStyle='#59647D';ctx.textAlign='right';ctx.fillText(stat,x0+s.gridW,hy+cw*0.02+kh*0.8);ctx.textAlign='left';
+   ctx.strokeStyle='#D8DDE9';ctx.lineWidth=Math.max(1,cw*0.004);ctx.beginPath();ctx.moveTo(x0,hy+cw*0.2);ctx.lineTo(x0+s.gridW,hy+cw*0.2);ctx.stroke();
+   off+=s.sec;
+  }
+  for(let i=rw.from;i<rw.to;i++){
+  const col=i-rw.from,row=ri;
+  const x=x0+col*(cw+s.g),yy=s.head+off+row*(s.ch+s.lab+s.g);
+  const it=items[i],b=bmps[i];
   ctx.save();rr(ctx,x,yy,cw,s.ch,cw*0.045);ctx.clip();
   if(b)ctx.drawImage(b,x,yy,cw,s.ch);
   else{ctx.fillStyle='#CBD2E0';ctx.fillRect(x,yy,cw,s.ch);ctx.fillStyle='#121A2B';ctx.font=`700 ${cw*0.085}px ${FONT}`;ctx.textAlign='center';ctx.fillText(fit(ctx,it.n,cw*0.86),x+cw/2,yy+s.ch/2);ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.06}px ${FONT}`;ctx.fillText('Imagem indisponível',x+cw/2,yy+s.ch/2+cw*0.1);ctx.textAlign='left';}
@@ -150,6 +194,7 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty){
     if(ex.length){ctx.fillStyle='#121A2B';ctx.font=`800 ${cw*0.068}px ${FONT}`;ctx.fillText(fit(ctx,ex.join(' · '),cw),x,ly+cw*0.17);}
    }
   }
+   }
  });
  /* rodapé em duas linhas, com margem de segurança */
  ctx.strokeStyle='#D8DDE9';ctx.lineWidth=Math.max(1,cw*0.004);
@@ -165,19 +210,36 @@ const slug=t=>String(t||'cartas').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowe
 /* Gera as imagens. items: [{url,n,no,q,f,l}] */
 export async function buildImages(items,o){
  const labels=o.labels!==false;
- const cols=Math.max(1,Math.min(10,items.length,o.cols||autoCols(items.length)));
+ const maxSec=o.sections&&o.sections.length?Math.max(...o.sections.map((_,si)=>items.filter(i=>i.sec===si).length)):items.length;
+ const cols=Math.max(1,Math.min(10,Math.max(1,maxSec),o.cols||autoCols(maxSec)));
  const extra=!!o.extra&&labels&&items.some(i=>i.c||typeof i.p==='number');
- const plan=planSheets(items.length,cols,labels,linesGuess(o.title+' (parte 1/1)'),!!o.kindLabel,extra);
+ const secs=o.sections&&o.sections.length?o.sections.map((sc,si)=>{const its=items.filter(i=>i.sec===si);return{...sc,n:its.length,q:its.reduce((a,i)=>a+(i.q||0),0)};}):null;
  const {bmps,fb,miss}=await loadAll(items,o.onProgress);
  const totalQty=items.reduce((a,i)=>a+(i.q||0),0);
- const files=[];let at=0;
- for(let p=0;p<plan.parts.length;p++){
-  const n=plan.parts[p];
-  const cv=drawSheet(items.slice(at,at+n),bmps.slice(at,at+n),{cols,labels,extra,kindLabel:o.kindLabel,kindColor:o.kindColor},plan.cw,o.title,p+1,plan.parts.length,items.length,totalQty);
+ const files=[];
+ let plan,partsLayout;
+ if(secs){
+  const rows=layoutRows(secs,cols);
+  plan=planSections(rows,cols,labels,linesGuess(o.title+' (parte 1/1)'),false,extra);
+  partsLayout=plan.parts;
+ }else{
+  plan=planSheets(items.length,cols,labels,linesGuess(o.title+' (parte 1/1)'),!!o.kindLabel,extra);
+ }
+ const nParts=plan.parts.length;
+ let at=0;
+ for(let p=0;p<nParts;p++){
+  let cv;
+  if(secs){
+   const rows=partsLayout[p];
+   cv=drawSheet(items,bmps,{cols,labels,extra,kindLabel:null},plan.cw,o.title,p+1,nParts,items.length,totalQty,rows,secs);
+  }else{
+   const n=plan.parts[p];
+   cv=drawSheet(items.slice(at,at+n),bmps.slice(at,at+n),{cols,labels,extra,kindLabel:o.kindLabel,kindColor:o.kindColor},plan.cw,o.title,p+1,nParts,items.length,totalQty);
+   at+=n;
+  }
   const blob=await toBlob(cv);cv.width=cv.height=1;
   if(!blob)throw new Error('O navegador não conseguiu gerar a imagem (talvez seja grande demais).');
-  files.push(new File([blob],slug(o.title)+(plan.parts.length>1?'-parte'+(p+1):'')+'.jpg',{type:'image/jpeg'}));
-  at+=n;
+  files.push(new File([blob],slug(o.title)+(nParts>1?'-parte'+(p+1):'')+'.jpg',{type:'image/jpeg'}));
  }
  bmps.forEach(b=>b&&b.close&&b.close());
  return{files,fb,miss,cw:plan.cw,cols};
@@ -217,8 +279,9 @@ export function openExport(c){
  cfg={...c,scope:c.scopes?c.scopes[0].v:null};
  const n0=c.build(cfg.scope).length;
  $('#dialog').innerHTML=`<h2>Exportar imagem</h2>
-  <p class="lead">Gera uma imagem com as cartas desta lista, com a quantidade sobre cada carta, para você compartilhar.</p>
+  <p class="lead">${c.sections?`Gera uma imagem juntando ${c.sections.length} listas, cada uma na própria seção, com a quantidade sobre cada carta.`:'Gera uma imagem com as cartas desta lista, com a quantidade sobre cada carta, para você compartilhar.'}</p>
   ${c.scopes?`<label class="lbl2" for="exs" style="display:block;margin-top:8px">Quais cartas</label><select class="field" id="exs" data-exp="scope">${c.scopes.map(s=>`<option value="${s.v}">${esc(s.l)}</option>`).join('')}</select>`:''}
+  ${c.sections?`<label class="lbl2" for="ext" style="margin-top:8px;display:block">Título da imagem</label><input class="field" id="ext" type="text" value="${esc(c.title)}" maxlength="120">`:''}
   <label class="lbl2" for="exc" style="margin-top:12px;display:block">Colunas (no máximo 10)</label>
   <select class="field" id="exc"><option value="0">Automático</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('')}</select>
   <label class="size" style="margin-top:12px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="exl" checked> Mostrar nome, número, acabamento e idioma</label>
@@ -236,12 +299,12 @@ export async function runExport(){
  items=items.map(i=>{const x={...i};if(!showP)delete x.p;if(!showC)delete x.c;return x;});
  if(!items.length){toast('Não há cartas para exportar nesta opção.');return;}
  const cols=+($('#exc')||{value:0}).value||0;const labels=!!($('#exl')||{checked:true}).checked;
- const title=cfg.title;
+ const title=(($('#ext')||{}).value||'').trim()||cfg.title;
  let tab=null;
  if(!TOUCH()){try{tab=window.open('','_blank');if(tab)tab.document.title='Gerando imagem…';}catch(e){}}
  const btn=$('#exgo');if(btn){btn.disabled=true;btn.textContent='Gerando… 0%';}
  try{
-  const r=await buildImages(items,{title,cols,labels,extra:showP||showC,kindLabel:cfg.kindLabel,kindColor:cfg.kindColor,onProgress:(d,t)=>{const b=$('#exgo');if(b)b.textContent=`Gerando… ${Math.round(d/t*100)}%`;}});
+  const r=await buildImages(items,{title,cols,labels,extra:showP||showC,kindLabel:cfg.kindLabel,kindColor:cfg.kindColor,sections:cfg.sections,onProgress:(d,t)=>{const b=$('#exgo');if(b)b.textContent=`Gerando… ${Math.round(d/t*100)}%`;}});
   document.getElementById('modal').classList.remove('on');
   let msg='';
   if(r.miss)msg+=`${r.miss} carta(s) ficaram sem imagem. `;
