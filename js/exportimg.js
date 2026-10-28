@@ -178,7 +178,7 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty,ro
    const txt='×'+it.q;ctx.font=`800 ${cw*0.1}px ${FONT}`;
    const bw=Math.max(cw*0.26,ctx.measureText(txt).width+cw*0.13),bh=cw*0.15;
    const bx=x+(cw-bw)/2,by=yy+s.ch-bh-cw*0.035;
-   rr(ctx,bx,by,bw,bh,bh/2);ctx.fillStyle='rgba(18,26,43,.94)';ctx.fill();
+   rr(ctx,bx,by,bw,bh,bh/2);ctx.fillStyle='#D63A2F';ctx.fill();
    ctx.lineWidth=Math.max(2,cw*0.008);ctx.strokeStyle='#fff';ctx.stroke();
    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(txt,x+cw/2,by+bh*0.72);ctx.textAlign='left';
   }
