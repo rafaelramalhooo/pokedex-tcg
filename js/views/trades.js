@@ -80,7 +80,7 @@ export function renderTrade(){
  g.innerHTML=`<div class="cards">${t.items.map(it=>tradeTile(t,it)).join('')}</div>`;
  S.cur.nav=t.items.map(it=>({id:it.id,tkey:itemKey(it)}));
 }
-const saveAndRefresh=()=>{saveTrades();if(S.cur&&S.cur.refresh)S.cur.refresh();};
+const saveAndRefresh=()=>{saveTrades();if(S.cur&&S.cur.refresh)S.cur.refresh();if(S.ui.tradeAdd&&$('#tres'))renderAddTrade();};
 /* painel da carta aberto a partir de uma lista */
 function tpStep(d){
  const c=S.ui.panelCtx;const x=c&&getTrade(c.tradeId);const it=x&&x.items.find(i=>itemKey(i)===c.tradeKey);if(!it)return;
@@ -113,6 +113,7 @@ const commit=()=>{
  const st=S.ui.tradeAdd||S.ui.pull;const t=st&&getTrade(st.id);const el=$('#tdcount');
  if(t&&el)el.textContent=countTxt(t);
  if(S.cur&&S.cur.refresh)S.cur.refresh();
+ if(S.ui.tradeAdd&&$('#tres'))renderAddTrade();
 };
 const CHECK='<span class="plcheck" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
 const setOptions=()=>{
@@ -130,10 +131,10 @@ export function renderAddTrade(){
  const res=[];
  for(const id in S.briefs){const c=S.briefs[id];if(!visibleSet(c.setId))continue;if(st.set&&c.setId!==st.set)continue;if(nz(c.name).includes(q)){res.push(id);if(res.length>=300)break;}}
  const list=res.slice(0,40);
- el.innerHTML=res.length?`<p class="lbl2">${fmtN(res.length)} resultados${res.length>list.length?', mostrando os primeiros '+list.length:''}. Toque na carta para escolher a variação.</p><div class="cards" style="--tile:118px">${list.map(id=>{
+ el.innerHTML=res.length?`<p class="lbl2">${fmtN(res.length)} resultados${res.length>list.length?', mostrando os primeiros '+list.length:''}. Toque na carta para colocá-la na lista e ajustar os detalhes.</p><div class="cards" style="--tile:118px">${list.map(id=>{
   const c=S.briefs[id];const set=S.setMap[c.setId];
   const n=t.items.filter(i=>i.id===id).reduce((a,i)=>a+i.q,0);
-  return`<div class="slot on plslot ${n?'sel':''}" data-act="tr-pick" data-id="${esc(id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, ${esc(set?set.name:'')}, escolher variação">
+  return`<div class="slot on plslot ${n?'sel':''}" data-act="tr-pick" data-id="${esc(id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, ${esc(set?set.name:'')}, ajustar na lista">
    <div class="pocket">${imgTag(c.image,'low',c.name,undefined,id)}${n?CHECK+`<span class="qty tq">×${n}</span>`:''}</div>
    <div class="num"><b>${esc(c.name)}</b><span>${esc(c.localId)}</span></div><div class="num"><span>${esc(set?set.name:'')}</span></div></div>`;}).join('')}</div>`:'<p class="lead">Nenhuma carta com esse nome. Se ela é de uma coleção que você ainda não baixou, use “Procurar em todas as coleções”.</p>';
 }
@@ -173,45 +174,28 @@ async function allCollections(){
  cur.loadedAll=true;
  if(!cur.pick){showSearch();}
 }
-/* Tela de variações: acabamento, idioma e quantidade da carta escolhida. */
-function showVariation(){
- const st=S.ui.tradeAdd;const t=st&&getTrade(st.id);const id=st&&st.pick;if(!t||!id)return;
- const sn=snapOf(id);const v=S.cards[id]&&S.cards[id].variants;
- let fins=S.cards[id]&&S.cards[id].variants?finsOfCard(S.cards[id]):['normal','holo','reverse'];if(!fins.length)fins=['normal','holo','reverse'];
- const lang=st.lang||langOf(id);
- const inList=f=>t.items.filter(i=>i.id===id&&i.f===f&&i.l===lang).reduce((a,i)=>a+i.q,0);
- const sum=fins.reduce((a,f)=>a+(st.fin[f]||0),0);
- const set=S.setMap[sn.s];
- $('#taview').innerHTML=`<button class="btn small" type="button" data-act="tv-back">‹ Voltar à busca</button>
-  <div class="tvgrid"><div class="tvimg"><div class="pocket">${imgTag(sn.i,'high',sn.n,undefined,id)}</div></div>
-   <div class="tvinfo"><h3>${esc(sn.n)}</h3><p class="lead" style="margin:0">${esc(sn.no)}${set?' · '+esc(set.name):''}</p>
-    <label class="lbl2" style="margin-top:12px;display:block">Idioma</label>
-    <div class="seg tvlang" role="group" aria-label="Idioma">${LANGS.map(([k,l])=>`<button type="button" data-act="tv-lang" data-v="${k}" aria-pressed="${lang===k}" title="${l}">${flagHTML(k)} ${k.toUpperCase()}</button>`).join('')}</div>
-    <label class="lbl2" style="margin-top:12px;display:block">Acabamento e quantidade</label>
-    ${fins.map(f=>`<div class="tvrow"><div><b>${FIN_LABEL[f]}</b>${inList(f)?`<br><small>na lista ×${inList(f)}</small>`:''}</div>
-     <div class="stepper"><button type="button" class="btn small" data-act="tv-dec" data-f="${f}" aria-label="Diminuir ${FIN_LABEL[f]}">−</button><span class="tvq">${st.fin[f]||0}</span><button type="button" class="btn small" data-act="tv-inc" data-f="${f}" aria-label="Aumentar ${FIN_LABEL[f]}">+</button></div></div>`).join('')}
-    <div style="margin-top:14px"><button class="btn primary" type="button" data-act="tv-add" ${sum?'':'disabled'}>Adicionar à lista</button></div></div></div>`;
- const b=$('#taview');if(b)b.scrollTop=0;
-}
-function tvPick(id){
- const st=S.ui.tradeAdd;if(!st)return;
- st.pick=id;st.lang=langOf(id);st.fin={normal:0,holo:0,reverse:0};
- showVariation();
- if(!S.cards[id]||S.cards[id].rvp===undefined)ensureCard(id,true).then(()=>{if(st.pick===id)showVariation();}).catch(()=>{});
-}
-function tvStep(f,d){
- const st=S.ui.tradeAdd;if(!st||!st.pick)return;
- st.fin[f]=Math.max(0,Math.min(99,(st.fin[f]||0)+d));showVariation();
-}
-function tvAdd(){
- const st=S.ui.tradeAdd;const t=st&&getTrade(st.id);if(!t||!st.pick)return;
- let n=0;
- for(const f of Object.keys(st.fin)){const q=st.fin[f]||0;if(q>0){addItem(t,st.pick,f,st.lang||langOf(st.pick),q);n+=q;}}
- if(!n)return;
+/* Tocar numa carta da busca já a coloca na lista e abre o mesmo painel da carta (“Nesta lista”),
+   onde se ajusta quantidade, acabamento, idioma, condição e valor. Se ela já está na lista, só abre. */
+function quickAdd(id){
+ const st=S.ui.tradeAdd;const t=st&&getTrade(st.id);if(!t)return;
+ const known=S.cards[id]&&S.cards[id].variants?finsOfCard(S.cards[id]):[];
+ const f=!known.length||known.includes('normal')?'normal':known[0];
+ const l=langOf(id);
+ const probe={id,f,l,c:''};
+ const had=t.items.some(x=>itemKey(x)===itemKey(probe));
+ if(!had)addItem(t,id,f,l,1);
  commit();
- st.pick=null;st.fin={normal:0,holo:0,reverse:0};
- showSearch();
- toast(`Adicionei ${n} ${n===1?'cópia':'cópias'} à lista.`);
+ const ctx={tradeId:t.id,tradeKey:itemKey(probe)};
+ openPanel(id,ctx);
+ if(!had&&!known.length)ensureCard(id,true).then(()=>{
+  const fins=S.cards[id]&&S.cards[id].variants?finsOfCard(S.cards[id]):[];
+  if(!fins.length||fins.includes(f))return;
+  const cur=getTrade(t.id);if(!cur)return;
+  const r=updateItem(cur,itemKey(probe),{f:fins[0]});
+  if(r&&S.ui.panelCtx&&S.ui.panelCtx.tradeKey===itemKey(probe))S.ui.panelCtx.tradeKey=itemKey(r);
+  saveTrades();if(S.cur&&S.cur.refresh)S.cur.refresh();
+  if(S.ui.panelId===id)renderPanel();
+ }).catch(()=>{});
 }
 function itemDialog(t,it){
  const key=itemKey(it);S.ui.tr={id:t.id,key};
@@ -445,12 +429,7 @@ export const TRADE_ACT={
   S.trades=S.trades.filter(y=>y.id!==x.id);saveTrades();closeDlg();location.hash='#/negociacao';
  },
  'trade-add':t=>addDialog(t.dataset.id),
- 'tr-pick':t=>tvPick(t.dataset.id),
- 'tv-back':()=>showSearch(),
- 'tv-lang':t=>{const st=S.ui.tradeAdd;if(!st)return;st.lang=t.dataset.v;showVariation();},
- 'tv-inc':t=>tvStep(t.dataset.f,1),
- 'tv-dec':t=>tvStep(t.dataset.f,-1),
- 'tv-add':()=>tvAdd(),
+ 'tr-pick':t=>quickAdd(t.dataset.id),
  'ta-all':()=>allCollections(),
  'trade-pull':t=>pullDialog(t.dataset.id),
  'pl-toggle':t=>plToggle(t.dataset.key),
