@@ -200,7 +200,7 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty,ro
  ctx.strokeStyle='#D8DDE9';ctx.lineWidth=Math.max(1,cw*0.004);
  ctx.beginPath();ctx.moveTo(s.pad,s.H-s.foot*0.95);ctx.lineTo(s.W-s.pad,s.H-s.foot*0.95);ctx.stroke();
  ctx.fillStyle='#8B94AB';ctx.font=`500 ${cw*0.052}px ${FONT}`;ctx.textAlign='center';
- ctx.fillText(fit(ctx,'Gerado pelo Pokédex TCG · app pessoal',textW),s.W/2,s.H-s.foot*0.55);
+ ctx.fillText(fit(ctx,'Gerado pelo TCG Collection · app pessoal',textW),s.W/2,s.H-s.foot*0.55);
  ctx.fillText(fit(ctx,'Não afiliado à The Pokémon Company · imagens: TCGdex',textW),s.W/2,s.H-s.foot*0.3);
  return cv;
 }

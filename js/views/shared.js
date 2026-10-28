@@ -31,7 +31,7 @@ function openPub(i){
 }
 const KIND={sell:'Vendo / Troco',want:'Procuro'};
 let cur=null;
-const shell=inner=>`<div class="pubwrap">${inner}<p class="pubfoot">Lista compartilhada pelo app pessoal Pokemon TCG Gestão de Coleção. Dados e imagens: TCGdex. Não afiliado à The Pokémon Company.</p></div>`;
+const shell=inner=>`<div class="pubwrap">${inner}<p class="pubfoot">Lista compartilhada pelo app pessoal TCG Collection. Dados e imagens: TCGdex. Não afiliado à The Pokémon Company.</p></div>`;
 export async function viewShared(code){
  S.cur={name:'shared'};
  $('#view').innerHTML=shell('<h1>Lista compartilhada</h1><p class="lead">Carregando…</p>');

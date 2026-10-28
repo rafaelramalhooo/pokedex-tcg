@@ -1,6 +1,6 @@
 {
-  "name": "Pokédex TCG — minha coleção",
-  "short_name": "Pokédex TCG",
+  "name": "TCG Collection",
+  "short_name": "TCG Collection",
   "description": "Gestão pessoal da coleção de Pokémon Estampas Ilustradas (TCG).",
   "lang": "pt-BR",
   "start_url": "./",
