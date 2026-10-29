@@ -183,7 +183,7 @@ with sync_playwright() as p:
     A.wait_for_selector("#auth.on", state="detached", timeout=10000)
     wait_idle(A)
     check("rafael@teste.com" in A.locator("#acct").inner_text() and "Sincronizado" in A.locator("#acct").inner_text(), "menu mostra o e-mail e 'Sincronizado'")
-    check("v5.1.1" in A.locator(".rail .ver").inner_text(), "versão 3.11 no menu")
+    check("v5.2" in A.locator(".rail .ver").inner_text(), "versão 3.11 no menu")
     uid = users["rafael@teste.com"]["id"]
     check(len(db[uid]["collection"]) == 3 and len(db[uid]["binders"]) == 1 and len(db[uid]["user_settings"]) == 1 and len(db[uid]["custom_images"]) == 1, f"nuvem recebeu coleção, fichário, ajustes e imagem ({ {k:len(v) for k,v in db[uid].items()} })")
     check(db[uid]["collection"]["sv01-2"]["finishes"]["reverse"]["l"] == "en", "acabamento e idioma enviados")

@@ -118,12 +118,12 @@ export function renderBinderBody(){
  if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas coleções: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
  live($('#bsum')).innerHTML=notes+statsHTML(r,own,tot);
  const g=live($('#bgrid'));
- renderBar(r.dex?r.dex.flatMap(x=>x.cand||[]):r.ids);
+ renderBar(r.dex?r.dex.filter(x=>x.rep).map(x=>x.rep):r.ids);
  if(r.dex){
   const q=parseQuery(S.ui.binderQ);
-  /* com filtro de raridade/tipo, cada espaço da Pokédex passa a mostrar (e contar) só as cartas que combinam */
-  const dexSlots=ffActive()?r.dex.map(x=>{const m=(x.cand||[]).filter(ffMatch);if(!m.length)return null;const ow=m.filter(isOwned);return{...x,cand:m,rep:ow[0]||m[0],have:ow,owned:ow.length>0};}).filter(Boolean):r.dex;
-  const list=dexSlots.filter(x=>(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned))&&slotMatches(x,q)&&(!ffActive()||(x.cand||[]).some(ffMatch)));
+  /* no fichário de Pokédex só existem as cartas que você colocou nos espaços; o filtro olha para elas e nunca troca por outra */
+  const dexSlots=ffActive()?r.dex.filter(x=>x.rep&&ffMatch(x.rep)):r.dex;
+  const list=dexSlots.filter(x=>(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned))&&slotMatches(x,q));
   S.cur.nav=list.filter(x=>x.rep).map(x=>({id:x.rep,dex:x.dex}));
   const shown=list.slice(0,S.ui.binderShown);
   if(list.length&&isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter+ffSig(),bookCover(b));return;}
