@@ -883,7 +883,7 @@ with sync_playwright() as p:
     page.locator('[data-act="bk-apply"]').click(); page.wait_for_timeout(400)
     st1 = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>[i.id,i.f,i.l,i.q])))")
     check(st1 == st0 and "Total" not in page.locator("#tchips").inner_text(), "em massa: limpar condição e valor e subtrair devolve a lista ao que era")
-    # ---- v5.0: Menor da Liga ----
+    # ---- v5.0.1: Menor da Liga ----
     getit = "import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>[i.p===undefined?null:i.p,i.lg===true])))"
     page.locator("#tgrid .tradeslot .pocket").nth(0).click(); page.wait_for_selector('#panel [data-tp="lg"]')
     page.fill('#panel [data-tp="p"]', "20"); page.press('#panel [data-tp="p"]', "Tab"); page.wait_for_timeout(250)
@@ -907,7 +907,7 @@ with sync_playwright() as p:
     check('"lg":true' in shotl[0] and 'lg' not in shotl[1], f"Menor da Liga: vai para o link público só se o valor for compartilhado {shotl}")
     exl = page.evaluate("import('./js/exportimg.js').then(m=>m.buildImages([{url:'',n:'Carta A',no:'1',q:2,f:'normal',l:'pt',lg:true}],{title:'Teste',cols:2,labels:true,extra:true,kindLabel:'Vendo'}).then(r=>[r.files.length]))")
     check(exl == [1], f"Menor da Liga: imagem da lista gera {exl}")
-    # ---- v5.0: mudar a ordem das cartas ----
+    # ---- v5.0.1: mudar a ordem das cartas ----
     page.wait_for_selector("#tgrid .tradeslot[data-key]")
     ord0 = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>i.id)))")
     page.wait_for_function("document.querySelectorAll('#tgrid .tradeslot[data-key]').length===2")
@@ -962,7 +962,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v5.0" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v5.0.1" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
@@ -1309,7 +1309,7 @@ Total de cartas: 60"""
       await k.loadOwnedCards();const loaded=!!s.cards['sv01-7'];const after=r.dexModel(b).find(x=>x.dex===7);
       delete s.collection['sv01-7'];return {had,rep,miss,loaded,cand:after.cand.includes('sv01-7')};}""")
     check(ow["had"] and ow["rep"] == "sv01-7" and ow["miss"] and ow["loaded"] and ow["cand"], f"Pokédex: carta sua sem detalhes aparece e os detalhes são baixados sozinhos {ow}")
-    # ---- v5.0: filtros por raridade e tipo ----
+    # ---- v5.0.1: filtros por raridade e tipo ----
     page.goto(APP + "#/"); page.wait_for_selector(".set", timeout=8000)
     page.locator(".set").first.click(); page.wait_for_selector("#ffbar .fbar", timeout=8000)
     page.wait_for_selector("#grid .slot", timeout=8000)
@@ -1327,8 +1327,8 @@ Total de cartas: 60"""
     page.locator('[data-act="ff-open"][data-k="tipo"]').click(); page.wait_for_selector('.fpanel .fchip[data-k="tipo"]')
     tchips = page.locator(".fpanel .fchip").all_inner_texts()
     check(any("Fogo" in c for c in tchips) and any("Água" in c for c in tchips), f"filtro: opções de tipo vêm das cartas {tchips}")
-    fx = page.evaluate("import('./js/filters.js').then(async f=>{const S=(await import('./js/state.js')).S;S.cards.zt={category:'Trainer',rarity:'Rara'};S.cards.ze={category:'Energy'};S.cards.zp={category:'Pokemon',types:['Fire','Water']};const r=[f.facets('zt').tipos,f.facets('ze').tipos,f.facets('zp').tipos];delete S.cards.zt;delete S.cards.ze;delete S.cards.zp;return JSON.stringify(r)})")
-    check(fx == '[["treinador"],["energia"],["fogo","agua"]]', f"filtro: Treinador e Energia viram tipos próprios {fx}")
+    fx = page.evaluate("import('./js/filters.js').then(async f=>{const S=(await import('./js/state.js')).S;S.cards.zt={category:'Trainer',rarity:'Rara'};S.cards.ze={category:'Energy'};S.cards.zp={category:'Pokemon',types:['Fire','Water']};S.cards.zl={category:'Pokémon',types:['Lutador','Sombrio'],rarity:'None'};const r=[f.facets('zt').tipos,f.facets('ze').tipos,f.facets('zp').tipos,f.facets('zl').tipos,f.facets('zl').rar];delete S.cards.zl;delete S.cards.zt;delete S.cards.ze;delete S.cards.zp;return JSON.stringify(r)})")
+    check(fx == '[["treinador"],["energia"],["fogo","agua"],["luta","escuridao"],"Sem raridade"]', f"filtro: Treinador e Energia viram tipos próprios {fx}")
     page.locator('.fpanel .fchip', has_text="Fogo").first.click(); page.wait_for_timeout(300)
     n_t = page.locator("#grid .slot").count()
     exp_t = page.evaluate("import('./js/state.js').then(m=>{const d=m.S.setd[m.S.cur.id];return d.cards.filter(c=>m.S.cards[c.id]&&(m.S.cards[c.id].types||[]).includes('Fogo')).length})")

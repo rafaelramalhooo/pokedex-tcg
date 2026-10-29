@@ -26,7 +26,7 @@ export function facets(id){
  if(cat==='treinador')tipos=['treinador'];
  else if(cat==='energia')tipos=['energia'];
  else tipos=[...new Set((c.types||[]).map(t=>canon(TYPE_ALIAS,t)).filter(Boolean))];
- return{rar:c.rarity?String(rarityPt(c.rarity)):'Sem raridade',tipos};
+ return{rar:c.rarity&&!/^(none|nenhuma|-)$/i.test(String(c.rarity).trim())?String(rarityPt(c.rarity)):'Sem raridade',tipos};
 }
 export function ffMatch(id){
  if(!ffActive())return true;
@@ -82,7 +82,7 @@ const toggle=(arr,v)=>{const i=arr.indexOf(v);if(i<0)arr.push(v);else arr.splice
 const redraw=()=>{S.ui.binderShown=240;S.ui.page=0;if(S.cur&&S.cur.refresh)S.cur.refresh();};
 export const FF_ACT={
  'ff-open':t=>{const f=ff();f.open=f.open===t.dataset.k?null:t.dataset.k;renderBar(ctx);if(f.open&&missingOf(ctx).length&&missingOf(ctx).length<=AUTO)loadMissing();},
- 'ff-tog':t=>{const f=ff();toggle(t.dataset.k==='rar'?f.rar:f.tipo,t.dataset.v);redraw();},
+ 'ff-tog':t=>{const f=ff();toggle(t.dataset.k==='rar'?f.rar:f.tipo,t.dataset.v);redraw();if(missingOf(ctx).length&&missingOf(ctx).length<=AUTO)loadMissing();},
  'ff-clear':()=>{const f=ff();f.rar=[];f.tipo=[];redraw();},
  'ff-load':()=>{loadMissing();}
 };
