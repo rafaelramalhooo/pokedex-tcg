@@ -4,7 +4,7 @@ import {logoFail} from './logos.js';
 import {$, esc} from './util.js';
 import {customCard} from './custom.js';
 import {modeOf, tileOf} from './modes.js';
-import {derivedImage} from './reprints.js';
+import {derivedImage,isDexUrl} from './reprints.js';
 
 let toastT=null;
 export function toast(msg,label,fn){
@@ -28,6 +28,10 @@ export function imgTag(base,q,name,role,id){
   const b=id&&S.briefs[id];
   return `<div class="ph" data-noimg="1"><b>${esc(name||'')}</b>${b&&b.localId?`<small>${esc(b.localId)}</small>`:''}</div>`;
  }
+ if(isDexUrl(base)&&id){
+  const dv=derivedImage(id);
+  if(dv)return `<img class="lz" decoding="async" alt="" data-src="${esc(dv.url)}/${q}.webp" data-b="${esc(dv.url)}" data-q="${q}" data-name="${esc(name||'')}" data-id="${esc(id)}" data-derived="${dv.kind}" data-alt="${esc(base)}/${q}.webp"${role?` data-role="${role}"`:''}>`;
+ }
  return `<img class="lz" decoding="async" alt="" data-src="${esc(base)}/${q}.webp" data-b="${esc(base)}" data-q="${q}" data-name="${esc(name||'')}"${id?` data-id="${esc(id)}"`:''}${role?` data-role="${role}"`:''}>`;
 }
 document.addEventListener('error',e=>{
@@ -43,6 +47,7 @@ document.addEventListener('error',e=>{
   if(n+1<cand.length){t.dataset.t=n+1;t.src=cand[n+1];return;}
  }
  if(t.dataset.role==='own')return;
+ if(t.dataset.alt){const a=t.dataset.alt;delete t.dataset.alt;t.dataset.b=a;t.dataset.t=99;t.src=a;return;}
  const d=document.createElement('div');d.className='ph';d.dataset.noimg='1';const bb=document.createElement('b');bb.textContent=t.dataset.name||'';d.appendChild(bb);
  const sm=document.createElement('small');sm.textContent='Imagem indisponível';d.appendChild(sm);t.replaceWith(d);
 },true);

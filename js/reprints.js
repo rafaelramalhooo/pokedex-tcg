@@ -23,3 +23,12 @@ export function derivedImage(id){
  if(se)return{url:`${AS}/en/${se.id}/${setId}/${localId}`,kind:'pattern'};
  return null;
 }
+
+/* O Dex (dextcg.com) não deixa outros sites exibirem as imagens dele. Para cartas que só têm imagem do Dex, usa a da TCGdex
+   (arte da carta original ou mesmo padrão de endereço) quando existir; senão devolve o endereço recebido. */
+export const isDexUrl=u=>typeof u==='string'&&u.includes('dextcg.com');
+export function tcgdexBase(id,url){
+ if(!isDexUrl(url)||!id)return url;
+ const dv=derivedImage(id);
+ return dv?dv.url:url;
+}

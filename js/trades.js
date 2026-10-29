@@ -2,7 +2,7 @@
 import {S} from './state.js';
 import {saveKV} from './db.js';
 import {langOf} from './cardlabel.js';
-import {derivedImage} from './reprints.js';
+import {derivedImage,tcgdexBase} from './reprints.js';
 import {customCard} from './custom.js';
 import {uid} from './util.js';
 
@@ -18,7 +18,7 @@ export function snapOf(id){
  const b=S.briefs[id]||{},c=S.cards[id]||{};
  let img=b.image||c.image||'';
  if(!img){const dv=derivedImage(id);if(dv)img=dv.url;}
- return{n:b.name||c.name||id,i:img,no:String(b.localId||c.localId||id.slice(id.lastIndexOf('-')+1)),s:b.setId||c.set||id.slice(0,id.lastIndexOf('-'))};
+ return{n:b.name||c.name||id,i:tcgdexBase(id,img),no:String(b.localId||c.localId||id.slice(id.lastIndexOf('-')+1)),s:b.setId||c.set||id.slice(0,id.lastIndexOf('-'))};
 }
 export function addItem(t,id,f,l,q,c){
  f=f||'normal';l=l||langOf(id);q=Math.max(1,q||1);c=c||'';
@@ -90,7 +90,7 @@ export function pullMine(t){
  }
  return n;
 }
-export const imgOf=it=>customCard(it.id)||(it.i?it.i+'/high.webp':'');
+export const imgOf=it=>{const b=tcgdexBase(it.id,it.i);return customCard(it.id)||(b?b+'/high.webp':'');};
 
 /* ---------- link público ---------- */
 /* Código longo e aleatório (24 caracteres). Quem tem o código vê a cópia da lista; ele não dá acesso a mais nada. */
@@ -104,7 +104,7 @@ export const shareLink=code=>`${location.origin}${location.pathname}#/v/${code}`
 export const shareSnapshot=(t,opts)=>{
  const o=t.kind==='sell'?(opts||{}):{};
  return{v:1,name:t.name,kind:t.kind,at:Date.now(),items:t.items.map(i=>{
-  const x={id:i.id,n:i.n,no:i.no,i:i.i,q:i.q,f:i.f,l:i.l};
+  const x={id:i.id,n:i.n,no:i.no,i:tcgdexBase(i.id,i.i),q:i.q,f:i.f,l:i.l};
   if(o.c&&i.c)x.c=i.c;
   if(o.v&&hasPrice(i))x.p=i.p;
   return x;
