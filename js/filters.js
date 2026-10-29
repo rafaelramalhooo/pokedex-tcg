@@ -16,6 +16,10 @@ export function ffReset(){S.ui.ff={rar:[],tipo:[],open:null,pending:null};ctx=[]
 export const ffActive=()=>{const f=ff();return f.rar.length>0||f.tipo.length>0;};
 export const ffSig=()=>{const f=ff();return f.rar.length||f.tipo.length?'|f:'+f.rar.join(',')+';'+f.tipo.join(','):'';};
 
+/* Raridades como no quadro das cartas (símbolo e nome em português do Brasil) */
+const RAR_SHOW=new Map([['Rara Dupla','Dupla Rara'],['Hiper rara','Hiper Rara'],['ACE SPEC Raro','Ace Spec Rara'],['Ilustração Rara Especial','Ilustração Especial Rara'],['Brilhante Ultra Rara','Shiny Ultra Rara'],['Shiny rara','Shiny Rara']]);
+const RAR_ORDER=['Comum','Incomum','Rara','Dupla Rara','Ace Spec Rara','Ilustração Rara','Ultra Rara','Ilustração Especial Rara','Hiper Rara','Shiny Rara','Shiny Ultra Rara','Promo'];
+const RAR_SYM={'Comum':'●','Incomum':'◆','Rara':'★','Dupla Rara':'★★','Ace Spec Rara':'★','Ilustração Rara':'★','Ultra Rara':'★★','Ilustração Especial Rara':'★★','Hiper Rara':'★★★','Shiny Rara':'☆','Shiny Ultra Rara':'☆☆'};
 const TIPO_LBL=new Map([...TYPES,['treinador','Treinador'],['energia','Energia']]);
 const TIPO_ORDER=[...TYPES.map(t=>t[0]),'treinador','energia'];
 
@@ -26,7 +30,8 @@ export function facets(id){
  if(cat==='treinador')tipos=['treinador'];
  else if(cat==='energia')tipos=['energia'];
  else tipos=[...new Set((c.types||[]).map(t=>canon(TYPE_ALIAS,t)).filter(Boolean))];
- return{rar:c.rarity&&!/^(none|nenhuma|-)$/i.test(String(c.rarity).trim())?String(rarityPt(c.rarity)):'Sem raridade',tipos};
+ const rp=c.rarity&&!/^(none|nenhuma|-)$/i.test(String(c.rarity).trim())?String(rarityPt(c.rarity)):'';
+ return{rar:rp?(RAR_SHOW.get(rp)||rp):'Sem raridade',tipos};
 }
 export function ffMatch(id){
  if(!ffActive())return true;
@@ -41,7 +46,7 @@ function options(ids){
  f.rar.forEach(r=>{if(!rar.has(r))rar.set(r,0);});
  f.tipo.forEach(t=>{if(!tipo.has(t))tipo.set(t,0);});
  return{
-  rar:[...rar.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'pt')),
+  rar:[...rar.entries()].sort((a,b)=>{const ia=RAR_ORDER.indexOf(a[0]),ib=RAR_ORDER.indexOf(b[0]);if(ia>=0||ib>=0)return(ia<0?99:ia)-(ib<0?99:ib);return b[1]-a[1]||a[0].localeCompare(b[0],'pt');}),
   tipo:[...tipo.entries()].sort((a,b)=>TIPO_ORDER.indexOf(a[0])-TIPO_ORDER.indexOf(b[0])).map(([k,n])=>[k,n,TIPO_LBL.get(k)||k])
  };
 }
@@ -68,7 +73,7 @@ export function renderBar(ids){
  const btn=(k,label,n)=>`<button type="button" class="btn small fbtn" data-act="ff-open" data-k="${k}" aria-expanded="${f.open===k}" aria-pressed="${n>0}">${label}${n?` · ${n}`:''} <span aria-hidden="true">${f.open===k?'▴':'▾'}</span></button>`;
  let h=`<div class="fbar"><span class="flab">Filtrar por</span>${btn('rar','Raridade',f.rar.length)}${btn('tipo','Tipo',f.tipo.length)}${ffActive()?'<button type="button" class="btn small ghost" data-act="ff-clear">Limpar filtros</button>':''}</div>`;
  if(f.open){
-  const list=f.open==='rar'?o.rar.map(([k,n])=>[k,n,k]):o.tipo;
+  const list=f.open==='rar'?o.rar.map(([k,n])=>[k,n,(RAR_SYM[k]?RAR_SYM[k]+' ':'')+k]):o.tipo;
   h+=`<div class="fpanel" role="group" aria-label="${f.open==='rar'?'Raridades':'Tipos'}">`+(list.length?list.map(([k,n,l])=>{
    const on=(f.open==='rar'?f.rar:f.tipo).includes(k);
    return`<button type="button" class="fchip" data-act="ff-tog" data-k="${f.open}" data-v="${esc(k)}" aria-pressed="${on}">${esc(l)} <small>${fmtN(n)}</small></button>`;
