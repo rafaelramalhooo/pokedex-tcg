@@ -883,7 +883,7 @@ with sync_playwright() as p:
     page.locator('[data-act="bk-apply"]').click(); page.wait_for_timeout(400)
     st1 = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>[i.id,i.f,i.l,i.q])))")
     check(st1 == st0 and "Total" not in page.locator("#tchips").inner_text(), "em massa: limpar condição e valor e subtrair devolve a lista ao que era")
-    # ---- v5.0.1: Menor da Liga ----
+    # ---- v5.1: Menor da Liga ----
     getit = "import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>[i.p===undefined?null:i.p,i.lg===true])))"
     page.locator("#tgrid .tradeslot .pocket").nth(0).click(); page.wait_for_selector('#panel [data-tp="lg"]')
     page.fill('#panel [data-tp="p"]', "20"); page.press('#panel [data-tp="p"]', "Tab"); page.wait_for_timeout(250)
@@ -903,11 +903,35 @@ with sync_playwright() as p:
     page.locator('[data-act="trade-bulk"]').click(); page.wait_for_selector("#bkl .bkrow"); page.locator('[data-act="bk-all"]').click()
     page.select_option("#bkpm", "liga"); page.locator('[data-act="bk-apply"]').click(); page.wait_for_timeout(400)
     check(page.evaluate(getit) == '[[null,true],[null,true]]', "Menor da Liga: edição em massa marca todas e tira o valor")
+    getld = "import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>i.ld===undefined?null:i.ld)))"
+    page.locator("#tgrid .tradeslot .pocket").nth(0).click(); page.wait_for_selector('#panel .lgdisc')
+    page.locator('#panel .lgdisc [data-v="10"]').click(); page.wait_for_timeout(300)
+    check(page.evaluate(getld) == '[10,null]' and page.locator('#panel .lgdisc [data-v="10"]').get_attribute("aria-pressed") == "true", "desconto: botão −10% grava e fica marcado")
+    page.fill('#panel [data-tp="ld"]', "7,5"); page.press('#panel [data-tp="ld"]', "Tab"); page.wait_for_timeout(300)
+    check(page.evaluate(getld) == '[7.5,null]', "desconto: personalizado aceita vírgula")
+    page.fill('#panel [data-tp="ld"]', "95"); page.press('#panel [data-tp="ld"]', "Tab"); page.wait_for_timeout(300)
+    check(page.evaluate(getld) == '[90,null]', "desconto: limite de 90%")
+    page.locator('#panel .lgdisc [data-v="5"]').click(); page.wait_for_timeout(300)
+    page.locator('#panel [data-act="close"]').click(); page.wait_for_timeout(300)
+    check("Menor da Liga −5%" in page.locator("#tgrid").inner_text(), "desconto: etiqueta 'Menor da Liga −5%' na carta")
+    page.locator("#tgrid .tradeslot .pocket").nth(0).click(); page.wait_for_selector('#panel .lgdisc')
+    page.locator('#panel .lgdisc [data-v="0"]').click(); page.wait_for_timeout(300)
+    check(page.evaluate(getld) == '[null,null]', "desconto: Sem desconto remove")
+    page.locator('#panel .lgdisc [data-v="15"]').click(); page.wait_for_timeout(300)
+    page.locator('#panel [data-tp="lg"]').uncheck(); page.wait_for_timeout(300)
+    check(page.evaluate(getld) == '[null,null]', "desconto: desmarcar Menor da Liga zera o desconto")
+    page.locator('#panel [data-act="close"]').click(); page.wait_for_timeout(300)
+    page.once("dialog", lambda d: d.accept())
+    page.locator('[data-act="trade-bulk"]').click(); page.wait_for_selector("#bkl .bkrow"); page.locator('[data-act="bk-all"]').click()
+    page.select_option("#bkpm", "liga"); page.fill("#bkpv", "10"); page.locator('[data-act="bk-apply"]').click(); page.wait_for_timeout(400)
+    check(page.evaluate(getld) == '[10,10]' and page.locator("#tgrid").inner_text().count("Menor da Liga −10%") == 2, "desconto: edição em massa aplica o percentual")
+    shotd = page.evaluate("import('./js/trades.js').then(m=>{const t={kind:'sell',name:'x',items:[{n:'A',no:'1',i:'',q:1,f:'normal',l:'pt',lg:true,ld:10}]};return [JSON.stringify(m.shareSnapshot(t,{v:true}).items[0]),JSON.stringify(m.shareSnapshot(t,{}).items[0]),m.ligaLabel({lg:true,ld:7.5})]})")
+    check('"ld":10' in shotd[0] and 'ld' not in shotd[1] and shotd[2] == "Menor da Liga −7,5%", f"desconto: link público e etiqueta {shotd}")
     shotl = page.evaluate("import('./js/trades.js').then(m=>{const t={kind:'sell',name:'x',items:[{n:'A',no:'1',i:'',q:1,f:'normal',l:'pt',lg:true}]};return [JSON.stringify(m.shareSnapshot(t,{v:true}).items[0]),JSON.stringify(m.shareSnapshot(t,{}).items[0])]})")
     check('"lg":true' in shotl[0] and 'lg' not in shotl[1], f"Menor da Liga: vai para o link público só se o valor for compartilhado {shotl}")
     exl = page.evaluate("import('./js/exportimg.js').then(m=>m.buildImages([{url:'',n:'Carta A',no:'1',q:2,f:'normal',l:'pt',lg:true}],{title:'Teste',cols:2,labels:true,extra:true,kindLabel:'Vendo'}).then(r=>[r.files.length]))")
     check(exl == [1], f"Menor da Liga: imagem da lista gera {exl}")
-    # ---- v5.0.1: mudar a ordem das cartas ----
+    # ---- v5.1: mudar a ordem das cartas ----
     page.wait_for_selector("#tgrid .tradeslot[data-key]")
     ord0 = page.evaluate("import('./js/state.js').then(m=>JSON.stringify(m.S.trades.find(t=>t.kind==='sell'&&t.items.length===2).items.map(i=>i.id)))")
     page.wait_for_function("document.querySelectorAll('#tgrid .tradeslot[data-key]').length===2")
@@ -962,7 +986,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v5.0.1" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v5.1" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
@@ -1309,7 +1333,7 @@ Total de cartas: 60"""
       await k.loadOwnedCards();const loaded=!!s.cards['sv01-7'];const after=r.dexModel(b).find(x=>x.dex===7);
       delete s.collection['sv01-7'];return {had,rep,miss,loaded,cand:after.cand.includes('sv01-7')};}""")
     check(ow["had"] and ow["rep"] == "sv01-7" and ow["miss"] and ow["loaded"] and ow["cand"], f"Pokédex: carta sua sem detalhes aparece e os detalhes são baixados sozinhos {ow}")
-    # ---- v5.0.1: filtros por raridade e tipo ----
+    # ---- v5.1: filtros por raridade e tipo ----
     page.goto(APP + "#/"); page.wait_for_selector(".set", timeout=8000)
     page.locator(".set").first.click(); page.wait_for_selector("#ffbar .fbar", timeout=8000)
     page.wait_for_selector("#grid .slot", timeout=8000)

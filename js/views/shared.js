@@ -55,13 +55,13 @@ export async function viewShared(code){
   <div class="cards">${data.items.map((it,idx)=>{
    const tag=[finShort(it.f),it.l&&it.l!=='xx'?String(it.l).toUpperCase():'',it.c?String(it.c):''].filter(Boolean).join(' · ');
    return`<div class="slot on tradeslot" data-act="pub-open" data-i="${idx}" role="button" tabindex="0" aria-label="${esc(it.n)}. Ver detalhes"><div class="pocket">${imgTag(it.i,'low',it.n)}<span class="qty tq">×${esc(it.q)}</span></div>
-    <div class="num"><b>${esc(it.n)}</b><span>${esc(it.no)} ${flagHTML(it.l||'xx')}</span></div>${tag?`<div class="num"><span>${esc(tag)}</span></div>`:''}${typeof it.p==='number'?`<div class="num"><b class="tprice">${esc(brl(it.p))}</b></div>`:it.lg===true?`<div class="num"><b class="tprice"><span class="tliga">Menor da Liga</span></b></div>`:''}</div>`;}).join('')}</div>`);
+    <div class="num"><b>${esc(it.n)}</b><span>${esc(it.no)} ${flagHTML(it.l||'xx')}</span></div>${tag?`<div class="num"><span>${esc(tag)}</span></div>`:''}${typeof it.p==='number'?`<div class="num"><b class="tprice">${esc(brl(it.p))}</b></div>`:it.lg===true?`<div class="num"><b class="tprice"><span class="tliga">${esc(it.ld>0?'Menor da Liga −'+String(it.ld).replace('.',',')+'%':'Menor da Liga')}</span></b></div>`:''}</div>`;}).join('')}</div>`);
 }
 export const SHARED_ACT={
  'pub-open':t=>openPub(+t.dataset.i),
  'pub-export':()=>{
   if(!cur)return;
   openExport({title:cur.name||'Lista',kindLabel:KIND[cur.kind==='want'?'want':'sell'],kindColor:cur.kind==='want'?'#2F6FDE':'#D93A2B',scopes:null,extras:{p:cur.items.some(i=>typeof i.p==='number'||i.lg===true),c:cur.items.some(i=>i.c),on:true},
-   build:()=>cur.items.map(it=>({url:it.i?it.i+'/high.webp':'',n:it.n,no:it.no,q:it.q,f:it.f,l:it.l,...(it.c?{c:it.c}:{}),...(typeof it.p==='number'?{p:it.p}:{}),...(it.lg===true&&typeof it.p!=='number'?{lg:true}:{})}))});
+   build:()=>cur.items.map(it=>({url:it.i?it.i+'/high.webp':'',n:it.n,no:it.no,q:it.q,f:it.f,l:it.l,...(it.c?{c:it.c}:{}),...(typeof it.p==='number'?{p:it.p}:{}),...(it.lg===true&&typeof it.p!=='number'?{lg:true,...(it.ld>0?{ld:it.ld}:{})}:{})}))});
  }
 };

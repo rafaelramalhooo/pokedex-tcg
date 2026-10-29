@@ -6,7 +6,7 @@ import {S, refreshAll} from '../state.js';
 import {closePanel, openPanel, renderPanel} from './panel.js';
 import {imgTag, noteHTML, toast} from '../ui.js';
 import {$, ICON, brl, esc, fmtN, live, nz} from '../util.js';
-import {KINDS, addItem, bulkEdit, getTrade, hasPrice, isLiga, imgOf, itemKey, newShareCode, newTrade, parsePrice, saveTrades, setQty, shareLink, shareSnapshot, snapOf, totalQty, tradeTotal, updateItem} from '../trades.js';
+import {KINDS, addItem, bulkEdit, getTrade, hasPrice, isLiga, ligaLabel, parseDisc, imgOf, itemKey, newShareCode, newTrade, parsePrice, saveTrades, setQty, shareLink, shareSnapshot, snapOf, totalQty, tradeTotal, updateItem} from '../trades.js';
 import {canShare, shareList, sharingMissing, unshareList} from '../cloud.js';
 import {openExport} from '../exportimg.js';
 
@@ -64,7 +64,7 @@ export function tradeTile(t,it){
   <div class="pocket">${imgTag(it.i,'low',it.n,undefined,it.id)}<span class="qty tq">×${it.q}</span></div>
   <div class="num"><b>${esc(it.n)}</b><span>${esc(it.no)} ${flagHTML(it.l||'xx')}</span></div>
   ${tag?`<div class="num"><span>${esc(tag)}</span></div>`:''}
-  ${sell?`<div class="num"><b class="tprice">${hasPrice(it)?esc(brl(it.p)):isLiga(it)?'<span class="tliga">Menor da Liga</span>':'<span class="tnop">Sem valor</span>'}</b></div>`:''}
+  ${sell?`<div class="num"><b class="tprice">${hasPrice(it)?esc(brl(it.p)):isLiga(it)?`<span class="tliga">${esc(ligaLabel(it))}</span>`:'<span class="tnop">Sem valor</span>'}</b></div>`:''}
   <div class="stepper"><button type="button" class="btn small" data-act="trade-dec" data-trade="${esc(t.id)}" data-key="${esc(key)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="trade-inc" data-trade="${esc(t.id)}" data-key="${esc(key)}" aria-label="Aumentar">+</button></div></div>`;
 }
 export function renderTrade(){
@@ -90,8 +90,9 @@ function tpStep(d){
 export function tradePanelChange(el){
  const c=S.ui.panelCtx;const x=c&&getTrade(c.tradeId);const it=x&&x.items.find(i=>itemKey(i)===c.tradeKey);if(!it)return;
  const k=el.dataset.tp,patch={};
- if(k==='p'){patch.p=parsePrice(el.value);if(patch.p!==null)patch.lg=false;}
- else if(k==='lg'){patch.lg=!!el.checked;if(el.checked)patch.p=null;}
+ if(k==='p'){patch.p=parsePrice(el.value);if(patch.p!==null){patch.lg=false;patch.ld=0;}}
+ else if(k==='lg'){patch.lg=!!el.checked;if(el.checked)patch.p=null;else patch.ld=0;}
+ else if(k==='ld'){patch.ld=parseDisc(el.value);}
  else patch[k]=el.value;
  const r=updateItem(x,c.tradeKey,patch);
  if(r)c.tradeKey=itemKey(r);
@@ -219,12 +220,12 @@ export function mergeExport(){
  const sections=lists.map(t=>({label:t.name,kindLabel:KINDS[t.kind],color:t.kind==='want'?'#2F6FDE':'#D93A2B'}));
  const anyP=lists.some(t=>t.kind==='sell'&&t.items.some(i=>hasPrice(i)||isLiga(i))),anyC=lists.some(t=>t.kind==='sell'&&t.items.some(i=>i.c));
  openExport({title:lists.map(t=>t.name).join(' + '),kindLabel:null,sections,scopes:null,extras:anyP||anyC?{p:anyP,c:anyC,on:false}:null,
-  build:()=>lists.flatMap((t,si)=>{const sell=t.kind==='sell';return t.items.map(it=>({sec:si,url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l,...(sell&&it.c?{c:it.c}:{}),...(sell&&hasPrice(it)?{p:it.p}:{}),...(sell&&isLiga(it)?{lg:true}:{})}));})});
+  build:()=>lists.flatMap((t,si)=>{const sell=t.kind==='sell';return t.items.map(it=>({sec:si,url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l,...(sell&&it.c?{c:it.c}:{}),...(sell&&hasPrice(it)?{p:it.p}:{}),...(sell&&isLiga(it)?{lg:true,...(it.ld>0?{ld:it.ld}:{})}:{})}));})});
 }
 export function tradeExport(id){
  const t=getTrade(id);if(!t)return;
  const sell=t.kind==='sell';
- openExport({title:t.name,kindLabel:KINDS[t.kind],kindColor:t.kind==='want'?'#2F6FDE':'#D93A2B',scopes:null,extras:sell?{p:t.items.some(i=>hasPrice(i)||isLiga(i)),c:t.items.some(i=>i.c),on:false}:null,build:()=>t.items.map(it=>({url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l,...(sell&&it.c?{c:it.c}:{}),...(sell&&hasPrice(it)?{p:it.p}:{}),...(sell&&isLiga(it)?{lg:true}:{})}))});
+ openExport({title:t.name,kindLabel:KINDS[t.kind],kindColor:t.kind==='want'?'#2F6FDE':'#D93A2B',scopes:null,extras:sell?{p:t.items.some(i=>hasPrice(i)||isLiga(i)),c:t.items.some(i=>i.c),on:false}:null,build:()=>t.items.map(it=>({url:imgOf(it),n:it.n,no:it.no,q:it.q,f:it.f,l:it.l,...(sell&&it.c?{c:it.c}:{}),...(sell&&hasPrice(it)?{p:it.p}:{}),...(sell&&isLiga(it)?{lg:true,...(it.ld>0?{ld:it.ld}:{})}:{})}))});
 }
 
 /* ---------- Editar em massa (listas Vendo/Troco) ---------- */
@@ -253,7 +254,7 @@ function bulkDialog(id){
   <div class="bkctl">
    <label class="size">Condição ${sel('bkc',[['','Não mudar'],['__none','Limpar a condição'],...COND])}</label>
    <label class="size">Quantidade ${sel('bkqm',[['','Não mudar'],['set','Definir como'],['add','Somar'],['sub','Subtrair']])} <input class="field mini" id="bkqv" type="number" min="0" max="999" placeholder="0"></label>
-   <label class="size">Valor (R$) ${sel('bkpm',[['','Não mudar'],['set','Definir como'],['up','Aumentar em %'],['down','Diminuir em %'],['liga','Menor da Liga'],['clear','Limpar o valor']])} <input class="field mini" id="bkpv" type="text" inputmode="decimal" placeholder="0,00" style="width:100px"></label>
+   <label class="size">Valor (R$) ${sel('bkpm',[['','Não mudar'],['set','Definir como'],['up','Aumentar em %'],['down','Diminuir em %'],['liga','Menor da Liga (campo = desconto %)'],['clear','Limpar o valor']])} <input class="field mini" id="bkpv" type="text" inputmode="decimal" placeholder="0,00" style="width:100px"></label>
   </div>
   <div class="actions"><button class="btn" type="button" data-act="bk-remove" id="bkrm">Remover marcadas</button><span><button class="btn" type="button" data-ed-act="cancel">Fechar</button> <button class="btn primary" type="button" data-act="bk-apply" id="bkgo">Aplicar às marcadas</button></span></div></div>`;
  $('#modal').classList.add('on');bulkPaint();
@@ -455,6 +456,7 @@ export const TRADE_ACT={
  'trade-dec':(t,e)=>{e&&e.stopPropagation();const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(!it)return;setQty(x,t.dataset.key,it.q-1);saveAndRefresh();},
  'trade-item':t=>{const x=getTrade(t.dataset.trade);const it=x&&x.items.find(i=>itemKey(i)===t.dataset.key);if(it)openPanel(it.id,{tradeId:x.id,tradeKey:t.dataset.key});},
  'tp-dec':()=>tpStep(-1),
+ 'tp-ld':t=>tradePanelChange({dataset:{tp:'ld'},value:t.dataset.v}),
  'tp-inc':()=>tpStep(1),
  'tp-remove':()=>{const c=S.ui.panelCtx;const x=c&&getTrade(c.tradeId);if(!x)return;setQty(x,c.tradeKey,0);saveAndRefresh();closePanel();},
  'tr-item-save':()=>{

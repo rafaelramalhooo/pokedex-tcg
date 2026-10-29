@@ -646,3 +646,9 @@ body.is-reordering *{cursor:grabbing!important}
 .fchip[aria-pressed="true"]{background:var(--accent,#2f6fe4);color:#fff;border-color:transparent}
 .fempty,.fnote{font-size:.88rem;color:var(--muted,#667)}
 .fnote{margin:4px 0 8px}
+
+/* v5.1: desconto sobre o menor da Liga */
+.lgdisc{margin:8px 0 2px}
+.lgdisc .lgbtns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.lgdisc .lgother{display:flex;align-items:center;gap:8px;font-size:.88rem}
+.lgdisc .lgother input{width:90px}

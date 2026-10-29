@@ -190,7 +190,7 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty,ro
    ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.062}px ${FONT}`;
    ctx.fillText(fit(ctx,meta,cw),x,ly+cw*0.085);
    if(o.extra){
-    const ex=[it.c||'',typeof it.p==='number'?it.p.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):it.lg?'Menor da Liga':''].filter(Boolean);
+    const ex=[it.c||'',typeof it.p==='number'?it.p.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):it.lg?'Menor da Liga'+(it.ld>0?' −'+String(it.ld).replace('.',',')+'%':''):''].filter(Boolean);
     if(ex.length){ctx.fillStyle='#121A2B';ctx.font=`800 ${cw*0.068}px ${FONT}`;ctx.fillText(fit(ctx,ex.join(' · '),cw),x,ly+cw*0.17);}
    }
   }
