@@ -4,7 +4,7 @@ import {logoFail} from './logos.js';
 import {$, esc} from './util.js';
 import {customCard} from './custom.js';
 import {modeOf, tileOf} from './modes.js';
-import {derivedImage,isDexUrl} from './reprints.js';
+import {derivedImage,isDexUrl,ptcgUrl,isPtcgBlank} from './reprints.js';
 
 let toastT=null;
 export function toast(msg,label,fn){
@@ -47,11 +47,14 @@ document.addEventListener('error',e=>{
   if(n+1<cand.length){t.dataset.t=n+1;t.src=cand[n+1];return;}
  }
  if(t.dataset.role==='own')return;
+ if(t.dataset.id&&!t.dataset.px){const u=ptcgUrl(t.dataset.id,q);if(u){t.dataset.px='1';t.dataset.t=99;t.src=u;return;}}
  if(t.dataset.alt){const a=t.dataset.alt;delete t.dataset.alt;t.dataset.b=a;t.dataset.t=99;t.src=a;return;}
  const d=document.createElement('div');d.className='ph';d.dataset.noimg='1';const bb=document.createElement('b');bb.textContent=t.dataset.name||'';d.appendChild(bb);
  const sm=document.createElement('small');sm.textContent='Imagem indisponível';d.appendChild(sm);t.replaceWith(d);
 },true);
 
+/* figura em branco do pokemontcg.io = carta que ele não tem: segue para a próxima alternativa */
+document.addEventListener('load',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&isPtcgBlank(t))t.dispatchEvent(new Event('error'));},true);
 
 export function modeSeg(){
  const m=S.cur&&S.cur.name==='set'?modeOf(S.cur.id):S.settings.mode;

@@ -32,3 +32,22 @@ export function tcgdexBase(id,url){
  const dv=derivedImage(id);
  return dv?dv.url:url;
 }
+
+/* Segunda alternativa de imagem: o servidor de imagens do pokemontcg.io (só cartas até onde ele tem; sem chave nem API).
+   Código da coleção na TCGdex -> código no pokemontcg.io. Se não houver regra segura, devolve vazio e a carta não tenta essa fonte. */
+const PTCG_PROMO=new Set(['svp','swshp','smp','xyp','bwp','dpp','mep']);
+export function ptcgSet(setId){
+ const id=String(setId||'').toLowerCase();
+ if(PTCG_PROMO.has(id))return id;
+ const m=/^(base|gym|neo|ecard|ex|dp|pl|hgss|bw|xy|sm|swsh|sv|me)0*(\d+)(?:\.(\d))?$/.exec(id);
+ return m?m[1]+m[2]+(m[3]?'pt'+m[3]:''):'';
+}
+export function ptcgUrl(id,q){
+ const b=S.briefs[id];const [sid,lid]=split(id);
+ const sl=ptcgSet(b&&b.setId||sid);if(!sl)return'';
+ const loc=String(b&&b.localId||lid);
+ const n=/^\d+$/.test(loc)?String(+loc):loc;
+ return`https://images.pokemontcg.io/${sl}/${n}${q==='high'?'_hires':''}.png`;
+}
+/* O pokemontcg.io devolve uma figura em branco de 640×892 para carta que não existe; isso conta como falha. */
+export const isPtcgBlank=i=>!!i&&typeof i.src==='string'&&i.src.includes('images.pokemontcg.io')&&i.naturalWidth===640&&i.naturalHeight===892;

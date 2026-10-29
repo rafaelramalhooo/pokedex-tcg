@@ -52,6 +52,8 @@ def handle(route):
         return route.fulfill(status=200, content_type="text/javascript", body="export const SUPABASE={url:'',key:''};")
     if "fonts.g" in url:
         return route.abort()
+    if url.startswith("https://images.pokemontcg.io"):
+        return route.fulfill(status=404, body="", headers=h)
     if url.startswith("https://assets.tcgdex.net") and ("/sv02/logo" in url or "/sv02/symbol" in url):
         return route.fulfill(status=404, body="", headers=h)
     if url.startswith("https://assets.tcgdex.net") and "/en/sv/sv02/" in url:
@@ -920,7 +922,9 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v4.7.1" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v4.8" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
+    check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
     check(page.locator("#pullres", has_text="Já na lista").count() == 0, "puxar: sem o aviso Já na lista")
     page.locator('[data-act="pl-none"]').click(); page.wait_for_timeout(150)
