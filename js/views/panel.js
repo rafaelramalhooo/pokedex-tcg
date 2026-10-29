@@ -6,7 +6,7 @@ import {H, S} from '../state.js';
 import {imgTag, noteHTML} from '../ui.js';
 import {dexModel} from '../rules.js';
 import {customCard} from '../custom.js';
-import {getTrade, hasPrice, itemKey} from '../trades.js';
+import {getTrade, hasPrice, isLiga, itemKey} from '../trades.js';
 import {derivedImage} from '../reprints.js';
 import {$, brl, esc} from '../util.js';
 
@@ -98,7 +98,7 @@ function pubBlock(ctx){
  const row=(k,v)=>`<div class="row" style="justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line-2)"><span class="lbl2" style="margin:0">${k}</span><b>${v}</b></div>`;
  return`<div class="fin has tpanel"><div class="fin-head"><h3>Nesta lista</h3></div>
   ${row('Quantidade','×'+esc(it.q))}${row('Acabamento',esc(FIN_LABEL[it.f]||it.f||'Normal'))}${row('Idioma',esc(L[it.l]||'Não informado'))}
-  ${it.c?row('Condição',esc(C[it.c]||it.c)):''}${typeof it.p==='number'?row('Valor pedido (por carta)',esc(brl(it.p))):''}</div>`;
+  ${it.c?row('Condição',esc(C[it.c]||it.c)):''}${typeof it.p==='number'?row('Valor pedido (por carta)',esc(brl(it.p))):it.lg===true?row('Valor pedido','Menor da Liga (referência)'):''}</div>`;
 }
 function tradeBlock(ctx,id,c){
  if(ctx.pub)return pubBlock(ctx);
@@ -114,7 +114,8 @@ function tradeBlock(ctx,id,c){
    <label><span class="lbl2">Acabamento</span><select class="field" data-tp="f">${fins.map(k=>`<option value="${k}" ${it.f===k?'selected':''}>${FIN_LABEL[k]||k}</option>`).join('')}</select></label>
    <label><span class="lbl2">Idioma</span><select class="field" data-tp="l">${LANGS.map(([k,l])=>`<option value="${k}" ${it.l===k?'selected':''}>${l}</option>`).join('')}</select></label>
    ${sell?`<label><span class="lbl2">Condição</span><select class="field" data-tp="c"><option value="">Não informada</option>${COND.map(([k,l])=>`<option value="${k}" ${it.c===k?'selected':''}>${l}</option>`).join('')}</select></label>
-   <label><span class="lbl2">Valor pedido (R$, por carta)</span><input class="field" data-tp="p" type="text" inputmode="decimal" placeholder="0,00" value="${hasPrice(it)?String(it.p).replace('.',','):''}"></label>`:''}</div>
+   <label><span class="lbl2">Valor pedido (R$, por carta)</span><input class="field" data-tp="p" type="text" inputmode="decimal" placeholder="${isLiga(it)?'Menor da Liga':'0,00'}" value="${hasPrice(it)?String(it.p).replace('.',','):''}" ${isLiga(it)?'disabled':''}></label>
+   <label class="lgchk"><input type="checkbox" data-tp="lg" ${isLiga(it)?'checked':''}> <span><b>Menor da Liga</b><small>Sem valor em reais: a etiqueta mostra que o menor preço da Liga Pokémon é a referência.</small></span></label>`:''}</div>
   <div style="margin-top:12px"><button class="btn danger" type="button" data-act="tp-remove">Remover da lista</button></div></div>`;
 }
 

@@ -31,6 +31,8 @@ import {closeModal, editorAct, openAddCards, openEditor, renderAddResults, rende
 import {renderHome, viewHome} from './views/home.js';
 import {closePanel, openPanel, panelNav} from './views/panel.js';
 import './tilt.js';
+import {FF_ACT} from './filters.js';
+import './reorder.js';
 import {dexToggle, openDex, renderDex, renderDexGrid, retryDex} from './views/dex.js';
 import {renderSetGrid, viewSet} from './views/set.js';
 import {setSetMode} from './modes.js';
@@ -38,6 +40,7 @@ import {exportBackup, importBackup, renderSettings, viewSettings} from './views/
 
 const ACT={
  ...TRADE_ACT,
+ ...FF_ACT,
  ...DECK_ACT,
  ...SHARED_ACT,
  'binder-export':t=>binderExport(t.dataset.id),

@@ -14,6 +14,7 @@ import {$, $$, live, ICON, esc, fmtN, pct} from '../util.js';
 import {slotHTML} from './set.js';
 import {dexArt, dexName, loadDexNames, matchQuery, pad4, parseQuery} from './dex.js';
 import {nz} from '../util.js';
+import {ffActive, ffMatch, ffReset, ffSig, renderBar} from '../filters.js';
 import {capRight, numLabel} from '../cardlabel.js';
 import {rarityPt, typePt} from '../constants.js';
 import {bookHTML, isBook, renderBookCtl} from './book.js';
@@ -40,7 +41,7 @@ export function renderBinders(){
 }
 export function viewBinder(id){
  const b=S.binders.find(x=>x.id===id);
- S.ui.binderFilter='all';S.ui.binderShown=240;S.ui.binderQ='';
+ S.ui.binderFilter='all';S.ui.binderShown=240;S.ui.binderQ='';ffReset();
  if(!b){$('#view').innerHTML=`<a class="back" href="#/binders">${ICON.back} Fichários</a><div class="empty"><h3>Fichário não encontrado</h3></div>`;return;}
  S.cur={name:'binder',id,soft:renderBinderBody,refresh:renderBinderBody};
  $('#view').innerHTML=`<a class="back" href="#/binders">${ICON.back} Fichários</a>
@@ -48,6 +49,7 @@ export function viewBinder(id){
   <div class="tools"><button class="btn" type="button" data-act="binder-export" data-id="${esc(id)}">Exportar imagem</button><button class="btn" type="button" data-act="edit-binder" data-id="${esc(id)}">Editar regras</button>${b.mode==='manual'?`<button class="btn" type="button" data-act="add-cards" data-id="${esc(id)}">Adicionar cartas</button>`:''}<button class="btn danger" type="button" data-act="del-binder" data-id="${esc(id)}">Excluir</button></div></div>
   <div id="bsum"></div>
   <div class="toolbar"><div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="bfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="bfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="bfilter" data-v="miss" aria-pressed="false">Faltam</button></div><input class="field" id="bq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar no fichário"><span class="fullctl" id="fullctl"></span><span class="sortctl" id="bsortctl"></span><span class="grow"></span><span class="bookctl" id="bookctl"></span></div>
+  <div id="ffbar"></div>
   <div id="bgrid"></div>`;
  renderBookCtl();
  renderSortCtl(b);
@@ -116,25 +118,26 @@ export function renderBinderBody(){
  if(r.dex&&S.status.cl)notes+=noteHTML('',`Baixando os detalhes das cartas das suas coleções: ${S.status.cl.done} de ${S.status.cl.total}. Os espaços da Pokédex se completam à medida que chegam.`);
  live($('#bsum')).innerHTML=notes+statsHTML(r,own,tot);
  const g=live($('#bgrid'));
+ renderBar(r.dex?r.dex.flatMap(x=>x.cand||[]):r.ids);
  if(r.dex){
   const q=parseQuery(S.ui.binderQ);
-  const list=r.dex.filter(x=>(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned))&&slotMatches(x,q));
+  const list=r.dex.filter(x=>(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?x.owned:!x.owned))&&slotMatches(x,q)&&(!ffActive()||(x.cand||[]).some(ffMatch)));
   S.cur.nav=list.filter(x=>x.rep).map(x=>({id:x.rep,dex:x.dex}));
   const shown=list.slice(0,S.ui.binderShown);
-  if(list.length&&isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter,bookCover(b));return;}
+  if(list.length&&isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(x=>dexSlotHTML(x,b.id)),'binder:'+b.id+':'+S.ui.binderFilter+ffSig(),bookCover(b));return;}
   g.innerHTML=list.length?`<div class="cards"${noQ(q)?'':' style="--tile:230px"'}>${shown.map(x=>dexSlotHTML(x,b.id)).join('')}${list.length>shown.length?`<div class="more"><button class="btn" type="button" data-act="more">Mostrar mais (${fmtN(list.length-shown.length)} restantes)</button></div>`:''}</div>`
-   :`<div class="empty"><h3>Nada por aqui</h3><p>Ajuste o filtro.</p></div>`;
+   :`<div class="empty"><h3>Nada por aqui</h3><p>${ffActive()?'Nenhuma carta combina com os filtros de raridade e tipo.':'Ajuste o filtro.'}</p></div>`;
   return;
  }
  const q=parseQuery(S.ui.binderQ);
- const list=r.ids.filter(id=>{const o=isOwned(id);if(!(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?o:!o)))return false;return cardMatches(id,q);});
+ const list=r.ids.filter(id=>{const o=isOwned(id);if(!(S.ui.binderFilter==='all'||(S.ui.binderFilter==='have'?o:!o)))return false;return cardMatches(id,q)&&ffMatch(id);});
  if(!list.length){
-  g.innerHTML=r.empty?`<div class="empty"><h3>Defina ao menos uma regra</h3><p>Use “Editar regras” para escolher o que entra neste fichário.</p></div>`:
+  g.innerHTML=ffActive()&&!r.empty?`<div class="empty"><h3>Nenhuma carta combina</h3><p>Nenhuma carta combina com os filtros de raridade e tipo. Use “Limpar filtros” para ver tudo de novo.</p></div>`:r.empty?`<div class="empty"><h3>Defina ao menos uma regra</h3><p>Use “Editar regras” para escolher o que entra neste fichário.</p></div>`:
   `<div class="empty"><h3>${b.mode==='manual'?'Nenhuma carta no fichário':'Nenhuma carta combina'}</h3><p>${b.mode==='manual'?'Use “Adicionar cartas” para escolher.':'Revise as regras ou sincronize o catálogo.'}</p></div>`;
   return;
  }
  S.cur.nav=list.map(id=>({id}));
- if(isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(id=>slotHTMLCtx(S.briefs[id]||{id,name:id,localId:''},b.id)),'binder:'+b.id+':'+S.ui.binderFilter,bookCover(b));return;}
+ if(isBook()&&noQ(q)){g.innerHTML=bookHTML(list.map(id=>slotHTMLCtx(S.briefs[id]||{id,name:id,localId:''},b.id)),'binder:'+b.id+':'+S.ui.binderFilter+ffSig(),bookCover(b));return;}
  const shown=list.slice(0,S.ui.binderShown);
  g.innerHTML=`<div class="cards"${noQ(q)?'':' style="--tile:230px"'}>${shown.map(id=>{
   const br=S.briefs[id]||{id,name:id,localId:''};

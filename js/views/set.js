@@ -12,10 +12,11 @@ import {bookHTML, isBook, renderBookCtl} from './book.js';
 import {coverMedia} from '../covers.js';
 import {$, $$, live, ICON, esc, fmtDate, fmtN, nz, pct} from '../util.js';
 import {matchQuery, parseQuery} from './dex.js';
+import {ffActive, ffMatch, ffReset, ffSig, renderBar} from '../filters.js';
 
 export async function viewSet(id){
  S.cur={name:'set',id,ready:false,soft:()=>{renderSetHero();renderSetGrid();},refresh:()=>{renderSetHero();renderSetGrid();}};
- S.ui.setFilter='all';S.ui.setQ='';
+ S.ui.setFilter='all';S.ui.setQ='';ffReset();
  $('#view').innerHTML=`<a class="back" href="#/">${ICON.back} Todas as coleções</a><div id="sethero"><div class="skel" style="height:130px"></div></div><div id="settools"></div><div id="grid"></div>`;
  try{await ensureSetd(id);}
  catch(e){
@@ -26,7 +27,7 @@ export async function viewSet(id){
  $('#settools').innerHTML=`<div class="toolbar">${modeSeg()}
   <div class="seg" role="group" aria-label="Filtro"><button type="button" data-act="sfilter" data-v="all" aria-pressed="true">Todas</button><button type="button" data-act="sfilter" data-v="have" aria-pressed="false">Tenho</button><button type="button" data-act="sfilter" data-v="miss" aria-pressed="false">Faltam</button></div>
   <input class="field" id="sq" type="search" placeholder="Nome ou número. Ex.: charizard (006/165)" aria-label="Buscar carta"><span class="fullctl" id="fullctl"></span>
-  <span class="grow"></span><span class="bookctl" id="bookctl"></span></div><div id="setnote"></div>`;
+  <span class="grow"></span><span class="bookctl" id="bookctl"></span></div><div id="ffbar"></div><div id="setnote"></div>`;
  renderBookCtl();
  renderSetHero();renderSetGrid();S.cur.ready=true;
  if(modeOf(id)==='master')ensureSetCards(id);
@@ -54,6 +55,7 @@ export function renderSetGrid(){
  const official=(d.cardCount&&d.cardCount.official)||0;
  const q=parseQuery(S.ui.setQ);const hasQ=q.words.length||q.num!==null||q.tot!==null;
  const cards=(d.cards||[]).slice();
+ renderBar(cards.map(c=>c.id));
  const note=$('#setnote');
  const load=S.setLoad[id];
  if(note){
@@ -79,14 +81,15 @@ export function renderSetGrid(){
  });
  const filtered=slots.filter(({c,f})=>{
   if(hasQ&&!matchQuery({...c,setId:id},q))return false;
+  if(!ffMatch(c.id))return false;
   const own=f?!!(S.collection[c.id]&&S.collection[c.id].f[f]&&S.collection[c.id].f[f].q>0):isOwned(c.id);
   if(S.ui.setFilter==='have'&&!own)return false;
   if(S.ui.setFilter==='miss'&&own)return false;
   return true;
  });
- if(!filtered.length){g.innerHTML=`<div class="empty"><h3>Nenhuma carta aqui</h3><p>${S.ui.setFilter==='have'?'Você ainda não marcou cartas desta coleção.':'Ajuste o filtro ou a busca.'}</p></div>`;return;}
+ if(!filtered.length){g.innerHTML=`<div class="empty"><h3>Nenhuma carta aqui</h3><p>${ffActive()?'Nenhuma carta combina com os filtros de raridade e tipo.':S.ui.setFilter==='have'?'Você ainda não marcou cartas desta coleção.':'Ajuste o filtro ou a busca.'}</p></div>`;return;}
  S.cur.nav=filtered.filter((x,i)=>!i||x.c.id!==filtered[i-1].c.id).map(x=>({id:x.c.id}));
- if(isBook()&&!hasQ){g.innerHTML=bookHTML(filtered.map(({c,f})=>slotHTML(c,f)),'set:'+id+':'+mode,setCover(id));return;}
+ if(isBook()&&!hasQ){g.innerHTML=bookHTML(filtered.map(({c,f})=>slotHTML(c,f)),'set:'+id+':'+mode+ffSig(),setCover(id));return;}
  let html=`<div class="cards"${hasQ?' style="--tile:230px"':''}>`;let secShown=false;
  filtered.forEach(({c,f,sec})=>{
   if(sec&&!secShown){secShown=true;html+=`<div class="divider">Cartas secretas, numeradas acima de ${official}</div>`;}

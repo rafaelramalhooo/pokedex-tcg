@@ -190,7 +190,7 @@ function drawSheet(items,bmps,o,cw,title,partNo,partTotal,totalCards,totalQty,ro
    ctx.fillStyle='#59647D';ctx.font=`600 ${cw*0.062}px ${FONT}`;
    ctx.fillText(fit(ctx,meta,cw),x,ly+cw*0.085);
    if(o.extra){
-    const ex=[it.c||'',typeof it.p==='number'?it.p.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):''].filter(Boolean);
+    const ex=[it.c||'',typeof it.p==='number'?it.p.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):it.lg?'Menor da Liga':''].filter(Boolean);
     if(ex.length){ctx.fillStyle='#121A2B';ctx.font=`800 ${cw*0.068}px ${FONT}`;ctx.fillText(fit(ctx,ex.join(' · '),cw),x,ly+cw*0.17);}
    }
   }
@@ -212,7 +212,7 @@ export async function buildImages(items,o){
  const labels=o.labels!==false;
  const maxSec=o.sections&&o.sections.length?Math.max(...o.sections.map((_,si)=>items.filter(i=>i.sec===si).length)):items.length;
  const cols=Math.max(1,Math.min(10,Math.max(1,maxSec),o.cols||autoCols(maxSec)));
- const extra=!!o.extra&&labels&&items.some(i=>i.c||typeof i.p==='number');
+ const extra=!!o.extra&&labels&&items.some(i=>i.c||i.lg||typeof i.p==='number');
  const secs=o.sections&&o.sections.length?o.sections.map((sc,si)=>{const its=items.filter(i=>i.sec===si);return{...sc,n:its.length,q:its.reduce((a,i)=>a+(i.q||0),0)};}):null;
  const {bmps,fb,miss}=await loadAll(items,o.onProgress);
  const totalQty=items.reduce((a,i)=>a+(i.q||0),0);

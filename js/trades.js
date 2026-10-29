@@ -26,16 +26,22 @@ export function addItem(t,id,f,l,q,c){
  if(ex){ex.q+=q;return ex;}
  const it={id,f,l,q,...snapOf(id)};if(c)it.c=c;t.items.push(it);return it;
 }
+/* Muda a posição de uma carta na lista (índice de 0 a n-1). */
+export function moveItemTo(t,key,to){
+ const i=t.items.findIndex(x=>itemKey(x)===key);if(i<0)return false;
+ const j=Math.max(0,Math.min(t.items.length-1,to));if(i===j)return false;
+ const [it]=t.items.splice(i,1);t.items.splice(j,0,it);return true;
+}
 export function setQty(t,key,q){
  const i=t.items.findIndex(x=>itemKey(x)===key);if(i<0)return;
  if(q<=0)t.items.splice(i,1);else t.items[i].q=Math.min(999,q);
 }
 export function updateItem(t,key,patch){
  const it=t.items.find(x=>itemKey(x)===key);if(!it)return null;
- const old=it;const next={...it,...patch};
+ const old=it;const next={...it,...patch};if(next.lg!==true)delete next.lg;
  const clash=t.items.find(x=>x!==old&&itemKey(x)===itemKey(next));
  if(clash){clash.q=Math.min(999,clash.q+next.q);t.items.splice(t.items.indexOf(old),1);return clash;}
- Object.assign(it,patch);return it;
+ Object.assign(it,patch);if(it.lg!==true)delete it.lg;return it;
 }
 /* ---------- valor e condição (listas Vendo/Troco) ---------- */
 /* Lê um valor digitado em reais: "12,50", "1.250,00" ou "12.5". Vazio ou inválido vira null. */
@@ -46,10 +52,12 @@ export function parsePrice(s){
  return Math.round(Math.min(n,999999)*100)/100;
 }
 export const hasPrice=i=>typeof i.p==='number'&&isFinite(i.p);
+/* “Menor da Liga”: o item não tem valor em reais; a etiqueta diz que o menor preço da Liga Pokémon é a referência. */
+export const isLiga=i=>!!i&&i.lg===true;
 export function tradeTotal(t){
- let sum=0,priced=0,missing=0;
- for(const i of t.items){if(hasPrice(i)){sum+=i.p*i.q;priced++;}else missing++;}
- return{sum:Math.round(sum*100)/100,priced,missing};
+ let sum=0,priced=0,missing=0,liga=0;
+ for(const i of t.items){if(hasPrice(i)){sum+=i.p*i.q;priced++;}else if(isLiga(i))liga++;else missing++;}
+ return{sum:Math.round(sum*100)/100,priced,missing,liga};
 }
 /* Edição em massa. o: {c: undefined|'__none'|código, qMode:''|'set'|'add'|'sub', qVal, pMode:''|'set'|'up'|'down'|'clear', pVal}. Devolve quantas cartas mudaram. */
 export function bulkEdit(t,keys,o){
@@ -66,8 +74,9 @@ export function bulkEdit(t,keys,o){
     patch.q=Math.max(1,Math.min(999,q));
    }
   }
-  if(o.pMode==='clear')patch.p=null;
-  else if(o.pMode==='set'){const p=parsePrice(o.pVal);if(p!==null)patch.p=p;}
+  if(o.pMode==='clear'){patch.p=null;patch.lg=false;}
+  else if(o.pMode==='liga'){patch.p=null;patch.lg=true;}
+  else if(o.pMode==='set'){const p=parsePrice(o.pVal);if(p!==null){patch.p=p;patch.lg=false;}}
   else if((o.pMode==='up'||o.pMode==='down')&&hasPrice(it)){
    const pc=Number(String(o.pVal).replace(',','.'));
    if(isFinite(pc)&&pc>=0){const f=o.pMode==='up'?1+pc/100:Math.max(0,1-pc/100);patch.p=Math.round(Math.min(it.p*f,999999)*100)/100;}
@@ -107,6 +116,7 @@ export const shareSnapshot=(t,opts)=>{
   const x={id:i.id,n:i.n,no:i.no,i:tcgdexBase(i.id,i.i),q:i.q,f:i.f,l:i.l};
   if(o.c&&i.c)x.c=i.c;
   if(o.v&&hasPrice(i))x.p=i.p;
+  if(o.v&&isLiga(i))x.lg=true;
   return x;
  })};
 };
