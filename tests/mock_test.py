@@ -786,7 +786,7 @@ with sync_playwright() as p:
     pos = page.evaluate("""()=>{const f=document.querySelector('#fullctl');const q=document.createElement('span');q.className='qty';document.body.appendChild(q);const cs=getComputedStyle(q);const r=[cs.backgroundColor,cs.color,cs.borderTopWidth,cs.borderTopColor];q.remove();
       return {inside:!!f&&!!f.querySelector('[data-act="immerse"]'),afterSearch:!!f&&f.previousElementSibling&&f.previousElementSibling.matches('input[type=search]'),inBookctl:!!document.querySelector('#bookctl [data-act="immerse"]'),qty:r};}""")
     check(pos["inside"] and pos["afterSearch"] and not pos["inBookctl"], f"tela cheia: botão logo depois do campo de busca {pos}")
-    check(pos["qty"] == ["rgb(214, 58, 47)", "rgb(255, 255, 255)", "2px", "rgb(255, 255, 255)"], f"números de quantidade: vermelho, texto branco, borda branca de 2px {pos['qty']}")
+    check(pos["qty"] == ["rgb(15, 24, 48)", "rgb(255, 255, 255)", "2px", "rgb(255, 255, 255)"], f"números de quantidade: azul-marinho, texto branco, borda branca de 2px {pos['qty']}")
     page.locator('[data-act="immerse"]').click(); page.wait_for_timeout(400)
     check(page.evaluate("document.body.classList.contains('immersive')"), "tela cheia: ligada")
     check(not page.locator(".rail").is_visible() and not page.locator("#sethero").is_visible(), "tela cheia: menu e cabeçalho escondidos")
@@ -986,7 +986,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v6.0" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v6.1" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
