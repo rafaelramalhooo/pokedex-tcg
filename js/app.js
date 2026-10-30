@@ -242,7 +242,7 @@ function route(fresh){
  else if(parts[0]==='ajustes')viewSettings();
  else viewHome();
 }
-window.addEventListener('hashchange',()=>{if(PUB){if(!PUBHASH.test(location.hash))location.reload();return;}route();});
+window.addEventListener('hashchange',()=>{if(PUB){const m=PUBHASH.exec(location.hash);if(!m||m[1]!==PUB[1])location.reload();return;}route();});
 H.route=()=>route(true);
 H.renderDex=()=>{if(S.ui.dexdlg)renderDexGrid();};
 

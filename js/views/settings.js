@@ -66,7 +66,7 @@ export function renderSettings(){
   <button class="btn danger" type="button" data-act="clear-cache">Limpar catálogo baixado</button>
  </section>
  <section class="panel-sec"><h2>Sobre</h2>
-  <p>Aplicativo pessoal de gestão de coleção, não afiliado à The Pokémon Company. Nomes, ilustrações, logos e marcas pertencem aos seus donos. Dados e imagens são carregados da <strong>TCGdex</strong> (tcgdex.dev). Confira as licenças de dados e imagens antes de qualquer uso público ou comercial. Preços não são exibidos.</p>
+  <p><strong>TCG Collection é um aplicativo de uso pessoal: não é vendido nem distribuído</strong> e não tem relação com outros apps de nome parecido. Não afiliado à The Pokémon Company. Nomes, ilustrações, logos e marcas pertencem aos seus donos. Dados e imagens são carregados da <strong>TCGdex</strong> (tcgdex.dev). Confira as licenças de dados e imagens antes de qualquer uso público ou comercial. Preços não são exibidos.</p>
  </section>`;
 }
 function logoDiagHTML(){

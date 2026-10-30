@@ -2,7 +2,7 @@
 
 Um aplicativo web, em português, para organizar a sua coleção de **Pokémon Estampas Ilustradas** (Pokémon TCG).
 
-**Acesse:** https://rafaelramalhooo.github.io/pokedex-tcg/
+**Acesse:** https://tcgcollection.app.br/
 
 ## O que dá para fazer
 

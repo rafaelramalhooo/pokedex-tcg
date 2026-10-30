@@ -1,7 +1,7 @@
 {
   "name": "TCG Collection",
   "short_name": "TCG Collection",
-  "description": "Gestão pessoal da coleção de Pokémon Estampas Ilustradas (TCG).",
+  "description": "App pessoal de gestão de coleção de cartas (TCG). Uso pessoal, não distribuído.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",

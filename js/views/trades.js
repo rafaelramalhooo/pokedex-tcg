@@ -6,9 +6,10 @@ import {S, refreshAll} from '../state.js';
 import {closePanel, openPanel, renderPanel} from './panel.js';
 import {imgTag, noteHTML, toast} from '../ui.js';
 import {$, ICON, brl, esc, fmtN, live, nz} from '../util.js';
-import {KINDS, addItem, bulkEdit, getTrade, hasPrice, isLiga, ligaLabel, parseDisc, imgOf, itemKey, newShareCode, newTrade, parsePrice, saveTrades, setQty, shareLink, shareSnapshot, snapOf, totalQty, tradeTotal, updateItem} from '../trades.js';
+import {KINDS, addItem, bulkEdit, getTrade, hasPrice, isLiga, ligaLabel, parseDisc, imgOf, itemKey, newShareCode, newTrade, parsePrice, saveTrades, setQty, mergeSnapshot, shareLink, shareSnapshot, snapOf, totalQty, tradeTotal, updateItem} from '../trades.js';
 import {canShare, shareList, sharingMissing, unshareList} from '../cloud.js';
 import {openExport} from '../exportimg.js';
+import {saveSettings} from '../db.js';
 
 const LANGS=[['pt','Português'],['en','Inglês'],['ja','Japonês'],['es','Espanhol'],['fr','Francês'],['de','Alemão'],['it','Italiano'],['ko','Coreano'],['zh','Chinês']];
 const kindChip=k=>`<span class="ttag ${k==='want'?'want':'sell'}">${KINDS[k]}</span>`;
@@ -16,7 +17,7 @@ const kindChip=k=>`<span class="ttag ${k==='want'?'want':'sell'}">${KINDS[k]}</s
 export function viewTrades(){
  S.cur={name:'trades',soft:renderTrades,refresh:renderTrades};
  $('#view').innerHTML=`<div class="top"><div><h1>Negociação</h1><p class="lead">Listas para vender, trocar ou procurar cartas. Elas ficam separadas da sua coleção, então nada aqui muda o que você já marcou.</p></div>
-  <div class="tools"><button class="btn" type="button" data-act="tm-start" id="tmstart" hidden>Juntar listas em imagem</button><button class="btn primary" type="button" data-act="trade-new">Nova lista</button></div></div><div id="tmbar"></div><div id="tbody"></div>`;
+  <div class="tools"><button class="btn" type="button" data-act="tm-start" id="tmstart" hidden>Juntar listas (imagem ou link)</button><button class="btn primary" type="button" data-act="trade-new">Nova lista</button></div></div><div id="tmbar"></div><div id="tbody"></div>`;
  S.ui.tmerge=null;
  renderTrades();
 }
@@ -28,7 +29,7 @@ export function renderTrades(){
  if(bar){
   if(mg){
    const sel=S.trades.filter(t=>mg.sel.has(t.id));const cards=sel.reduce((a,t)=>a+t.items.length,0);
-   bar.innerHTML=`<div class="tmbar"><span><b>${sel.length}</b> lista${sel.length===1?'':'s'} marcada${sel.length===1?'':'s'} · ${fmtN(cards)} carta${cards===1?'':'s'}. ${sel.length<2?'Marque pelo menos duas listas.':''}</span><span class="row"><button class="btn small" type="button" data-act="tm-cancel">Cancelar</button><button class="btn small primary" type="button" data-act="tm-go" ${sel.length<2||!cards?'disabled':''}>Gerar imagem</button></span></div>`;
+   bar.innerHTML=`<div class="tmbar"><span><b>${sel.length}</b> lista${sel.length===1?'':'s'} marcada${sel.length===1?'':'s'} · ${fmtN(cards)} carta${cards===1?'':'s'}. ${sel.length<2?'Marque pelo menos duas listas.':''}</span><span class="row"><button class="btn small" type="button" data-act="tm-cancel">Cancelar</button><button class="btn small" type="button" data-act="tm-share" ${sel.length<2||!cards?'disabled':''}>Compartilhar link</button><button class="btn small primary" type="button" data-act="tm-go" ${sel.length<2||!cards?'disabled':''}>Gerar imagem</button></span></div>`;
   }else bar.innerHTML='';
  }
  if(mg&&S.trades.length){
@@ -407,6 +408,60 @@ async function shareStop(id){
  delete t.share;saveTrades();shareDialog(id);toast('O link deixou de funcionar.');
 }
 
+/* ---------- link de várias listas juntas ---------- */
+const msAll=()=>Array.isArray(S.settings.mergeShares)?S.settings.mergeShares:(S.settings.mergeShares=[]);
+const msKey=ids=>[...ids].sort().join('|');
+const msLists=()=>{const mg=S.ui.tmerge;return mg?S.trades.filter(t=>mg.sel.has(t.id)&&t.items.length):[];};
+const msOptsHTML=(lists,o)=>lists.some(t=>t.kind==='sell')?`<div style="margin:10px 0"><label class="size" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="mshv" ${o.v?'checked':''}> Mostrar os valores pedidos</label><label class="size" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="mshc" ${o.c?'checked':''}> Mostrar as condições das cartas</label><p class="lead" style="margin:6px 0 0">Vale para as listas Vendo / Troco. Desligado, quem abre o link não vê valor nem condição.</p></div>`:'';
+const readMsOpts=()=>({v:!!($('#mshv')&&$('#mshv').checked),c:!!($('#mshc')&&$('#mshc').checked)});
+const readMsName=(lists)=>{const n=($('#mshn')&&$('#mshn').value||'').trim().slice(0,80);return n||lists.map(t=>t.name).join(' + ');};
+function mergeShareDialog(msg){
+ const lists=msLists();if(!S.ui.tmerge)return;
+ if(lists.length<2){toast('Marque pelo menos duas listas com cartas.');return;}
+ S.ui.msh={ids:lists.map(t=>t.id)};
+ const found=msAll().find(x=>msKey(x.ids)===msKey(S.ui.msh.ids));
+ const others=msAll().filter(x=>x!==found);
+ let body;
+ if(!canShare())body=`<p class="note warn">Para criar um link, entre na sua conta (menu Catálogo e ajustes). O link fica guardado na nuvem.</p><div class="actions"><span></span><button class="btn" type="button" data-ed-act="cancel">Fechar</button></div>`;
+ else if(!found)body=`<p>O link abre uma página <b>só de leitura</b> com as ${lists.length} listas, cada uma na sua seção, com as cartas e as quantidades. Quem abre não vê sua conta, sua coleção, seus fichários nem seus decks, e não precisa de login.</p>
+  <p class="lead">O endereço é longo e aleatório, mas qualquer pessoa que receber o link consegue ver as listas. A página é uma cópia: ela só muda quando você usar “Atualizar o link”.</p>
+  <label class="lbl2" for="mshn">Nome do conjunto</label><input class="field" id="mshn" style="width:100%" maxlength="80" value="${esc(lists.map(t=>t.name).join(' + '))}">
+  ${msOptsHTML(lists,{})}
+  <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="msh-create">Criar link</button></div>`;
+ else body=`<label class="lbl2" for="shl">Link das listas juntas</label><input class="field" id="shl" readonly style="width:100%" value="${esc(shareLink(found.code))}" onfocus="this.select()">
+  <p class="lead" style="margin-top:8px">Última atualização do link: ${esc(fmtAt(found.at))}. ${lists.reduce((a,t)=>a+t.items.length,0)} carta${lists.reduce((a,t)=>a+t.items.length,0)===1?'':'s'} nas listas marcadas agora.</p>
+  <label class="lbl2" for="mshn">Nome do conjunto</label><input class="field" id="mshn" style="width:100%" maxlength="80" value="${esc(found.name)}">
+  ${msOptsHTML(lists,found.opts||{})}
+  <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-act="sh-copy">Copiar link</button><button class="btn" type="button" data-act="msh-update" data-code="${esc(found.code)}">Atualizar o link com as listas atuais</button><button class="btn" type="button" data-act="msh-stop" data-code="${esc(found.code)}">Parar de compartilhar</button></div>
+  <div class="actions"><span></span><button class="btn" type="button" data-ed-act="cancel">Fechar</button></div>`;
+ const oth=canShare()&&others.length?`<h3 style="margin:16px 0 6px;font-size:14px">Outros links de listas juntas</h3>${others.map(x=>`<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0"><span class="lead" style="margin:0;flex:1 1 140px"><b>${esc(x.name)}</b> · ${esc(fmtAt(x.at))}</span><button class="btn small" type="button" data-act="msh-copy" data-code="${esc(x.code)}">Copiar</button><button class="btn small" type="button" data-act="msh-update" data-code="${esc(x.code)}" data-other="1">Atualizar</button><button class="btn small" type="button" data-act="msh-stop" data-code="${esc(x.code)}">Parar</button></div>`).join('')}`:'';
+ $('#dialog').innerHTML=`<h2>Compartilhar link das listas juntas</h2>${msg?`<p class="note err">${esc(msg)}</p>`:''}${body}${oth}`;
+ $('#modal').classList.add('on');
+}
+async function mergeShareGo(code,fromOther){
+ let rec=code?msAll().find(x=>x.code===code):null;
+ let lists;
+ if(rec&&fromOther){lists=rec.ids.map(getTrade).filter(t=>t&&t.items.length);if(lists.length<2){mergeShareDialog('Algumas listas desse link não existem mais. Pare de compartilhar esse link ou recrie o conjunto.');return;}}
+ else lists=msLists();
+ if(lists.length<2)return;
+ const opts=fromOther?(rec.opts||{}):readMsOpts();
+ const name=fromOther?rec.name:readMsName(lists);
+ const newCode=rec?rec.code:newShareCode();
+ try{await shareList(newCode,mergeSnapshot(lists,name,opts));}
+ catch(e){mergeShareDialog(sharingMissing(e)?SQL_MSG:'Não consegui criar o link agora. Confira a conexão e tente de novo.');return;}
+ const next={code:newCode,name,ids:lists.map(t=>t.id),at:Date.now(),opts};
+ const all=msAll();const i=all.findIndex(x=>x.code===newCode);
+ if(i>=0)all[i]=next;else all.push(next);
+ saveSettings();
+ if(fromOther){toast('Link atualizado.');mergeShareDialog();}else mergeShareDialog();
+}
+async function mergeShareStop(code){
+ const all=msAll();const rec=all.find(x=>x.code===code);if(!rec)return;
+ try{await unshareList(code);}
+ catch(e){mergeShareDialog(sharingMissing(e)?SQL_MSG:'Não consegui parar de compartilhar agora. Confira a conexão e tente de novo.');return;}
+ S.settings.mergeShares=all.filter(x=>x!==rec);saveSettings();mergeShareDialog();toast('O link deixou de funcionar.');
+}
+
 const closeDlg=()=>{$('#modal').classList.remove('on');S.ui.tr=null;S.ui.tradeAdd=null;S.ui.pull=null;S.ui.bulk=null;};
 export const TRADE_ACT={
  'trade-new':()=>listDialog(newTrade('', 'sell'),true),
@@ -414,6 +469,11 @@ export const TRADE_ACT={
  'tm-cancel':()=>{S.ui.tmerge=null;renderTrades();},
  'tm-toggle':t=>{const m=S.ui.tmerge;if(!m)return;const id=t.dataset.id;if(m.sel.has(id))m.sel.delete(id);else m.sel.add(id);renderTrades();},
  'tm-go':()=>mergeExport(),
+ 'tm-share':()=>mergeShareDialog(),
+ 'msh-create':()=>mergeShareGo(null,false),
+ 'msh-update':t=>mergeShareGo(t.dataset.code,!!t.dataset.other),
+ 'msh-stop':t=>mergeShareStop(t.dataset.code),
+ 'msh-copy':async t=>{const l=shareLink(t.dataset.code);let ok=false;try{await navigator.clipboard.writeText(l);ok=true;}catch(e){}toast(ok?'Link copiado.':l);},
  'tr-kind':t=>{document.querySelectorAll('[data-act=tr-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));if(S.ui.tr)S.ui.tr.t.kind=t.dataset.v;},
  'tr-save':()=>{
   const st=S.ui.tr;if(!st)return;

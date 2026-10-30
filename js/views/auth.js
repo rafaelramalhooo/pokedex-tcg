@@ -49,9 +49,9 @@ function formHTML(){
 export function showAuth(done){
  if(done)onDone=done;
  const el=host();
- el.innerHTML=`<div class="acard"><img src="assets/logo-pokemon-tcg.png" alt="Pokémon Trading Card Game" width="260" height="133">
+ el.innerHTML=`<div class="acard"><img src="assets/logo-tcg-collection.png" alt="TCG Collection App" width="260" height="356">
   <p class="asub">Minha coleção de cartas</p><div id="aform">${formHTML()}</div>
-  <p class="afoot">App pessoal, não afiliado à The Pokémon Company.</p></div>`;
+  <p class="afoot"><strong>App de uso pessoal.</strong> Não é vendido nem distribuído, e não tem relação com outros apps de nome parecido. Não afiliado à The Pokémon Company.</p></div>`;
  el.classList.add('on');document.body.classList.add('locked');
  setTimeout(()=>{const f=$('#au-em')||$('#au-pw');if(f)f.focus();},30);
 }
@@ -64,7 +64,7 @@ function busyUI(on,text){
 function showErr(msg,ok){const e=$('#au-err');if(e){e.textContent=msg;e.classList.toggle('ok',!!ok);}}
 function loading(msg){
  const el=host();el.classList.add('on');document.body.classList.add('locked');
- el.innerHTML=`<div class="acard"><img src="assets/logo-pokemon-tcg.png" alt="" width="260" height="133"><p class="asub" role="status">${esc(msg)}</p></div>`;
+ el.innerHTML=`<div class="acard"><img src="assets/logo-tcg-collection.png" alt="" width="260" height="356"><p class="asub" role="status">${esc(msg)}</p></div>`;
 }
 
 async function afterSignIn(session){

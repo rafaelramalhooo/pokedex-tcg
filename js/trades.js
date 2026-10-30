@@ -119,13 +119,16 @@ export function newShareCode(){
 }
 export const shareLink=code=>`${location.origin}${location.pathname}#/v/${code}`;
 /* A cópia leva só o que é visível: nome, tipo e cartas com quantidade, acabamento e idioma. Valor e condição só entram se você escolher (opts.v, opts.c) e só em listas Vendo/Troco. */
-export const shareSnapshot=(t,opts)=>{
+const itemsOf=(t,opts)=>{
  const o=t.kind==='sell'?(opts||{}):{};
- return{v:1,name:t.name,kind:t.kind,at:Date.now(),items:t.items.map(i=>{
+ return t.items.map(i=>{
   const x={id:i.id,n:i.n,no:i.no,i:tcgdexBase(i.id,i.i),q:i.q,f:i.f,l:i.l};
   if(o.c&&i.c)x.c=i.c;
   if(o.v&&hasPrice(i))x.p=i.p;
   if(o.v&&isLiga(i)){x.lg=true;if(i.ld>0)x.ld=i.ld;}
   return x;
- })};
+ });
 };
+export const shareSnapshot=(t,opts)=>({v:1,name:t.name,kind:t.kind,at:Date.now(),items:itemsOf(t,opts)});
+/* Várias listas num só link: cada carta leva "sec" (posição da lista em "secs"). Valor e condição só entram nas listas Vendo/Troco e só se você escolher. */
+export const mergeSnapshot=(lists,name,opts)=>({v:2,name,kind:'mix',at:Date.now(),secs:lists.map(t=>({name:t.name,kind:t.kind})),items:lists.flatMap((t,si)=>itemsOf(t,opts).map(x=>({...x,sec:si})))});
