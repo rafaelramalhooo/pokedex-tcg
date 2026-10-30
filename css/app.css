@@ -276,7 +276,8 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
   .btn.small{height:40px}
   .seg button{min-height:40px;padding:8px 14px}
   .tabs button{min-height:40px}
-  input.field{min-width:0;flex:1 1 160px}
+  input.field{min-width:0}
+  .row input.field,.tools input.field,.toolbar input.field{flex:1 1 160px}
   .top{flex-direction:column;align-items:stretch}
   .tools{flex-wrap:wrap}
   .toolbar{flex-wrap:wrap}
@@ -408,15 +409,15 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .panel-sec .acct-st{color:var(--ink-2)}
 .panel-sec .acct-st.idle .dot{background:#1E9E5C}
 body.locked{overflow:hidden}
-.auth{position:fixed;inset:0;z-index:100;background:var(--bg,#E3E7F0);display:none;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.auth{position:fixed;inset:0;z-index:100;background:var(--bg,#E3E7F0);display:none;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
 .auth.on{display:flex}
-.acard{width:min(420px,100%);background:var(--sheet,#fff);border:1px solid var(--line,#D5DAE6);border-radius:20px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 20px 50px rgba(18,26,43,.18)}
-.acard img{max-width:118px;height:auto;margin-bottom:2px}
+.acard{margin:auto;width:min(420px,100%);background:var(--sheet,#fff);border:1px solid var(--line,#D5DAE6);border-radius:20px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 20px 50px rgba(18,26,43,.18)}
+.acard img{width:104px;max-width:30vw;height:auto;margin-bottom:2px;flex:none}
 .acard .asub{margin:0 0 6px;color:var(--ink-2)}
 .acard #aform,.acard form{width:100%;display:flex;flex-direction:column;gap:8px}
 .acard h2{margin:6px 0 0;text-align:center}
 .acard .lead{text-align:center;margin:0 0 6px}
-.acard .field{width:100%}
+.acard .field{width:100%;flex:none;height:46px;font-size:16px}
 .acard .btn.primary{margin-top:6px;width:100%;justify-content:center}
 .atabs{display:flex;gap:6px;margin-bottom:6px}
 .atabs button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line,#D5DAE6);background:transparent;font:inherit;font-weight:600;cursor:pointer;color:var(--ink-2)}
