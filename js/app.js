@@ -119,6 +119,26 @@ document.addEventListener('click',e=>{
  const t=e.target.closest('[data-act]');
  if(t&&ACT[t.dataset.act])ACT[t.dataset.act](t,e);
 });
+/* Botão direito (computador) ou toque longo (celular) em cartas marcadas com data-rc: faz a ação "tirar uma". */
+const RC=t=>{const f=ACT[t.dataset.rc];if(f)f(t,{stopPropagation(){}});};
+let lpTimer=0,lpFired=false,lpAt=0;
+document.addEventListener('contextmenu',e=>{
+ const t=e.target.closest&&e.target.closest('[data-rc]');if(!t)return;
+ e.preventDefault();
+ if(Date.now()-lpAt<1500)return;
+ RC(t);
+});
+document.addEventListener('pointerdown',e=>{
+ if(e.pointerType!=='touch')return;
+ const t=e.target.closest('[data-rc]');if(!t)return;
+ clearTimeout(lpTimer);
+ lpTimer=setTimeout(()=>{lpTimer=0;lpFired=true;lpAt=Date.now();if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}RC(t);},450);
+},{passive:true});
+const lpCancel=()=>{clearTimeout(lpTimer);lpTimer=0;};
+document.addEventListener('pointermove',e=>{if(e.pointerType==='touch'&&lpTimer&&(Math.abs(e.movementX)>3||Math.abs(e.movementY)>3))lpCancel();},{passive:true});
+document.addEventListener('pointerup',()=>{lpCancel();setTimeout(()=>{lpFired=false;},500);},{passive:true});
+document.addEventListener('pointercancel',lpCancel,{passive:true});
+document.addEventListener('click',e=>{if(lpFired){lpFired=false;e.stopPropagation();e.preventDefault();}},true);
 document.addEventListener('keydown',e=>{
  if(S.ui.panelId&&!$('#modal').classList.contains('on')&&(e.key==='ArrowLeft'||e.key==='ArrowRight')&&!(e.target.tagName&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))){e.preventDefault();panelNav(e.key==='ArrowRight'?1:-1);return;}
  if(bookKey(e)){e.preventDefault();return;}

@@ -145,10 +145,10 @@ export function renderAdd(){
  el.innerHTML=list.length?`<p class="lbl2">${fmtN(res.length)} resultado${res.length===1?'':'s'}${res.length>shown.length?', mostrando os primeiros '+shown.length:''}${check&&list.length<shown.length?` · ${shown.length-list.length} fora do Standard escondida${shown.length-list.length===1?'':'s'}`:''}.</p><div class="cards" style="--tile:118px">${list.map(id=>{
   const c=S.briefs[id];const set=S.setMap[c.setId];const it=d.items.find(x=>x.id===id);const n=it?it.q:0;
   const L=d.format==='standard'?legalOf(S.dinfo[id]):'ok';const have=own.get(nameKey(c.name))||0;
-  return`<div class="slot on plslot ${n?'sel':''}" data-act="dk-pick" data-id="${esc(id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, ${esc(set?set.name:'')}, ${n?'no deck ×'+n:'adicionar'}">
+  return`<div class="slot on plslot ${n?'sel':''}" data-act="dk-pick" data-rc="dk-dec" data-id="${esc(id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, ${esc(set?set.name:'')}, ${n?'no deck ×'+n:'adicionar'}">
    <div class="pocket">${imgTag(c.image,'low',c.name,undefined,id)}${n?CHECK+`<span class="qty tq">×${n}</span>`:''}${lglTag(L)}</div>
    <div class="num"><b>${esc(c.name)}</b><span>${esc(c.localId)}</span></div><div class="num"><span>${esc(set?set.name:'')}</span></div><div class="num"><span>${have?esc(ownText(split.get(nameKey(c.name)))):'Você não tem'}</span></div>
-   ${n?`<div class="stepper"><button type="button" class="btn small" data-act="dk-dec" data-id="${esc(id)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="dk-inc" data-id="${esc(id)}" aria-label="Aumentar">+</button></div>`:''}</div>`;}).join('')}</div>`:`<p class="lead">${shown.length?'Todas as cartas encontradas estão fora do Standard. Desmarque “Esconder as fora do Standard” para vê-las.':'Nenhuma carta encontrada.'}</p>`;
+   ${n?`<div class="stepper"><button type="button" data-act="dk-dec" data-id="${esc(id)}" aria-label="Diminuir">−</button><button type="button" data-act="dk-inc" data-id="${esc(id)}" aria-label="Aumentar">+</button></div>`:''}</div>`;}).join('')}</div>`:`<p class="lead">${shown.length?'Todas as cartas encontradas estão fora do Standard. Desmarque “Esconder as fora do Standard” para vê-las.':'Nenhuma carta encontrada.'}</p>`;
  const c=$('#tdcount');if(c)c.textContent=cntTxt(d);
 }
 function commit(d){

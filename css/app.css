@@ -134,8 +134,8 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .fin{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:var(--pocket)}
 .fin.has{background:#fff;border-color:var(--ink-3)}
 .fin-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.step{display:inline-flex;align-items:center;gap:2px;background:var(--sheet);border:1px solid var(--line);border-radius:10px}
-.step button{width:34px;height:34px;border:0;background:transparent;font-size:20px;font-weight:700;cursor:pointer;border-radius:8px}
+.step{display:inline-flex;align-items:center;gap:2px;background:var(--sheet);border:1.5px solid var(--ink-3);border-radius:999px;padding:2px}
+.step button{width:38px;height:38px;border:0;background:transparent;font-size:22px;font-weight:700;cursor:pointer;border-radius:50%}
 .step button:hover{background:var(--line-2)}
 .step output{min-width:28px;text-align:center;font-weight:800}
 .fin-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -465,8 +465,6 @@ body.immersive{overflow:hidden;background:#000}
 
 /* ---------- Negociação e exportar imagem ---------- */
 .tradeslot .qty{left:50%;right:auto;transform:translateX(-50%);bottom:6px;font-size:14px;padding:3px 12px;border-radius:999px}
-.tradeslot .stepper{display:flex;gap:6px;justify-content:center;margin-top:2px}
-.tradeslot .stepper .btn{min-width:44px;padding:0 10px;font-size:18px;line-height:1}
 .exres{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;max-height:58vh;overflow:auto}
 .exitem img{width:100%;border-radius:10px;border:1px solid var(--line);display:block;margin-bottom:6px}
 .exitem .row{display:flex;gap:6px;flex-wrap:wrap}
@@ -490,8 +488,6 @@ body.immersive{overflow:hidden;background:#000}
 .tvlang{display:flex;flex-wrap:wrap;gap:2px}
 .tvlang button{padding:6px 10px;display:inline-flex;align-items:center;gap:5px}
 .tvrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
-.tvrow .stepper{display:flex;align-items:center;gap:10px}
-.tvrow .stepper .btn{min-width:44px;min-height:44px;font-size:20px;padding:0}
 .tvq{min-width:28px;text-align:center;font-weight:800;font-size:18px}
 @media (max-width:600px){.tvgrid{grid-template-columns:1fr}.tvimg{max-width:220px;margin:0 auto}}
 
@@ -581,8 +577,6 @@ img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.coverpage .cvlogo img.lgbg,.her
 @media (prefers-reduced-motion:reduce){.pocket{transform:none!important}.pocket::after{display:none}}
 /* botões − / + sempre centralizados */
 .step button{display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1}
-.tradeslot .stepper .btn,.tvrow .stepper .btn,.stepper .btn{justify-content:center;padding-left:0;padding-right:0;line-height:1;text-align:center}
-.stepper .btn{padding-bottom:2px}
 
 /* ---------- v4.1: capa na primeira página (página dupla) ---------- */
 .bpage.coverpage{position:relative;overflow:hidden;padding:0;border:0;background:var(--rail-2)}
@@ -670,3 +664,69 @@ body.is-reordering *{cursor:grabbing!important}
 .subtabs a span:empty{display:none}
 .pgslot .num b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pgrow .btn{flex:none}
+
+/* ---------- v7.1: botões de quantidade (− +) em pílula, iguais em todo o app ---------- */
+.stepper{display:flex;align-items:stretch;width:100%;max-width:150px;margin:4px auto 0;border:1.5px solid var(--ink-3);border-radius:999px;overflow:hidden;background:#fff;flex:none}
+.stepper.wide{width:auto;max-width:none;margin:0}
+.stepper>button,.stepper>button.btn{flex:1 1 0;min-width:44px;height:40px;min-height:40px;padding:0;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--ink);font-size:22px;font-weight:700;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation}
+.stepper>button+button,.stepper>output+button{border-left:1.5px solid var(--line)}
+.stepper>output{flex:0 0 auto;min-width:46px;padding:0 8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;border-left:1.5px solid var(--line)}
+.stepper>button:hover{background:var(--line-2)}
+.stepper>button:active{background:var(--acc);color:var(--acc-ink)}
+.stepper>button:focus-visible{outline:3px solid var(--purple);outline-offset:-3px}
+[data-rc]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.tvrow .stepper{width:auto;max-width:none;margin:0}
+.tvrow .stepper>button{min-width:48px;height:44px}
+
+/* v7.1: tela da carta de jogo */
+.pgdet{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:18px;align-items:start;margin-top:4px}
+.pgimg .pocket{border-radius:10px;overflow:hidden}
+.pgimg img{width:100%;display:block}
+.pgtxt .facts{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
+.ctx{margin:10px 0 0;padding:8px 10px;background:var(--desk);border-radius:10px}
+.ctx b{display:block;font-size:14.5px}
+.ctx .dmg{font-weight:800;color:var(--purple-d)}
+.ctx small{display:block;color:var(--ink-3);margin-top:1px}
+.ctx p{margin:4px 0 0;font-size:14px;line-height:1.45;white-space:pre-line}
+.flav{font-style:italic}
+.pgmeta{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;padding:12px 14px;border:1.5px solid var(--purple-ln);background:var(--purple-bg);border-radius:12px}
+.pgrow{display:flex;align-items:center;gap:12px;margin:8px 0;padding:8px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+.pgrow.on{border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-ln)}
+.pgthumb{width:56px;flex:none;padding:0;border:0;background:transparent;cursor:pointer}
+.pgthumb .pocket{border-radius:6px;overflow:hidden;transform:none}
+.pgthumb img{width:100%;display:block}
+.pgname{flex:1;min-width:0}
+.pgrow .stepper{width:auto;margin:0}
+.goal{font-weight:800;font-size:11.5px;border-radius:99px;padding:1px 8px}
+.goal.low{background:#FFF1D6;color:#8A5A00}
+.goal.ok{background:#DDF3E5;color:#136B3A}
+.pgslot .num{justify-content:center;text-align:center}
+
+/* v7.1: celular e tablet */
+@media (max-width:1024px) and (min-width:601px){
+ .modal{padding:3vh 18px}
+ .tdlg{max-height:calc(94vh - 40px)}
+ .pgdet{grid-template-columns:minmax(150px,200px) 1fr}
+ .subtabs{overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+ .subtabs::-webkit-scrollbar{display:none}
+}
+@media (max-width:600px){
+ .modal{padding:0;align-items:stretch}
+ .modal .dialog{width:100%;max-width:none;min-height:100%;max-height:none;border-radius:0;overflow:visible;padding:14px 14px calc(18px + env(safe-area-inset-bottom))}
+ .tdlg{max-height:none;min-height:calc(100vh - 32px);min-height:calc(100dvh - 32px)}
+ .tdhead{position:sticky;top:0;background:var(--sheet);z-index:2;padding-top:14px;margin-top:-14px}
+ .tdbody{overflow:visible}
+ .pgdet{grid-template-columns:1fr}
+ .pgimg{width:min(230px,70%);margin:0 auto}
+ .pgmeta{flex-direction:column;align-items:stretch;text-align:center}
+ .pgmeta .stepper.wide{align-self:center}
+ .pgrow{flex-wrap:wrap}
+ .pgname{flex:1 1 calc(100% - 70px)}
+ .pgrow .stepper{margin-left:auto}
+ .stepper>button,.stepper>button.btn{height:44px;min-height:44px}
+ .subtabs{overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+ .subtabs::-webkit-scrollbar{display:none}
+ .subtabs a{padding:10px 12px;flex:none}
+ .top .tools{flex-wrap:wrap}
+ .top .tools .btn{flex:1 1 calc(50% - 6px)}
+}

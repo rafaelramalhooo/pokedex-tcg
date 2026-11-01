@@ -1,24 +1,26 @@
 /* Cartas de jogo: estoque de cartas só para jogar, separado da coleção. Consulta rápida do que você tem por nome. */
 import {visibleSet} from '../catalog.js';
+import {getFB} from '../api.js';
+import {typePt, rarityPt} from '../constants.js';
 import {S} from '../state.js';
 import {imgTag, toast} from '../ui.js';
 import {$, esc, fmtN, live, nz} from '../util.js';
 import {importInto} from '../decktext.js';
 import {ensureInfo, getDeck, nameKey, ownSplit, ownText, pool, tradeFromDeck} from '../decks.js';
-import {addPlay, getPlay, playGroups, playText, playTotal, savePlay, setPlay} from '../play.js';
+import {MAX_GOAL, addPlay, getGoal, getPlay, missingText, playGroups, playText, playTotal, savePlay, setGoal, setPlay} from '../play.js';
 import {subTabs} from './decks.js';
 
 const CATS=[['pokemon','Pokémon'],['treinador','Treinador'],['energia','Energia']];
 const CHECK='<span class="plcheck" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
 const setName=sid=>(S.setMap[sid]&&S.setMap[sid].name)||sid||'';
-const ui=()=>S.ui.pg||(S.ui.pg={q:'',cat:'',set:''});
+const ui=()=>S.ui.pg||(S.ui.pg={q:'',cat:'',set:'',miss:false});
 
 /* ---------- tela principal ---------- */
 export function viewPlay(){
  S.cur={name:'play',soft:renderPlay,refresh:renderPlay};
- const st=ui();st.q='';st.cat='';st.set='';
- $('#view').innerHTML=`${subTabs('play')}<div class="top"><div><h1>Cartas de jogo</h1><p class="lead">Cartas que você usa só para jogar. Elas ficam separadas da sua coleção e contam por nome: qualquer impressão serve. Use para saber quanto você tem antes de comprar.</p></div>
-  <div class="tools"><button class="btn primary" type="button" data-act="pg-add">Adicionar cartas</button><button class="btn" type="button" data-act="pg-import">Importar lista</button><button class="btn" type="button" data-act="pg-fromdeck">Adicionar de um deck</button><button class="btn" type="button" data-act="pg-copy">Copiar lista</button></div></div>
+ const st=ui();st.q='';st.cat='';st.set='';st.miss=false;
+ $('#view').innerHTML=`${subTabs('play')}<div class="top"><div><h1>Cartas de jogo</h1><p class="lead">Cartas que você usa só para jogar. Elas ficam separadas da sua coleção e contam por nome: qualquer impressão serve. Use para saber quanto você tem antes de comprar. Dica: abra uma carta para ver o texto dela e definir uma meta de quantidade.</p></div>
+  <div class="tools"><button class="btn primary" type="button" data-act="pg-add">Adicionar cartas</button><button class="btn" type="button" data-act="pg-import">Importar lista</button><button class="btn" type="button" data-act="pg-fromdeck">Adicionar de um deck</button><button class="btn" type="button" data-act="pg-copy">Copiar lista</button><button class="btn" type="button" data-act="pg-copymiss">Copiar o que falta</button></div></div>
   <div id="pgbar"></div><div id="pgbody"></div>`;
  renderPlay();
 }
@@ -44,17 +46,18 @@ export function renderPlay(){
  needInfo();
  const sets=[...new Set(S.play.map(e=>e.s).filter(Boolean))].map(sid=>({sid,name:setName(sid)})).sort((a,b)=>a.name.localeCompare(b.name,'pt'));
  const q=nz(st.q);
- const vis=all.filter(g=>(!q||nz(g.n).includes(q))&&(!st.cat||(g.cat||'pokemon')===st.cat)&&(!st.set||g.entries.some(e=>e.s===st.set)));
- const total=vis.reduce((a,g)=>a+g.q,0);
+ const vis=all.filter(g=>(!q||nz(g.n).includes(q))&&(!st.cat||(g.cat||'pokemon')===st.cat)&&(!st.set||g.entries.some(e=>e.s===st.set))&&(!st.miss||g.miss>0));
+ const total=vis.reduce((a,g)=>a+g.q,0);const missAll=all.reduce((a,g)=>a+g.miss,0);
  if(!document.getElementById('pgq')){
   bar.innerHTML=`<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
    <div style="flex:1;min-width:200px"><label class="lbl2" for="pgq">Buscar pelo nome</label><input class="field" id="pgq" type="search" style="width:100%" placeholder="Ex.: Boss, Pikachu, Ultra Ball" value="${esc(st.q)}"></div>
    <div id="pgcats"></div>
-   <label class="size">Expansão <select class="field" data-pg="set" id="pgset"></select></label></div><p class="lead" id="pgsum" style="margin:0 0 6px"></p>`;
+   <label class="size">Expansão <select class="field" data-pg="set" id="pgset"></select></label><div id="pgmiss"></div></div><p class="lead" id="pgsum" style="margin:0 0 6px"></p>`;
  }
  const cats=$('#pgcats');if(cats)cats.innerHTML=`<div class="seg" role="group" aria-label="Categoria">${[['','Todas'],...CATS].map(([k,l])=>`<button type="button" data-act="pg-cat" data-v="${k}" aria-pressed="${st.cat===k}">${l}</button>`).join('')}</div>`;
+ const mb=$('#pgmiss');if(mb){const nm=all.filter(g=>g.miss>0).length;mb.innerHTML=all.some(g=>g.goal)?`<button type="button" class="fchip" data-act="pg-miss" aria-pressed="${!!st.miss}">Só o que falta (${nm})</button>`:'';}
  const sel=$('#pgset');if(sel){const h=`<option value="">Todas</option>${sets.map(x=>`<option value="${esc(x.sid)}" ${st.set===x.sid?'selected':''}>${esc(x.name)}</option>`).join('')}`;if(sel.innerHTML!==h)sel.innerHTML=h;}
- const sum=$('#pgsum');if(sum)sum.textContent=`${fmtN(total)} carta${total===1?'':'s'} · ${fmtN(vis.length)} nome${vis.length===1?'':'s'} diferente${vis.length===1?'':'s'}${vis.length<all.length?` (de ${fmtN(all.length)} no total)`:''}`;
+ const sum=$('#pgsum');if(sum)sum.textContent=`${fmtN(total)} carta${total===1?'':'s'} · ${fmtN(vis.length)} nome${vis.length===1?'':'s'} diferente${vis.length===1?'':'s'}${vis.length<all.length?` (de ${fmtN(all.length)} no total)`:''}${all.some(g=>g.goal)?(missAll?` · faltam ${fmtN(missAll)} para as metas`:' · todas as metas batidas'):''}`;
  if(!vis.length){body.innerHTML='<p class="lead">Nenhuma carta com esse filtro.</p>';return;}
  const groups=st.cat?[[st.cat,(CATS.find(c=>c[0]===st.cat)||[])[1]]]:CATS;
  body.innerHTML=groups.map(([k,l])=>{
@@ -62,13 +65,15 @@ export function renderPlay(){
   return`<h3 class="dsec">${l} <span>${rows.reduce((a,g)=>a+g.q,0)}</span></h3><div class="cards">${rows.map(tile).join('')}</div>`;
  }).join('');
 }
+const STEP=(dec,inc,attr,mid)=>`<div class="stepper${mid!==undefined?' wide':''}"><button type="button" data-act="${dec}" ${attr} aria-label="Diminuir">−</button>${mid!==undefined?`<output aria-live="polite">${mid}</output>`:''}<button type="button" data-act="${inc}" ${attr} aria-label="Aumentar">+</button></div>`;
 function tile(g){
  const one=g.entries.length===1;
  const sub=one?`${esc(g.top.no)} · ${esc(setName(g.top.s))}`:`${g.entries.length} impressões`;
- return`<div class="slot on tradeslot pgslot" data-act="pg-open" data-k="${esc(g.k)}" role="button" tabindex="0" aria-label="${esc(g.n)}, você tem ${g.q}. Ver detalhes">
+ const goal=g.goal?`<div class="num"><span class="goal ${g.miss?'low':'ok'}">${g.miss?`Meta ${g.goal} · faltam ${g.miss}`:`Meta ${g.goal} ✓`}</span></div>`:'';
+ return`<div class="slot on tradeslot pgslot" data-act="pg-open" data-rc="pg-rc" data-k="${esc(g.k)}" role="button" tabindex="0" aria-label="${esc(g.n)}, você tem ${g.q}. Ver detalhes">
   <div class="pocket">${imgTag(g.i,'low',g.n,undefined,g.id)}<span class="qty tq">×${g.q}</span></div>
-  <div class="num"><b>${esc(g.n)}</b><span>${esc(g.q)} na mão</span></div><div class="num"><span>${sub}</span></div>
-  ${one?`<div class="stepper"><button type="button" class="btn small" data-act="pg-dec" data-id="${esc(g.top.id)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="pg-inc" data-id="${esc(g.top.id)}" aria-label="Aumentar">+</button></div>`:''}</div>`;
+  <div class="num"><b>${esc(g.n)}</b><span>${esc(g.q)} na mão</span></div><div class="num"><span>${sub}</span></div>${goal}
+  ${one?STEP('pg-dec','pg-inc',`data-id="${esc(g.top.id)}"`):''}</div>`;
 }
 function change(id,d){
  const e=getPlay(id);if(!e)return;
@@ -76,10 +81,42 @@ function change(id,d){
  if(S.ui.pgd)paintDetail();
 }
 
-/* ---------- detalhe de uma carta (por impressão) ---------- */
+/* ---------- detalhe de uma carta (por nome) ---------- */
 const head=(title,sub,id)=>`<div class="tdhead"><div><h2>${title}</h2><span class="tdcount" ${id?`id="${id}"`:''}>${sub||''}</span></div><button class="btn primary" type="button" data-ed-act="cancel">Concluir</button></div>`;
+const CATPT={pokemon:'Pokémon',trainer:'Treinador',energy:'Energia'};
+const TRAINER={supporter:'Apoiador',item:'Item',stadium:'Estádio',tool:'Ferramenta Pokémon','pokémon tool':'Ferramenta Pokémon'};
+const texts=()=>S.ui.ctext||(S.ui.ctext={});
+const keep=c=>({name:c.name,category:c.category,stage:c.stage,trainerType:c.trainerType,energyType:c.energyType,hp:c.hp,types:c.types||[],rarity:c.rarity,mark:c.regulationMark,illustrator:c.illustrator,
+ effect:c.effect,description:c.description,abilities:c.abilities||[],attacks:c.attacks||[],weaknesses:c.weaknesses||[],resistances:c.resistances||[],retreat:c.retreat,evolveFrom:c.evolveFrom,setName:c.set&&c.set.name,no:c.localId});
+async function loadText(id){
+ if(texts()[id])return;
+ texts()[id]='loading';
+ try{texts()[id]=keep(await getFB(`/cards/${encodeURIComponent(id)}`));}catch(e){texts()[id]='err';}
+ if(S.ui.pgd&&S.ui.pgd.sel===id)paintDetail();
+}
+const costTxt=a=>{const m=new Map();(a||[]).forEach(t=>m.set(typePt(t),(m.get(typePt(t))||0)+1));return[...m].map(([t,n])=>n>1?`${t} ×${n}`:t).join(', ');};
+function infoHTML(id,e){
+ const c=texts()[id];
+ if(!c||c==='loading')return'<div class="skel" style="height:120px"></div>';
+ if(c==='err')return`<div class="note warn">Não consegui carregar o texto desta carta agora. Confira a conexão e abra de novo.</div>`;
+ const facts=[CATPT[String(c.category||'').toLowerCase()]||'',c.stage||'',c.trainerType?(TRAINER[String(c.trainerType).toLowerCase()]||c.trainerType):'',c.energyType||'',c.hp?c.hp+' PS':'',...(c.types||[]).map(typePt),c.rarity?rarityPt(c.rarity):'',c.mark?'Marca '+c.mark:''].filter(Boolean);
+ const abil=(c.abilities||[]).map(x=>`<div class="ctx"><b>${esc(x.type||'Habilidade')} · ${esc(x.name||'')}</b><p>${esc(x.effect||'')}</p></div>`).join('');
+ const atk=(c.attacks||[]).map(x=>`<div class="ctx"><b>${esc(x.name||'')}${x.damage?` <span class="dmg">${esc(x.damage)}</span>`:''}</b>${(x.cost||[]).length?`<small>${esc(costTxt(x.cost))}</small>`:''}${x.effect?`<p>${esc(x.effect)}</p>`:''}</div>`).join('');
+ const wr=[];
+ if((c.weaknesses||[]).length)wr.push('Fraqueza: '+c.weaknesses.map(w=>`${typePt(w.type)} ${w.value||''}`.trim()).join(', '));
+ if((c.resistances||[]).length)wr.push('Resistência: '+c.resistances.map(w=>`${typePt(w.type)} ${w.value||''}`.trim()).join(', '));
+ if(c.retreat!==undefined&&c.retreat!==null&&c.category&&/pok/i.test(c.category))wr.push('Recuo: '+c.retreat);
+ return`<div class="facts">${facts.map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div>
+  ${c.evolveFrom?`<p class="lead" style="margin:6px 0 0">Evolui de ${esc(c.evolveFrom)}</p>`:''}
+  ${abil}${atk}
+  ${c.effect?`<div class="ctx"><p>${esc(c.effect)}</p></div>`:''}
+  ${wr.length?`<p class="lead" style="margin:8px 0 0">${wr.map(esc).join(' · ')}</p>`:''}
+  ${c.description?`<p class="lead flav" style="margin:8px 0 0">${esc(c.description)}</p>`:''}
+  <p class="lead" style="margin:8px 0 0">${e?`${esc(setName(e.s))} · carta ${esc(e.no)}`:''}${c.illustrator?` · Ilustração: ${esc(c.illustrator)}`:''}</p>`;
+}
 function openDetail(k){
- S.ui.pgd={k};
+ const g=playGroups().find(x=>x.k===k);if(!g)return;
+ S.ui.pgd={k,sel:g.top.id};
  $('#dialog').innerHTML=`<div class="tdlg" id="pgdlg"></div>`;
  $('#modal').classList.add('on');
  paintDetail();
@@ -88,11 +125,20 @@ function paintDetail(){
  const st=S.ui.pgd;const el=$('#pgdlg');if(!st||!el)return;
  const g=playGroups().find(x=>x.k===st.k);
  if(!g){$('#modal').classList.remove('on');S.ui.pgd=null;return;}
+ if(!g.entries.some(e=>e.id===st.sel))st.sel=g.top.id;
+ const sel=g.entries.find(e=>e.id===st.sel);
+ loadText(sel.id);
  const own=ownSplit().get(g.k)||{c:0,p:0};
+ const goal=g.goal;
  el.innerHTML=`${head(esc(g.n),`${g.q} de jogo${own.c?` · ${own.c} na coleção`:''}`)}<div class="tdbody">
-  ${g.entries.map(e=>`<div class="row pgrow" style="gap:12px;align-items:center;margin:8px 0"><div style="width:56px;flex:none">${imgTag(e.i,'low',e.n,undefined,e.id)}</div>
-   <div style="flex:1;min-width:0"><b>${esc(e.n)}</b><div class="lead" style="margin:0">${esc(e.no)} · ${esc(setName(e.s))}</div></div>
-   <div class="stepper" style="display:flex;gap:6px;align-items:center"><button type="button" class="btn small" data-act="pg-dec" data-id="${esc(e.id)}" aria-label="Diminuir">−</button><b style="min-width:30px;text-align:center">${e.q}</b><button type="button" class="btn small" data-act="pg-inc" data-id="${esc(e.id)}" aria-label="Aumentar">+</button></div>
+  <div class="pgdet"><div class="pgimg"><div class="pocket">${imgTag(sel.i,'high',sel.n,undefined,sel.id)}</div></div>
+   <div class="pgtxt">${infoHTML(sel.id,sel)}</div></div>
+  <div class="pgmeta"><div><b>Meta de quantidade</b><div class="lead" style="margin:2px 0 0">${goal?(g.miss?`Faltam ${g.miss} para chegar a ${goal}.`:`Meta de ${goal} batida.`):'Sem meta. Defina quantas você quer ter, somando todas as impressões.'}</div></div>
+   ${STEP('pg-goal-dec','pg-goal-inc',`data-k="${esc(g.k)}"`,goal||'—')}</div>
+  <h3 class="dsec" style="margin-top:18px">Suas impressões <span>${g.entries.length}</span></h3>
+  ${g.entries.map(e=>`<div class="pgrow ${e.id===sel.id?'on':''}"><button type="button" class="pgthumb" data-act="pg-sel" data-id="${esc(e.id)}" aria-label="Ver o texto desta impressão"><div class="pocket">${imgTag(e.i,'low',e.n,undefined,e.id)}</div></button>
+   <div class="pgname"><b>${esc(e.n)}</b><div class="lead" style="margin:0">${esc(e.no)} · ${esc(setName(e.s))}</div></div>
+   ${STEP('pg-dec','pg-inc',`data-id="${esc(e.id)}"`,e.q)}
    <button type="button" class="btn small" data-act="pg-rm" data-id="${esc(e.id)}">Remover</button></div>`).join('')}
   <div class="actions" style="margin-top:14px"><button class="btn" type="button" data-act="pg-more" data-n="${esc(g.n)}">Adicionar outra impressão</button><span></span></div></div>`;
 }
@@ -109,7 +155,7 @@ function addDialog(prefill){
   <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
    <div style="flex:1;min-width:200px"><label class="lbl2" for="pga">Buscar pelo nome da carta</label><input class="field" id="pga" type="search" style="width:100%" placeholder="Ex.: Ultra Ball" value="${esc(prefill||'')}"></div>
    <label class="size">Expansão <select class="field" data-pa="set"><option value="">Todas</option>${opts.map(x=>`<option value="${esc(x.sid)}">${esc(x.name)}</option>`).join('')}</select></label></div>
-  <p class="lead" style="margin:8px 0 0">Toque numa carta para colocá-la nas cartas de jogo. Use − e + para a quantidade. Qualquer impressão serve para jogar.</p>
+  <p class="lead" style="margin:8px 0 0">Clique (ou toque) numa carta para colocá-la nas cartas de jogo; clique com o botão direito (ou segure o dedo) para tirar uma. Também dá para usar − e +. Qualquer impressão serve para jogar.</p>
   <div id="pares" style="margin-top:12px"></div></div></div>`;
  $('#modal').classList.add('on');setTimeout(()=>{const i=$('#pga');if(i){i.focus();}},30);
  renderAdd();
@@ -135,11 +181,11 @@ export function renderAdd(){
  const split=ownSplit();
  el.innerHTML=shown.length?`<p class="lbl2">${fmtN(res.length)} resultado${res.length===1?'':'s'}${res.length>shown.length?', mostrando os primeiros '+shown.length:''}.</p><div class="cards" style="--tile:118px">${shown.map(id=>{
   const c=S.briefs[id];const e=getPlay(id);const n=e?e.q:0;const v=split.get(nameKey(c.name));
-  return`<div class="slot on plslot ${n?'sel':''}" data-act="pa-pick" data-id="${esc(id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, ${esc(setName(c.setId))}, ${n?'nas cartas de jogo ×'+n:'adicionar'}">
+  return`<div class="slot on plslot ${n?'sel':''}" data-act="pa-pick" data-rc="pa-dec" data-id="${esc(id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, ${esc(setName(c.setId))}, ${n?'nas cartas de jogo ×'+n:'adicionar'}">
    <div class="pocket">${imgTag(c.image,'low',c.name,undefined,id)}${n?CHECK+`<span class="qty tq">×${n}</span>`:''}</div>
    <div class="num"><b>${esc(c.name)}</b><span>${esc(c.localId)}</span></div><div class="num"><span>${esc(setName(c.setId))}</span></div>
    <div class="num"><span>${v&&(v.c||v.p)?esc(ownText(v)):'Você não tem'}</span></div>
-   ${n?`<div class="stepper"><button type="button" class="btn small" data-act="pa-dec" data-id="${esc(id)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="pa-inc" data-id="${esc(id)}" aria-label="Aumentar">+</button></div>`:''}</div>`;}).join('')}</div>`:'<p class="lead">Nenhuma carta encontrada.</p>';
+   ${n?STEP('pa-dec','pa-inc',`data-id="${esc(id)}"`):''}</div>`;}).join('')}</div>`:'<p class="lead">Nenhuma carta encontrada.</p>';
  const c=$('#pgcount');if(c)c.textContent=`${playTotal()} cartas`;
 }
 function pick(id,d){
@@ -205,6 +251,26 @@ function deckGo(){
  toast(`${n} carta${n===1?'':'s'} adicionada${n===1?'':'s'} às cartas de jogo.`);
 }
 
+function goalStep(k,d){
+ const g=playGroups().find(x=>x.k===k);if(!g)return;
+ const cur=getGoal(k);
+ const next=d>0?(cur?cur+1:Math.max(4,g.q)):cur-1;
+ setGoal(k,Math.min(MAX_GOAL,next));
+ renderPlay();paintDetail();
+}
+/* Botão direito (ou toque longo) numa carta da lista: tira uma, parando em 1. */
+function rcTile(k){
+ const g=playGroups().find(x=>x.k===k);if(!g)return;
+ if(g.entries.length>1){toast('Esta carta tem mais de uma impressão. Abra a carta para ajustar cada uma.');return;}
+ if(g.q<=1){toast('Só resta uma. Para tirar, abra a carta e use Remover.');return;}
+ change(g.top.id,-1);
+}
+async function copyMissing(){
+ if(!playGroups().some(g=>g.goal)){toast('Defina uma meta numa carta para usar este botão.');return;}
+ const text=missingText();if(!text){toast('Você já bateu todas as metas.');return;}
+ let ok=false;try{await navigator.clipboard.writeText(text);ok=true;}catch(e){}
+ toast(ok?'Lista do que falta copiada.':'Não consegui copiar neste navegador.');
+}
 async function copyList(){
  const text=playText();if(!text){toast('Não há cartas para copiar.');return;}
  let ok=false;try{await navigator.clipboard.writeText(text);ok=true;}catch(e){}
@@ -221,6 +287,12 @@ export const PLAY_ACT={
  'pdk-mode':t=>deckDialog(S.ui.pdk&&S.ui.pdk.id,t.dataset.v),
  'pdk-go':()=>deckGo(),
  'pg-copy':()=>copyList(),
+ 'pg-copymiss':()=>copyMissing(),
+ 'pg-miss':()=>pgFilter('miss',!ui().miss),
+ 'pg-sel':t=>{if(S.ui.pgd){S.ui.pgd.sel=t.dataset.id;paintDetail();}},
+ 'pg-goal-inc':t=>goalStep(t.dataset.k,1),
+ 'pg-goal-dec':t=>goalStep(t.dataset.k,-1),
+ 'pg-rc':t=>rcTile(t.dataset.k),
  'pg-cat':t=>pgFilter('cat',t.dataset.v),
  'pg-open':t=>openDetail(t.dataset.k),
  'pg-inc':(t,e)=>{e&&e.stopPropagation();change(t.dataset.id,1);},

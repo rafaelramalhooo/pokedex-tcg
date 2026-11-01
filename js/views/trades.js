@@ -346,7 +346,7 @@ export function renderPull(){
  el.innerHTML=vis.length?`<p class="lbl2">${fmtN(vis.length)} carta${vis.length===1?'':'s'}${vis.length>list.length?', mostrando as primeiras '+list.length+'. Use a busca ou o filtro para achar as outras':''}.</p><div class="cards" style="--tile:118px">${list.map(r=>{
   const its=itemsOf(t,st,r);const on=its.length>0;const q=its.reduce((a,i)=>a+i.q,0);
   const tag=st.split?[finShort(r.f),r.l&&r.l!=='xx'?r.l.toUpperCase():''].filter(Boolean).join(' · '):(r.l&&r.l!=='xx'?r.l.toUpperCase():'');
-  return`<div class="slot on plslot ${on?'sel':''}" data-act="pl-toggle" data-key="${esc(r.key)}" role="button" tabindex="0" aria-label="${esc(r.sn.n)}, você tem ${r.own}, ${on?'na lista, toque para tirar':'toque para adicionar'}">
+  return`<div class="slot on plslot ${on?'sel':''}" data-act="pl-toggle" data-rc="pl-rc" data-key="${esc(r.key)}" role="button" tabindex="0" aria-label="${esc(r.sn.n)}, você tem ${r.own}, ${on?'na lista, toque para tirar':'toque para adicionar'}">
    <div class="pocket">${imgTag(r.sn.i,'low',r.sn.n,undefined,r.id)}${on?CHECK:''}<span class="qty tq">×${on?q:r.own}</span></div>
    <div class="num"><b>${esc(r.sn.n)}</b><span>${esc(r.sn.no)}</span></div>${tag?`<div class="num"><span>${esc(tag)}</span></div>`:''}
    ${on?`<div class="stepper"><button type="button" class="btn small" data-act="pl-dec" data-key="${esc(r.key)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="pl-inc" data-key="${esc(r.key)}" aria-label="Aumentar">+</button></div>`:`<div class="num"><span>Você tem ×${r.own}</span></div>`}</div>`;}).join('')}</div>`:'<p class="lead">Nenhuma carta com esse filtro.</p>';
@@ -369,6 +369,13 @@ function plStep(key,d){
  if(d>0){if(sum>=r.own)return;const it=st.split?its[0]:(its.find(i=>i.f===r.f&&i.l===r.l)||its[0]);setQty(t,itemKey(it),it.q+1);}
  else{if(sum<=1)return;const it=[...its].reverse().find(i=>i.q>0);setQty(t,itemKey(it),it.q-1);}
  commit();renderPull();
+}
+/* Botão direito (ou toque longo): tira uma; se era a última, tira a carta da lista. */
+function plRight(key){
+ const st=S.ui.pull;const t=st&&getTrade(st.id);if(!t)return;
+ const r=viewRows(st).find(x=>x.key===key);if(!r)return;
+ const its=itemsOf(t,st,r);if(!its.length)return;
+ if(its.reduce((a,i)=>a+i.q,0)<=1)plToggle(key);else plStep(key,-1);
 }
 function plAll(on){
  const st=S.ui.pull;const t=st&&getTrade(st.id);if(!t)return;
@@ -509,6 +516,7 @@ export const TRADE_ACT={
  'pl-toggle':t=>plToggle(t.dataset.key),
  'pl-inc':(t,e)=>{e&&e.stopPropagation();plStep(t.dataset.key,1);},
  'pl-dec':(t,e)=>{e&&e.stopPropagation();plStep(t.dataset.key,-1);},
+ 'pl-rc':t=>plRight(t.dataset.key),
  'pl-src':t=>{const st=S.ui.pull;if(st)pullDialog(st.id,t.dataset.v);},
  'pl-all':()=>plAll(true),
  'pl-none':()=>plAll(false),

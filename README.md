@@ -19,3 +19,5 @@ Este é um projeto pessoal e **não é afiliado, patrocinado nem aprovado pela T
 ## Cartas de jogo (v7)
 
 Dentro de **Decks** há a aba **Cartas de jogo**: um estoque das cartas que você usa só para jogar, separado da coleção (não entra em fichários nem no progresso das coleções). A contagem é por nome: qualquer impressão serve. O deck e as listas de compra somam coleção + cartas de jogo. Para sincronizar entre aparelhos, rode `supabase/atualizacao-cartas-de-jogo.sql` uma vez (veja `docs/ATUALIZACAO-CARTAS-DE-JOGO.md`).
+
+**Novidades da v7.1:** botões − e + em formato de pílula em todo o app; botão direito (ou toque longo no celular) tira uma carta nas telas de adicionar cartas de jogo, adicionar ao deck, "Puxar das minhas cartas" e na lista de cartas de jogo (que para em 1); a tela da carta mostra o texto, ataques, habilidades e demais dados; meta de quantidade por carta (fica nas configurações e sincroniza sozinha, sem SQL novo), com "Só o que falta" e "Copiar o que falta"; telas ajustadas para celular e tablet.
