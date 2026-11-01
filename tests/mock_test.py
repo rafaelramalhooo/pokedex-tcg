@@ -986,7 +986,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v7.1" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v7.2" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
@@ -1289,6 +1289,17 @@ Total de cartas: 60"""
         check(ovf(), f"v7.1 {nm}: janela de adicionar sem rolagem lateral")
         page.screenshot(path=str(ROOT/f"tests/v71_{nm}_adicionar.png"))
         page.locator('#dialog [data-ed-act="cancel"]').first.click(); page.wait_for_timeout(250)
+    page.set_viewport_size(vp0); page.wait_for_timeout(350)
+    # ---- v7.2: botões iguais em todas as telas do celular ----
+    page.set_viewport_size({"width": 390, "height": 844}); page.wait_for_timeout(300)
+    for rt, nm in [("#/", "colecoes"), ("#/binders", "fichas"), ("#/decks", "decks"), ("#/decks/cartas", "jogo"), ("#/negociacao", "negociacao"), ("#/ajustes", "ajustes"), ("#/expansoes", "expansoes")]:
+        page.evaluate(f"location.hash='{rt}'"); page.wait_for_timeout(700)
+        bad = page.evaluate("""()=>{const out=[];document.querySelectorAll('main .btn, .modal.on .btn').forEach(b=>{const r=b.getBoundingClientRect();if(!r.width||b.closest('.stepper'))return;const cs=getComputedStyle(b);if(cs.justifyContent!=='center'||cs.textAlign!=='center')out.push(['alinhamento',b.textContent.trim()]);if(r.height<40)out.push(['altura '+Math.round(r.height),b.textContent.trim()]);});
+          document.querySelectorAll('.tools').forEach(t=>{const hs=[...t.querySelectorAll(':scope>.btn')].map(b=>b.getBoundingClientRect()).filter(r=>r.width);const rows={};hs.forEach(r=>{(rows[Math.round(r.top)]=rows[Math.round(r.top)]||[]).push(r.height)});Object.values(rows).forEach(a=>{if(Math.max(...a)-Math.min(...a)>1)out.push(['alturas diferentes na linha',a.join('/')])});});return out}""")
+        check(not bad, f"v7.2 {nm}: botões centralizados e alinhados no celular {bad[:4]}")
+        check(page.evaluate("document.documentElement.scrollWidth<=window.innerWidth+1"), f"v7.2 {nm}: sem rolagem lateral")
+        page.screenshot(path=str(ROOT/f"tests/v72_{nm}.png"))
+    page.evaluate("location.hash='#/decks/cartas'"); page.wait_for_timeout(600)
     page.set_viewport_size(vp0); page.wait_for_timeout(350)
     # detalhe por impressão
     page.locator('#pgbody .pgslot', has_text="sv02 1").click(); page.wait_for_selector("#pgdlg .pgrow", timeout=3000)

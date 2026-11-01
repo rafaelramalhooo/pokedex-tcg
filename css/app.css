@@ -730,3 +730,40 @@ body.is-reordering *{cursor:grabbing!important}
  .top .tools{flex-wrap:wrap}
  .top .tools .btn{flex:1 1 calc(50% - 6px)}
 }
+
+/* ---------- v7.2: botões e controles iguais em todo o app ---------- */
+.btn{justify-content:center;text-align:center;line-height:1.2;height:auto;min-height:40px;padding:8px 16px;font-size:15px;font-family:inherit;text-decoration:none}
+a.btn{color:inherit}
+.btn.small{height:auto;min-height:34px;padding:6px 12px;font-size:14px}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,.seg button:focus-visible,.fchip:focus-visible{outline:3px solid var(--purple);outline-offset:2px}
+.seg button,.fchip{font-family:inherit}
+.seg button{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+.fchip{display:inline-flex;align-items:center;justify-content:center;text-align:center}
+.actions>span:empty{display:none}
+@media (max-width:860px){
+ .btn{height:auto;min-height:46px;white-space:normal}
+ .btn.small{height:auto;min-height:42px}
+ .field,select.field{height:46px;font-size:16px}
+ textarea.field{height:auto}
+ .seg{display:flex;width:100%}
+ .seg button{flex:1 1 0;min-height:44px;padding:8px 6px}
+ .fchip{min-height:40px;padding:8px 14px}
+ .top .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;width:100%}
+ .top .tools>.btn{flex:1 1 calc(50% - 5px);min-width:0}
+ .top .tools>.btn.primary{flex-basis:100%;order:-1}
+ .top .tools>input,.top .tools>.seg,.top .tools>label{flex:1 1 100%}
+ .toolbar{align-items:stretch}
+ .toolbar>.btn{flex:1 1 calc(50% - 7px)}
+ .actions,.dialog .actions{gap:10px;align-items:stretch}
+ .actions>.btn{flex:1 1 140px}
+ .actions>span:has(>.btn){display:flex;gap:10px;flex:1 1 100%}
+ .actions>span:has(>.btn)>.btn{flex:1 1 0}
+ .tdhead .btn{min-height:46px;flex:none}
+ #pgcats{flex:1 1 100%}
+ .size{flex:1 1 100%}
+ .size select.field{flex:1}
+ .panel-sec>.btn,.panel-sec>a.btn,.panel-sec>label.btn{display:flex;width:100%;margin-top:8px}
+ .panel-sec .row>.btn,.panel-sec .row>label.btn{flex:1 1 calc(50% - 5px)}
+ label.btn{cursor:pointer}
+}
