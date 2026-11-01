@@ -123,7 +123,7 @@ textarea.field{height:auto;padding:10px 12px;width:100%;resize:vertical}
 .slot.off .num b{color:var(--ink-3)}
 .chip{position:absolute;left:6px;top:6px;font-size:11px;font-weight:800;background:var(--ink);color:#fff;border-radius:6px;padding:1px 6px}
 .chip.R{background:#2F6FEB}.chip.H{background:#7A3FD1}
-.qty{position:absolute;right:6px;bottom:6px;background:var(--rail);color:#fff;border:2px solid #fff;border-radius:99px;font-size:12px;font-weight:700;padding:1px 8px}
+.qty{position:absolute;right:6px;bottom:6px;background:var(--red);color:#fff;border:2px solid #fff;border-radius:99px;font-size:12px;font-weight:700;padding:1px 8px}
 .tg{position:absolute;right:6px;top:6px;width:28px;height:28px;border-radius:99px;border:1.5px solid var(--ink-3);background:rgba(255,255,255,.92);display:grid;place-items:center;cursor:pointer;opacity:0;transition:opacity .12s}
 .slot:hover .tg,.tg:focus-visible,.slot.on .tg{opacity:1}
 .slot.on .tg{background:var(--ok);border-color:var(--ok);color:#fff}
@@ -501,7 +501,7 @@ body.immersive{overflow:hidden;background:#000}
 .dval.bad{background:#FDECEA;border-color:#F2B4AE;color:#8A1F17}
 .dval.warn{background:#FFF4E0;border-color:#F0C98A;color:#7A4A06}
 .dval li.info{opacity:.75}
-.dsec{margin:18px 0 8px;font-size:16px}.dsec span{color:var(--ink-2);font-weight:600;margin-left:6px}
+.dsec{margin:18px 0 8px;font-size:16px}.dsec span{color:var(--red);font-weight:800;margin-left:6px}
 .lgl{position:absolute;left:6px;top:6px;font-size:11px;font-weight:800;color:#fff;border-radius:999px;padding:2px 8px;line-height:1.4;z-index:2}
 .lgl.no{background:#B3261E}.lgl.rp{background:#C27A06}
 .dslot.illegal .pocket img{opacity:.55}
@@ -660,7 +660,7 @@ body.is-reordering *{cursor:grabbing!important}
 .subtabs a{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;font-weight:700;color:var(--ink-2);border-bottom:3px solid transparent;margin-bottom:-2px;border-radius:10px 10px 0 0}
 .subtabs a:hover{color:var(--ink);background:rgba(255,255,255,.6)}
 .subtabs a.on{color:var(--ink);border-bottom-color:var(--acc)}
-.subtabs a span{font-size:12px;font-weight:800;background:var(--rail);color:#fff;border-radius:99px;padding:1px 8px}
+.subtabs a span{font-size:12px;font-weight:800;background:var(--red);color:#fff;border-radius:99px;padding:1px 8px}
 .subtabs a span:empty{display:none}
 .pgslot .num b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pgrow .btn{flex:none}
