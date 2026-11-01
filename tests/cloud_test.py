@@ -50,7 +50,7 @@ def jsonb(v):   # imita o jsonb do Postgres: reordena as chaves
     if isinstance(v, list): return [jsonb(x) for x in v]
     return v
 def key_of(t, r):
-    return {"collection": lambda: r["card_id"], "binders": lambda: r["id"], "trade_lists": lambda: r["id"], "decks": lambda: r["id"], "shared_lists": lambda: r["id"], "user_settings": lambda: "me", "custom_images": lambda: r["kind"] + "/" + r["id"]}[t]()
+    return {"collection": lambda: r["card_id"], "binders": lambda: r["id"], "trade_lists": lambda: r["id"], "decks": lambda: r["id"], "play_stock": lambda: r["id"], "shared_lists": lambda: r["id"], "user_settings": lambda: "me", "custom_images": lambda: r["kind"] + "/" + r["id"]}[t]()
 
 def api(route):
     h = {"access-control-allow-origin": "*", "content-type": "application/json"}
@@ -183,7 +183,7 @@ with sync_playwright() as p:
     A.wait_for_selector("#auth.on", state="detached", timeout=10000)
     wait_idle(A)
     check("rafael@teste.com" in A.locator("#acct").inner_text() and "Sincronizado" in A.locator("#acct").inner_text(), "menu mostra o e-mail e 'Sincronizado'")
-    check("v6.3" in A.locator(".rail .ver").inner_text(), "versão 3.11 no menu")
+    check("v7.0" in A.locator(".rail .ver").inner_text(), "versão 3.11 no menu")
     uid = users["rafael@teste.com"]["id"]
     check(len(db[uid]["collection"]) == 3 and len(db[uid]["binders"]) == 1 and len(db[uid]["user_settings"]) == 1 and len(db[uid]["custom_images"]) == 1, f"nuvem recebeu coleção, fichário, ajustes e imagem ({ {k:len(v) for k,v in db[uid].items()} })")
     check(db[uid]["collection"]["sv01-2"]["finishes"]["reverse"]["l"] == "en", "acabamento e idioma enviados")
@@ -313,6 +313,21 @@ with sync_playwright() as p:
     check("não encontrada" in V.locator("h1").inner_text() and len(db[uid].get("shared_lists", {})) == 0 and A.evaluate("import('./js/state.js').then(m=>(m.S.settings.mergeShares||[]).length)") == 0, "união: parar de compartilhar derruba o link")
     A.locator('[data-ed-act="cancel"]').click(); A.locator('[data-act="tm-cancel"]').click()
     A.evaluate("import('./js/state.js').then(m=>{m.S.trades=m.S.trades.filter(t=>t.name!=='Procuro teste');m.S.ui.tmerge=null;})")
+
+    # ---- cartas de jogo sincronizam (v7) ----
+    A.evaluate("import('./js/play.js').then(m=>{m.addPlay('sv02-3',4);m.savePlay();})")
+    A.wait_for_timeout(2600); wait_idle(A)
+    check("sv02-3" in db[uid].get("play_stock", {}) and db[uid]["play_stock"]["sv02-3"]["data"]["q"] == 4, "cartas de jogo: sobem para a nuvem")
+    B.evaluate("document.dispatchEvent(new Event('visibilitychange'))"); B.wait_for_timeout(1500); wait_idle(B)
+    check(B.evaluate("import('./js/state.js').then(m=>(m.S.play.find(e=>e.id==='sv02-3')||{}).q)") == 4, "cartas de jogo: o outro aparelho recebe")
+    A.evaluate("import('./js/play.js').then(m=>{m.setPlay('sv02-3',2);m.savePlay();})"); A.wait_for_timeout(2600); wait_idle(A)
+    check(db[uid]["play_stock"]["sv02-3"]["data"]["q"] == 2, "cartas de jogo: mudança de quantidade sobe")
+    state["missing"] = ["play_stock"]
+    A.evaluate("import('./js/play.js').then(m=>{m.addPlay('sv02-4',1);m.savePlay();})"); A.wait_for_timeout(2600)
+    check("Erro" not in A.locator("#acct").inner_text() and A.evaluate("import('./js/state.js').then(m=>m.S.play.some(e=>e.id==='sv02-4'))"), "cartas de jogo: sem a tabela no Supabase o app segue funcionando neste aparelho")
+    state["missing"] = []
+    A.evaluate("import('./js/play.js').then(m=>{m.setPlay('sv02-4',0);m.setPlay('sv02-3',0);m.savePlay();})"); A.wait_for_timeout(2600); wait_idle(A)
+    check("sv02-3" not in db[uid].get("play_stock", {}), "cartas de jogo: remover apaga na nuvem")
 
     # ---- sair apaga o aparelho, a nuvem fica; entrar de novo restaura ----
     A.locator(".acct [data-cloud=out]").click()

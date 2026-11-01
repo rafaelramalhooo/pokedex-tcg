@@ -15,3 +15,7 @@ Um aplicativo web, em português, para organizar a sua coleção de **Pokémon E
 ## Aviso
 
 Este é um projeto pessoal e **não é afiliado, patrocinado nem aprovado pela The Pokémon Company**. Pokémon e os nomes das cartas pertencem aos seus donos. Os dados e as imagens das cartas vêm da [TCGdex](https://tcgdex.dev).
+
+## Cartas de jogo (v7)
+
+Dentro de **Decks** há a aba **Cartas de jogo**: um estoque das cartas que você usa só para jogar, separado da coleção (não entra em fichários nem no progresso das coleções). A contagem é por nome: qualquer impressão serve. O deck e as listas de compra somam coleção + cartas de jogo. Para sincronizar entre aparelhos, rode `supabase/atualizacao-cartas-de-jogo.sql` uma vez (veja `docs/ATUALIZACAO-CARTAS-DE-JOGO.md`).

@@ -3,6 +3,7 @@ import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loa
 import {scopeIds} from './rules.js';
 import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter, tradePanelChange} from './views/trades.js';
 import {viewShared, SHARED_ACT} from './views/shared.js';
+import {viewPlay, PLAY_ACT, pgFilter, paFilter, renderAdd as renderPlayAdd, deckPick} from './views/play.js';
 import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter, deckExportLang} from './views/decks.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
@@ -42,6 +43,7 @@ const ACT={
  ...TRADE_ACT,
  ...FF_ACT,
  ...DECK_ACT,
+ ...PLAY_ACT,
  ...SHARED_ACT,
  'binder-export':t=>binderExport(t.dataset.id),
  'exp-go':()=>runExport(),
@@ -139,6 +141,9 @@ document.addEventListener('change',e=>{
  if(t.dataset.edsort&&S.ui.edit){S.ui.edit.b.sort={f:'default',dir:'asc',...(S.ui.edit.b.sort||{}),[t.dataset.edsort]:t.value};return;}
  if(t.dataset.dexonly!==undefined&&S.ui.dexdlg){S.ui.dexdlg.only=t.checked;renderDexGrid();return;}
  if(t.dataset.dx==='lang'){deckExportLang(t.value);return;}
+ if(t.dataset.pg==='set'){pgFilter('set',t.value);return;}
+ if(t.dataset.pg==='deck'){deckPick(t.value);return;}
+ if(t.dataset.pa==='set'){paFilter('set',t.value);return;}
  if(t.dataset.dk==='set'){deckAddFilter('set',t.value);return;}
  if(t.dataset.dk==='own'){deckAddFilter('own',t.checked);return;}
  if(t.dataset.dk==='legal'){deckAddFilter('legal',t.checked);return;}
@@ -174,6 +179,8 @@ document.addEventListener('input',e=>{
  if(t.id==='pq'){S.ui.pick.q=t.value;renderPicker();return;}
  if(t.id==='bq'){S.ui.binderQ=t.value;S.ui.binderShown=240;S.ui.page=0;renderBinderBody();return;}
  if(t.id==='sq'){S.ui.setQ=t.value;renderSetGrid();return;}
+ if(t.id==='pgq'){pgFilter('q',t.value);return;}
+ if(t.id==='pga'&&S.ui.pa){S.ui.pa.q=t.value;renderPlayAdd();return;}
  if(t.id==='plq'&&S.ui.pull){pullFilter('q',t.value);return;}
  if(t.id==='dka'&&S.ui.deckAdd){S.ui.deckAdd.q=t.value;renderAdd();return;}
  if(t.id==='tra'&&S.ui.tradeAdd){S.ui.tradeAdd.q=t.value;renderAddTrade();return;}
@@ -232,6 +239,7 @@ function route(fresh){
  if(!same&&keepEnter(key))return;
  window.scrollTo(0,0);
  if(parts[0]==='set'&&parts[1])viewSet(decodeURIComponent(parts[1]));
+ else if(parts[0]==='decks'&&parts[1]==='cartas')viewPlay();
  else if(parts[0]==='decks'&&parts[1])viewDeck(parts[1]);
  else if(parts[0]==='decks')viewDecks();
  else if(parts[0]==='negociacao'&&parts[1])viewTrade(parts[1]);
@@ -255,7 +263,7 @@ async function boot(){
   S.catalogAt=(await DB.get('kv','catalogAt'))||0;
   S.binders=(await DB.get('kv','binders'))||[];
   S.trades=(await DB.get('kv','trades'))||[];
-  S.decks=(await DB.get('kv','decks'))||[];S.dinfo=(await DB.get('kv','dinfo'))||{};S.setab=(await DB.get('kv','setab'))||{};
+  S.decks=(await DB.get('kv','decks'))||[];S.play=(await DB.get('kv','play'))||[];S.dinfo=(await DB.get('kv','dinfo'))||{};S.setab=(await DB.get('kv','setab'))||{};
   Object.assign(S.settings,(await DB.get('kv','settings'))||{});
   if(!Array.isArray(S.settings.legalMarks))S.settings.legalMarks=['H','I','J'];
   if(!Array.isArray(S.settings.legalSets))S.settings.legalSets=['30th'];

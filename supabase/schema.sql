@@ -171,3 +171,24 @@ $$;
 
 revoke all on function public.get_shared_list(text) from public;
 grant execute on function public.get_shared_list(text) to anon, authenticated;
+
+-- Cartas de jogo: cartas usadas só para jogar (também disponível separado em atualizacao-cartas-de-jogo.sql).
+create table if not exists public.play_stock (
+  user_id    uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  id         text        not null,
+  data       jsonb       not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
+drop trigger if exists play_stock_touch on public.play_stock;
+create trigger play_stock_touch before update on public.play_stock
+  for each row execute function public.touch_updated_at();
+
+alter table public.play_stock enable row level security;
+
+drop policy if exists "play_stock: só o dono" on public.play_stock;
+create policy "play_stock: só o dono" on public.play_stock
+  for all to authenticated
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);

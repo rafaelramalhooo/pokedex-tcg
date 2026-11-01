@@ -986,7 +986,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v6.3" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v7.0" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
@@ -1219,6 +1219,82 @@ Total de cartas: 60"""
     ntr = page.evaluate("import('./js/state.js').then(m=>m.S.trades.length)")
     page.locator('[data-act="dt-go"]').click(); page.wait_for_selector("#tgrid .tradeslot", timeout=5000)
     check(page.evaluate("import('./js/state.js').then(m=>m.S.trades.length)") == ntr + 1 and "Procuro" in page.locator("#tchips").inner_text(), "deck para negociação: lista Procuro criada e aberta")
+    # ---- v7: cartas de jogo ----
+    page.evaluate("location.hash='#/decks/cartas'"); page.wait_for_selector(".subtabs")
+    check(page.locator('.rail a.nav[data-nav="decks"].on').count() == 1 and page.locator(".subtabs a.on").inner_text().startswith("Cartas de jogo"), "cartas de jogo: aba ativa e menu Decks continua marcado")
+    check("ainda não tem cartas de jogo" in page.locator("#pgbody").inner_text(), "cartas de jogo: estado vazio explica o que fazer")
+    page.locator('[data-act="pg-add"]').first.click(); page.fill("#pga", "carta sv02"); page.wait_for_selector("#pares .slot", timeout=8000)
+    page.locator('#pares .slot[data-id=sv02-1]').click(); page.wait_for_timeout(250)
+    for _ in range(3): page.locator('#pares .slot[data-id=sv02-1] [data-act="pa-inc"]').click(); page.wait_for_timeout(60)
+    check("4 cartas" in page.locator("#pgcount").inner_text() and page.evaluate("import('./js/state.js').then(m=>(m.S.play.find(e=>e.id==='sv02-1')||{}).q)") == 4, "cartas de jogo: adicionar e aumentar a quantidade na busca")
+    page.locator('#pares .slot[data-id=sv02-5]').click(); page.wait_for_timeout(200)
+    page.locator('#pares .slot[data-id=sv02-5] [data-act="pa-dec"]').click(); page.wait_for_timeout(200)
+    check(page.evaluate("import('./js/state.js').then(m=>m.S.play.some(e=>e.id==='sv02-5'))") is False, "cartas de jogo: − até zero tira a carta")
+    page.locator('#dialog [data-ed-act="cancel"]').click(); page.wait_for_timeout(300)
+    check(page.locator("#pgbody .pgslot").count() == 1 and "×4" in page.locator("#pgbody .pgslot").inner_text() and "4 cartas" in page.locator("#pgsum").inner_text(), "cartas de jogo: lista mostra o total por nome")
+    page.screenshot(path=str(ROOT/"tests/57_cartas_de_jogo.png"))
+    page.fill("#pgq", "zzzz"); page.wait_for_timeout(250)
+    check("Nenhuma carta" in page.locator("#pgbody").inner_text(), "cartas de jogo: busca sem resultado")
+    page.fill("#pgq", "sv02 1"); page.wait_for_timeout(250)
+    check(page.locator("#pgbody .pgslot").count() == 1, "cartas de jogo: busca pelo nome")
+    page.fill("#pgq", ""); page.wait_for_timeout(200)
+    page.locator('[data-act="pg-cat"][data-v="treinador"]').click(); page.wait_for_timeout(250)
+    check(page.locator("#pgbody .pgslot").count() == 0, "cartas de jogo: filtro por categoria")
+    page.locator('[data-act="pg-cat"][data-v=""]').click(); page.wait_for_timeout(250)
+    page.locator('#pgbody .pgslot [data-act="pg-inc"]').click(); page.wait_for_timeout(200)
+    check("×5" in page.locator("#pgbody .pgslot").inner_text(), "cartas de jogo: + direto no cartão")
+    # a coleção não muda e os totais somam coleção + jogo
+    r = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
+      const k=m.nameKey('Carta sv02 1');const sp=m.ownSplit().get(k);const tot=m.ownByName().get(k);
+      return {p:sp.p,c:sp.c,tot,txt:m.ownText(sp),inColl:!!s.collection['sv02-1']};}""")
+    check(r["p"] == 5 and r["tot"] == r["c"] + r["p"] and "de jogo" in r["txt"], f"cartas de jogo: somam com a coleção por nome ({r})")
+    # detalhe por impressão
+    page.locator('#pgbody .pgslot', has_text="sv02 1").click(); page.wait_for_selector("#pgdlg .pgrow", timeout=3000)
+    check(page.locator("#pgdlg .pgrow").count() == 1 and "Adicionar outra impressão" in page.locator("#pgdlg").inner_text(), "cartas de jogo: detalhe da carta")
+    page.locator('#pgdlg [data-act="pg-dec"]').click(); page.wait_for_timeout(200)
+    check(page.evaluate("import('./js/state.js').then(m=>m.S.play.find(e=>e.id==='sv02-1').q)") == 4, "cartas de jogo: − no detalhe")
+    page.locator('#pgdlg [data-act="pg-rm"]').click(); page.wait_for_timeout(250)
+    check(page.evaluate("import('./js/state.js').then(m=>m.S.play.some(e=>e.id==='sv02-1'))") is False, "cartas de jogo: remover a carta")
+    # importar uma lista (soma)
+    page.evaluate("location.hash='#/decks/cartas'"); page.wait_for_selector(".subtabs")
+    page.locator('[data-act="pg-import"]').click(); page.fill("#pit", "Pokémon: 3\n2 Carta sv02 3 SV02 3\n1 Carta sv02 5 SV02 5\n3 Zzz Inexistente XXX 9")
+    page.locator('[data-act="pi-go"]').click(); page.wait_for_function("document.querySelector('#dialog').innerText.includes('Cartas importadas')", timeout=30000)
+    check("Zzz Inexistente XXX 9" in page.locator("#dialog").inner_text(), "cartas de jogo: importação mostra o que não foi encontrado")
+    page.locator('#dialog [data-ed-act="cancel"]').click(); page.wait_for_timeout(250)
+    q3 = page.evaluate("import('./js/state.js').then(m=>[(m.S.play.find(e=>e.id==='sv02-3')||{}).q,(m.S.play.find(e=>e.id==='sv02-5')||{}).q])")
+    check(q3 == [2, 1], f"cartas de jogo: importar soma as cartas {q3}")
+    page.locator('[data-act="pg-import"]').click(); page.fill("#pit", "1 Carta sv02 3 SV02 3")
+    page.locator('[data-act="pi-go"]').click(); page.wait_for_function("document.querySelector('#dialog').innerText.includes('Cartas importadas')", timeout=30000)
+    page.locator('#dialog [data-ed-act="cancel"]').click(); page.wait_for_timeout(250)
+    check(page.evaluate("import('./js/state.js').then(m=>m.S.play.find(e=>e.id==='sv02-3').q)") == 3, "cartas de jogo: nova importação soma ao que já existe")
+    # deck: conta as cartas de jogo e o que falta
+    r2 = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
+      const d={id:'zz',name:'zz',format:'livre',items:[{id:'sv02-3',q:5,n:'Carta sv02 3',i:'',no:'3',s:'sv02'}]};
+      const have=m.ownByName().get(m.nameKey('Carta sv02 3'))||0;const w=m.tradeFromDeck(d,'want');
+      return {have,miss:w.cards,play:s.play.find(e=>e.id==='sv02-3').q};}""")
+    check(r2["miss"] == max(0, 5 - r2["have"]) and r2["have"] >= r2["play"], f"cartas de jogo: o Procuro do deck desconta as cartas de jogo ({r2})")
+    page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".subtabs")
+    check(page.locator(".subtabs a", has_text="Cartas de jogo").locator("span").inner_text().strip() != "", "cartas de jogo: aba mostra o total")
+    # adicionar de um deck: só o que falta
+    page.evaluate("location.hash='#/decks/cartas'"); page.wait_for_selector(".subtabs")
+    n0 = page.evaluate("import('./js/play.js').then(m=>m.playTotal())")
+    page.locator('[data-act="pg-fromdeck"]').click(); page.wait_for_selector("#pdks", timeout=3000)
+    page.locator('[data-act="pdk-mode"][data-v="all"]').click(); page.wait_for_timeout(200)
+    check("Serão adicionadas" in page.locator("#dialog .note").inner_text(), "cartas de jogo: de um deck, mostra o que será adicionado")
+    page.locator('[data-act="pdk-go"]').click(); page.wait_for_timeout(500)
+    check(page.evaluate("import('./js/play.js').then(m=>m.playTotal())") > n0, "cartas de jogo: adicionar todas as cartas de um deck")
+    # puxar das minhas cartas (trocas): origem cartas de jogo
+    page.evaluate("import('./js/state.js').then(m=>{const t=m.S.trades[0];location.hash='#/negociacao/'+t.id;})"); page.wait_for_selector("#tgrid", timeout=5000)
+    page.locator('[data-act="trade-pull"]').click(); page.wait_for_selector("#pullres", timeout=3000)
+    check(page.locator('[data-act="pl-src"]').count() == 2, "negociação: puxar das minhas cartas tem a origem Coleção / Cartas de jogo")
+    page.locator('[data-act="pl-src"][data-v="play"]').click(); page.wait_for_timeout(300)
+    check(page.locator("#pullres .slot").count() >= 1 and "Você tem" in page.locator("#pullres").inner_text(), "negociação: puxar das cartas de jogo")
+    page.locator('#dialog [data-ed-act="cancel"]').click(); page.wait_for_timeout(250)
+    # backup leva as cartas de jogo
+    bk = page.evaluate("""async()=>{const s=(await import('./js/state.js')).S;const keep=JSON.stringify(s.play);return keep.length>2;}""")
+    check(bk, "cartas de jogo: existem dados para o backup")
+    page.evaluate("import('./js/state.js').then(async m=>{m.S.play=[];const p=await import('./js/play.js');await p.savePlay();})")
+
     # ---- Pokédex: cartas da Celebração de 30 Anos (sem dexId na TCGdex) ----
     dx = page.evaluate("""async()=>{const m=await import('./js/dex30.js');const r=await import('./js/rules.js');const st=(await import('./js/state.js')).S;
       st.cards['30th-087']={id:'30th-087',name:'Nidoran♀',set:'30th',localId:'087',category:'Pokemon'};

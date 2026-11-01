@@ -280,8 +280,17 @@ function bulkRemove(){
 
 /* ---------- Puxar das minhas cartas: tocar na carta já a coloca na lista ---------- */
 const PULL_MAX=120;
-function ownRows(){
+function ownRows(src){
  const rows=[];
+ if(src==='play'){
+  for(const e of S.play){
+   if(!(e.q>0))continue;
+   const l=langOf(e.id);const sn=snapOf(e.id);
+   rows.push({key:itemKey({id:e.id,f:'normal',l}),id:e.id,f:'normal',l,own:e.q,sn,set:e.s||sn.s});
+  }
+  rows.sort((a,b)=>a.sn.n.localeCompare(b.sn.n,'pt',{numeric:true}));
+  return rows;
+ }
  for(const id in S.collection){
   const e=S.collection[id];
   for(const f in e.f){
@@ -306,14 +315,16 @@ function groupRows(rows){
 const viewRows=st=>st.split?st.all:groupRows(st.all);
 /* Itens da lista que correspondem a uma linha da janela. */
 const itemsOf=(t,st,r)=>st.split?t.items.filter(i=>itemKey(i)===r.key):t.items.filter(i=>i.id===r.id);
-function pullDialog(id){
+function pullDialog(id,src){
  const t=getTrade(id);if(!t)return;
- const rows=ownRows();
- if(!rows.length){toast('Você ainda não marcou cartas na sua coleção para copiar.');return;}
- S.ui.pull={id,q:'',set:'',rep:false,split:false,all:rows};
+ src=src==='play'?'play':'col';
+ const rows=ownRows(src);
+ if(!rows.length){toast(src==='play'?'Você ainda não tem cartas de jogo para copiar.':S.play.length?'Você ainda não marcou cartas na sua coleção. Tente a origem “Cartas de jogo”.':'Você ainda não marcou cartas na sua coleção para copiar.');if(src==='col'&&S.play.length)return pullDialog(id,'play');return;}
+ S.ui.pull={id,q:'',set:'',rep:false,split:false,src,all:rows};
  const sets=[...new Set(rows.map(r=>r.set).filter(Boolean))].map(sid=>({sid,name:(S.setMap[sid]&&S.setMap[sid].name)||sid})).sort((a,b)=>a.name.localeCompare(b.name,'pt'));
  $('#dialog').innerHTML=`<div class="tdlg">${tdHead('Puxar das minhas cartas',t)}<div class="tdbody">
-  <p class="lead">Toque numa carta para colocá-la em “${esc(t.name)}”; toque de novo para tirar. Isso só copia: a sua coleção não muda.</p>
+  ${S.play.length?`<div class="seg" role="group" aria-label="Origem das cartas" style="margin-bottom:10px"><button type="button" data-act="pl-src" data-v="col" aria-pressed="${src==='col'}">Coleção</button><button type="button" data-act="pl-src" data-v="play" aria-pressed="${src==='play'}">Cartas de jogo</button></div>`:''}
+  <p class="lead">Toque numa carta para colocá-la em “${esc(t.name)}”; toque de novo para tirar. Isso só copia: ${src==='play'?'as suas cartas de jogo':'a sua coleção'} não muda.</p>
   <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
    <div style="flex:1;min-width:180px"><label class="lbl2" for="plq">Buscar pelo nome</label><input class="field" id="plq" type="search" style="width:100%" placeholder="Ex.: Pikachu"></div>
    <label class="size">Coleção <select class="field" data-pl="set"><option value="">Todas</option>${sets.map(x=>`<option value="${esc(x.sid)}">${esc(x.name)}</option>`).join('')}</select></label>
@@ -498,6 +509,7 @@ export const TRADE_ACT={
  'pl-toggle':t=>plToggle(t.dataset.key),
  'pl-inc':(t,e)=>{e&&e.stopPropagation();plStep(t.dataset.key,1);},
  'pl-dec':(t,e)=>{e&&e.stopPropagation();plStep(t.dataset.key,-1);},
+ 'pl-src':t=>{const st=S.ui.pull;if(st)pullDialog(st.id,t.dataset.v);},
  'pl-all':()=>plAll(true),
  'pl-none':()=>plAll(false),
  'trade-export':t=>tradeExport(t.dataset.id),

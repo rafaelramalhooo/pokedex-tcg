@@ -123,15 +123,29 @@ export function setCopies(d,id,q){
  const i=d.items.findIndex(x=>x.id===id);if(i<0)return;
  if(q<=0)d.items.splice(i,1);else d.items[i].q=Math.min(99,q);
 }
-/* Quanto você tem de uma carta pelo nome (todas as impressões da sua coleção). */
-export function ownByName(){
+/* Quanto você tem de uma carta pelo nome: coleção (c) e cartas de jogo (p). Qualquer impressão conta. */
+export function ownSplit(){
  const m=new Map();
+ const row=k=>m.get(k)||m.set(k,{c:0,p:0}).get(k);
  for(const id in S.collection){
   const e=S.collection[id];let q=0;for(const f in e.f)q+=(e.f[f]&&e.f[f].q)||0;
   if(q<=0)continue;
-  const k=nameKey(snapOf(id).n);m.set(k,(m.get(k)||0)+q);
+  row(nameKey(snapOf(id).n)).c+=q;
  }
+ for(const e of S.play||[]){if(e.q>0)row(nameKey(e.n)).p+=e.q;}
  return m;
+}
+/* Total por nome (coleção + cartas de jogo). */
+export function ownByName(){
+ const m=new Map();
+ for(const [k,v] of ownSplit())m.set(k,v.c+v.p);
+ return m;
+}
+/* "3 na coleção + 1 de jogo" */
+export function ownText(v){
+ if(!v||(!v.c&&!v.p))return'Você não tem';
+ const parts=[];if(v.c)parts.push(`${v.c} na coleção`);if(v.p)parts.push(`${v.p} de jogo`);
+ return`Você tem ×${v.c+v.p}`+(v.c&&v.p?` (${parts.join(' + ')})`:v.p?' (de jogo)':'');
 }
 
 /* ---------- lista de negociação a partir do deck ---------- */

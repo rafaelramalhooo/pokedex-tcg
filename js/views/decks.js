@@ -5,8 +5,9 @@ import {imgTag, toast} from '../ui.js';
 import {$, ICON, esc, fmtN, live, nz} from '../util.js';
 import {exportRows, importInto, tcgText} from '../decktext.js';
 import {addItem, newTrade, saveTrades} from '../trades.js';
-import {DECK_SIZE, MAX_COPIES, addCopy, ensureInfo, ensureReprint, getDeck, legalOf, markTxt, nameKey, newDeck, ownByName, resolveDeck, saveDecks, setCopies, totalCards, validate, nameCounts, tradeFromDeck} from '../decks.js';
+import {DECK_SIZE, MAX_COPIES, addCopy, ensureInfo, ensureReprint, getDeck, legalOf, markTxt, nameKey, newDeck, ownByName, ownSplit, ownText, resolveDeck, saveDecks, setCopies, totalCards, validate, nameCounts, tradeFromDeck} from '../decks.js';
 
+export const subTabs=on=>`<nav class="subtabs" aria-label="Decks e cartas de jogo"><a href="#/decks" class="${on==='decks'?'on':''}" ${on==='decks'?'aria-current="page"':''}>Decks</a><a href="#/decks/cartas" class="${on==='play'?'on':''}" ${on==='play'?'aria-current="page"':''}>Cartas de jogo <span>${S.play.reduce((a,e)=>a+e.q,0)||''}</span></a></nav>`;
 const FMT={standard:'Standard',livre:'Livre (sem validar o Standard)'};
 const CATS=[['pokemon','Pokémon'],['treinador','Treinador'],['energia','Energia']];
 const CHECK='<span class="plcheck" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
@@ -14,7 +15,7 @@ const CHECK='<span class="plcheck" aria-hidden="true"><svg viewBox="0 0 24 24" w
 /* ---------- lista de decks ---------- */
 export function viewDecks(){
  S.cur={name:'decks',soft:renderDecks,refresh:renderDecks};
- $('#view').innerHTML=`<div class="top"><div><h1>Decks</h1><p class="lead">Monte decks de 60 cartas e confira as regras do Standard. Os decks ficam separados da sua coleção.</p></div>
+ $('#view').innerHTML=`${subTabs('decks')}<div class="top"><div><h1>Decks</h1><p class="lead">Monte decks de 60 cartas e confira as regras do Standard. Os decks ficam separados da sua coleção.</p></div>
   <div class="tools"><button class="btn" type="button" data-act="deck-import">Importar do TCG Live</button><button class="btn primary" type="button" data-act="deck-new">Novo deck</button></div></div><div id="dbody"></div>`;
  renderDecks();
 }
@@ -53,14 +54,14 @@ function resolveSoon(d){
 let paint=0;
 function softPaint(){if(paint)return;paint=setTimeout(()=>{paint=0;renderDeck();},400);}
 const lglTag=(l,i)=>l==='no'?`<span class="lgl no" title="${esc(markTxt(i))}">Fora${i&&i.mk?' · '+esc(i.mk):''}</span>`:l==='reprint'?`<span class="lgl rp" title="${esc(markTxt(i))}: legal por reimpressão">Reimpressão${i&&i.mk?' · '+esc(i.mk):''}</span>`:'';
-function deckTile(d,it,own){
+function deckTile(d,it,own,split){
  const i=S.dinfo[it.id];const L=d.format==='standard'?legalOf(i):'ok';
  const k=i?i.nk:nameKey(it.n);const have=own.get(nameKey(it.n))||0;
  const over=!(i&&i.be)&&nameCounts(d).get(k)&&nameCounts(d).get(k).q>MAX_COPIES;
  return`<div class="slot on tradeslot dslot ${L==='no'?'illegal':''}" data-act="deck-card" data-id="${esc(it.id)}" role="button" tabindex="0" aria-label="${esc(it.n)}, ${it.q} cópia${it.q===1?'':'s'}">
   <div class="pocket">${imgTag(it.i,'low',it.n,undefined,it.id)}<span class="qty tq ${over?'over':''}">×${it.q}</span>${lglTag(L,i)}</div>
   <div class="num"><b>${esc(it.n)}</b><span>${esc(it.no)}</span></div>
-  <div class="num"><span>${have?`Você tem ×${have}`:'Você não tem'}</span></div>
+  <div class="num"><span>${have?esc(ownText(split.get(nameKey(it.n)))):'Você não tem'}</span></div>
   <div class="stepper"><button type="button" class="btn small" data-act="deck-dec" data-id="${esc(it.id)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="deck-inc" data-id="${esc(it.id)}" aria-label="Aumentar">+</button></div></div>`;
 }
 export function renderDeck(){
@@ -73,12 +74,12 @@ export function renderDeck(){
  const list=v.issues.map(x=>`<li class="${x.lvl}">${esc(x.msg)}</li>`).join('');
  live($('#dvalid')).innerHTML=d.items.length?`<div class="dval ${ok?'ok':v.errs?'bad':'warn'}"><b>${ok?(d.format==='standard'?'Deck válido para o Standard':'Deck completo'):v.pending?'Conferindo as cartas…':v.errs?'O deck ainda tem problemas':'Deck válido, com avisos'}</b>${list?`<ul>${list}</ul>`:''}</div>`:'';
  const g=live($('#dgrid'));
- if(!d.items.length){g.innerHTML=`<div class="empty"><h3>Deck vazio</h3><p>Use “Adicionar cartas” para buscar pelo nome${S.collection&&Object.keys(S.collection).length?' ou marque “Só as que eu tenho”':''}.</p></div>`;return;}
- const own=ownByName();
+ if(!d.items.length){g.innerHTML=`<div class="empty"><h3>Deck vazio</h3><p>Use “Adicionar cartas” para buscar pelo nome${(S.collection&&Object.keys(S.collection).length)||S.play.length?' ou marque “Só as que eu tenho”':''}.</p></div>`;return;}
+ const own=ownByName();const split=ownSplit();
  g.innerHTML=CATS.map(([k,l])=>{
   const rows=d.items.filter(it=>{const i=S.dinfo[it.id];return(i?i.cat:'pokemon')===k;}).sort((a,b)=>a.n.localeCompare(b.n,'pt'));
   if(!rows.length)return'';
-  return`<h3 class="dsec">${l} <span>${rows.reduce((a,i)=>a+i.q,0)}</span></h3><div class="cards">${rows.map(it=>deckTile(d,it,own)).join('')}</div>`;
+  return`<h3 class="dsec">${l} <span>${rows.reduce((a,i)=>a+i.q,0)}</span></h3><div class="cards">${rows.map(it=>deckTile(d,it,own,split)).join('')}</div>`;
  }).join('');
 }
 
@@ -121,7 +122,7 @@ const addSoon=()=>{if(addPaint)return;addPaint=setTimeout(()=>{addPaint=0;render
 export function renderAdd(){
  const st=S.ui.deckAdd;const el=$('#dkres');const d=st&&getDeck(st.id);if(!st||!el||!d)return;
  live(el);
- const q=nz(st.q);const own=ownByName();
+ const q=nz(st.q);const own=ownByName();const split=ownSplit();
  if(q.length<2&&!st.own){el.innerHTML='<p class="lead">Digite ao menos 2 letras, ou marque “Só as que eu tenho”.</p>';return;}
  let res=[];
  for(const id in S.briefs){
@@ -146,7 +147,7 @@ export function renderAdd(){
   const L=d.format==='standard'?legalOf(S.dinfo[id]):'ok';const have=own.get(nameKey(c.name))||0;
   return`<div class="slot on plslot ${n?'sel':''}" data-act="dk-pick" data-id="${esc(id)}" role="button" tabindex="0" aria-label="${esc(c.name)}, ${esc(set?set.name:'')}, ${n?'no deck ×'+n:'adicionar'}">
    <div class="pocket">${imgTag(c.image,'low',c.name,undefined,id)}${n?CHECK+`<span class="qty tq">×${n}</span>`:''}${lglTag(L)}</div>
-   <div class="num"><b>${esc(c.name)}</b><span>${esc(c.localId)}</span></div><div class="num"><span>${esc(set?set.name:'')}</span></div><div class="num"><span>${have?`Você tem ×${have}`:'Você não tem'}</span></div>
+   <div class="num"><b>${esc(c.name)}</b><span>${esc(c.localId)}</span></div><div class="num"><span>${esc(set?set.name:'')}</span></div><div class="num"><span>${have?esc(ownText(split.get(nameKey(c.name)))):'Você não tem'}</span></div>
    ${n?`<div class="stepper"><button type="button" class="btn small" data-act="dk-dec" data-id="${esc(id)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="dk-inc" data-id="${esc(id)}" aria-label="Aumentar">+</button></div>`:''}</div>`;}).join('')}</div>`:`<p class="lead">${shown.length?'Todas as cartas encontradas estão fora do Standard. Desmarque “Esconder as fora do Standard” para vê-las.':'Nenhuma carta encontrada.'}</p>`;
  const c=$('#tdcount');if(c)c.textContent=cntTxt(d);
 }
@@ -238,7 +239,7 @@ function tradeDialog(id,kind){
  const r=tradeFromDeck(d,kind);
  const total=totalCards(d);
  const msg=!d.items.length?'O deck está vazio.':kind==='want'
-  ?(r.cards?`Faltam ${r.cards} carta${r.cards===1?'':'s'} (${r.names} nome${r.names===1?'':'s'} diferente${r.names===1?'':'s'}) para você montar este deck com a sua coleção.`:'Você já tem todas as cartas deste deck. Não falta nada.')
+  ?(r.cards?`Faltam ${r.cards} carta${r.cards===1?'':'s'} (${r.names} nome${r.names===1?'':'s'} diferente${r.names===1?'':'s'}) para você montar este deck com a sua coleção e as suas cartas de jogo.`:'Você já tem todas as cartas deste deck. Não falta nada.')
   :(r.cards?`Você tem ${r.cards} das ${total} cartas do deck. A lista leva as impressões que estão na sua coleção.`:'Você não tem nenhuma carta deste deck na coleção.');
  $('#dialog').innerHTML=`<h2>Criar lista de negociação</h2>
   <p class="lead">A lista é criada na área Negociação a partir de “${esc(d.name)}”. A sua coleção e o deck não mudam.</p>
