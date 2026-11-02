@@ -1,9 +1,11 @@
-/* Mudar a ordem das cartas numa lista de Negociação.
+/* Mudar a ordem das cartas (Negociação, Decks, lista de decks e Cartas de jogo).
    Mouse: clicar e arrastar. Toque (iPad, celular): segurar a carta por um instante e arrastar.
    Teclado: com a carta em foco, Alt + setas ← → movem uma posição. A ordem fica salva e sincroniza como o resto da lista. */
 import {S} from './state.js';
 import {getTrade, itemKey, moveItemTo, saveTrades} from './trades.js';
 import {toast} from './ui.js';
+import {getDeck, moveDeckItems, moveDecks} from './decks.js';
+import {movePlayOrder} from './play.js';
 
 const HOLD=380;      /* ms de toque até o arrasto começar */
 const SLOP=8;        /* px de tolerância enquanto espera o toque longo */
@@ -11,8 +13,19 @@ const MOUSE_MOVE=6;  /* px para começar a arrastar com o mouse */
 let st=null;         /* gesto em andamento */
 let suppressUntil=0; /* ignora o clique que o navegador gera ao soltar */
 
-const tileOf=t=>t&&t.closest?t.closest('#tgrid .tradeslot[data-key]'):null;
-const grid=()=>document.querySelector('#tgrid .cards');
+/* Cartão reordenável: da Negociação (#tgrid .tradeslot[data-key]) ou qualquer um marcado com data-ro dentro de [data-reorder]. */
+const tileOf=t=>t&&t.closest?t.closest('#tgrid .tradeslot[data-key], [data-reorder] [data-ro]'):null;
+const isTrade=tile=>!!(tile&&tile.matches('#tgrid .tradeslot[data-key]'));
+const gridOf=tile=>isTrade(tile)?document.querySelector('#tgrid .cards'):tile.closest('[data-reorder]');
+const keyOf=tile=>tile.dataset.ro!==undefined?tile.dataset.ro:tile.dataset.key;
+const tilesIn=g=>[...g.children].filter(n=>n.dataset&&(n.dataset.ro!==undefined||n.dataset.key!==undefined));
+/* Grava a nova ordem de uma grade que não é da Negociação. Devolve true se algo mudou. */
+function applyOrder(kind,keys){
+ if(kind==='decks')return moveDecks(keys);
+ if(kind==='play')return movePlayOrder(keys);
+ if(kind&&kind.startsWith('deck:')){const d=getDeck(kind.slice(5));return d?moveDeckItems(d,keys):false;}
+ return false;
+}
 const tid=()=>S.cur&&S.cur.name==='trade'?S.cur.id:null;
 
 function startDrag(){
@@ -60,8 +73,12 @@ function finish(commit){
  s.tile.classList.remove('dragging');
  document.body.classList.remove('is-reordering');
  const id=tid();const t=id&&getTrade(id);
- const g=grid();
- if(commit&&t&&g){
+ const g=s.grid;
+ if(commit&&!isTrade(s.tile)&&g){
+  const kind=g.dataset.reorder;
+  const keys=tilesIn(g).map(keyOf);
+  if(applyOrder(kind,keys))toast('Ordem atualizada.');
+ }else if(commit&&t&&g){
   const keys=[...g.querySelectorAll('.tradeslot[data-key]')].map(n=>n.dataset.key);
   const before=t.items.map(itemKey).join('\n');
   const byKey=new Map(t.items.map(i=>[itemKey(i),i]));
@@ -77,9 +94,10 @@ function finish(commit){
 document.addEventListener('pointerdown',e=>{
  if(e.button!==undefined&&e.button!==0)return;
  const tile=tileOf(e.target);
- if(!tile||e.target.closest('.stepper,button,a,input,select,label'))return;
- const g=grid();if(!g||g.querySelectorAll('.tradeslot').length<2)return;
- st={tile,x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,type:e.pointerType,id:e.pointerId,drag:false};
+ if(!tile)return;
+ const inner=e.target.closest('.stepper,button,a,input,select,label');if(inner&&inner!==tile)return;
+ const g=gridOf(tile);if(!g||tilesIn(g).length<2)return;
+ st={tile,grid:g,x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,type:e.pointerType,id:e.pointerId,drag:false};
  if(e.pointerType!=='mouse'){
   st.timer=setTimeout(()=>{if(st&&!st.drag)startDrag();},HOLD);
  }
@@ -114,6 +132,19 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
  if(!e.altKey||(e.key!=='ArrowLeft'&&e.key!=='ArrowRight'))return;
  const tile=tileOf(document.activeElement);if(!tile)return;
+ if(!isTrade(tile)){
+  const g=gridOf(tile);if(!g)return;
+  const els=tilesIn(g);const i=els.indexOf(tile);const j=i+(e.key==='ArrowRight'?1:-1);
+  e.preventDefault();
+  if(i<0||j<0||j>=els.length)return;
+  const keys=els.map(keyOf);const [k]=keys.splice(i,1);keys.splice(j,0,k);
+  const kind=g.dataset.reorder;
+  if(applyOrder(kind,keys)&&S.cur&&S.cur.refresh)S.cur.refresh();
+  const again=[...document.querySelectorAll('[data-reorder] [data-ro]')].find(n=>n.dataset.ro===k);
+  if(again)again.focus();
+  toast(`Posição ${j+1} de ${els.length}.`);
+  return;
+ }
  const id=tid();const t=id&&getTrade(id);if(!t)return;
  const key=tile.dataset.key;
  const i=t.items.findIndex(x=>itemKey(x)===key);if(i<0)return;

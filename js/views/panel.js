@@ -8,6 +8,9 @@ import {dexModel} from '../rules.js';
 import {customCard} from '../custom.js';
 import {getTrade, hasPrice, isLiga, ligaLabel, itemKey} from '../trades.js';
 import {derivedImage} from '../reprints.js';
+import {loadText, textHTML} from '../cardtext.js';
+import {getDeck, legalOf, markTxt, nameKey, ownSplit, ownText} from '../decks.js';
+import {getGoal, getPlay, playGroups} from '../play.js';
 import {$, brl, esc} from '../util.js';
 
 /* Página pública de lista compartilhada: o painel mostra os dados da lista só para leitura. */
@@ -65,8 +68,8 @@ export function renderPanel(failed){
    <label><span class="lbl2">Idioma</span><select class="field" data-ch="l" data-id="${esc(id)}" data-fin="${f}">${LANGS.map(([k,l])=>`<option value="${k}" ${cur.l===k?'selected':''}>${l}</option>`).join('')}</select></label></div>`:''}</div>`;
  }).join(''):(failed?noteHTML('err','Não consegui carregar os detalhes desta carta. Verifique a conexão e abra de novo.'):'<div class="skel" style="height:90px;margin-top:10px"></div>');
  const ctx=S.ui.panelCtx;
- const tctx=ctx&&ctx.tradeId?tradeBlock(ctx,id,c):null;
- if(ctx&&ctx.tradeId&&!tctx){S.ui.panelId=null;p.classList.remove('open');sc.classList.remove('on');delete p.dataset.id;return;}
+ const tctx=ctx&&ctx.tradeId?tradeBlock(ctx,id,c):ctx&&ctx.deckId?deckBlock(ctx,id,c):ctx&&ctx.playK?playBlock(ctx,id,c):null;
+ if(ctx&&(ctx.tradeId||ctx.deckId||ctx.playK)&&!tctx){S.ui.panelId=null;p.classList.remove('open');sc.classList.remove('on');delete p.dataset.id;return;}
  const manual=ctx&&ctx.binderId&&(S.binders.find(x=>x.id===ctx.binderId)||{}).mode==='manual';
  const nav=(S.cur&&S.cur.nav)||[];const ni=navIndex(nav,id,S.ui.panelCtx);
  const phead=`<div class="phead"><div class="pn"><button class="btn small" type="button" data-act="panel-nav" data-d="-1" ${ni<=0?'disabled':''} aria-label="Carta anterior">‹</button><span aria-live="polite">${ni>=0?`${ni+1} de ${nav.length}`:''}</span><button class="btn small" type="button" data-act="panel-nav" data-d="1" ${ni<0||ni>=nav.length-1?'disabled':''} aria-label="Próxima carta">›</button></div><button class="btn small close" type="button" data-act="close">Fechar</button></div>`;
@@ -75,6 +78,7 @@ export function renderPanel(failed){
   ${c&&c.illustrator?`<p class="lead" style="margin-top:2px">Ilustração: ${esc(c.illustrator)}</p>`:''}
   <div class="facts">${facts.map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div>
   ${tctx||rows}
+  ${cardText(id)}
   ${tctx?'':`<div style="margin-top:14px"><label class="lbl2" for="note">Observações</label><textarea class="field" id="note" rows="3" data-id="${esc(id)}" placeholder="Ex.: comprada em feira, assinatura, ponto de dobra">${esc(e?e.n:'')}</textarea></div>`}
   ${tctx?'':dexPick(ctx,id)}
   ${ctx&&ctx.pub?'':photoCtl(id,!!image)}
@@ -121,6 +125,39 @@ function tradeBlock(ctx,id,c){
 }
 
 H.renderPanel=renderPanel;
+
+/* Texto da carta (ataques, habilidades, efeito): vem da TCGdex ao abrir a carta. */
+function cardText(id){
+ if(/^pub-/.test(id))return'';
+ loadText(id,()=>{if(S.ui.panelId===id)renderPanel();});
+ return`<div class="ptext"><h3 class="dsec" style="margin:16px 0 4px">Texto da carta</h3>${textHTML(id)}</div>`;
+}
+
+/* Aberta por um deck: no lugar de "Tenho", só o que está neste deck. A coleção não é tocada. */
+function deckBlock(ctx,id,c){
+ const d=getDeck(ctx.deckId);const it=d&&d.items.find(x=>x.id===id);if(!it)return null;
+ const i=S.dinfo[id];const L=d.format==='standard'?legalOf(i):'ok';
+ const have=ownSplit().get(nameKey(it.n));
+ const lg=L==='no'?`<p class="note err" style="margin:8px 0 0">Fora do Standard (${esc(markTxt(i))}).</p>`:L==='reprint'?`<p class="note warn" style="margin:8px 0 0">Legal por reimpressão (${esc(markTxt(i))}).</p>`:'';
+ return`<div class="fin has tpanel"><div class="fin-head"><h3>Neste deck</h3><span class="ttag fmt">${esc(d.name)}</span></div>
+  <div class="row" style="justify-content:space-between;align-items:center"><span class="lbl2" style="margin:0">Cópias</span>
+   <div class="step"><button type="button" data-act="dp-dec" data-id="${esc(id)}" aria-label="Tirar uma cópia do deck">−</button><output aria-live="polite">${it.q}</output><button type="button" data-act="dp-inc" data-id="${esc(id)}" aria-label="Adicionar uma cópia ao deck">+</button></div></div>
+  <p class="lead" style="margin:8px 0 0">${have?esc(ownText(have)):'Você não tem esta carta.'}</p>${lg}
+  <div style="margin-top:12px"><button class="btn danger" type="button" data-act="dp-rm" data-id="${esc(id)}">Remover do deck</button></div></div>`;
+}
+
+/* Aberta pelas Cartas de jogo: quantidade desta impressão e meta do nome. */
+function playBlock(ctx,id,c){
+ const e=getPlay(id);if(!e)return null;
+ const g=playGroups().find(x=>x.k===ctx.playK);if(!g)return null;
+ const goal=getGoal(g.k);
+ return`<div class="fin has tpanel"><div class="fin-head"><h3>Nas cartas de jogo</h3><span class="ttag fmt">${g.q} no total</span></div>
+  <div class="row" style="justify-content:space-between;align-items:center"><span class="lbl2" style="margin:0">Esta impressão</span>
+   <div class="step"><button type="button" data-act="pp-dec" data-id="${esc(id)}" aria-label="Tirar uma">−</button><output aria-live="polite">${e.q}</output><button type="button" data-act="pp-inc" data-id="${esc(id)}" aria-label="Adicionar uma">+</button></div></div>
+  <div class="row" style="justify-content:space-between;align-items:center;margin-top:10px"><span class="lbl2" style="margin:0">Meta${goal?(g.miss?` · faltam ${g.miss}`:' · batida'):''}</span>
+   <div class="step"><button type="button" data-act="pp-goal-dec" data-k="${esc(g.k)}" aria-label="Diminuir a meta">−</button><output aria-live="polite">${goal||'—'}</output><button type="button" data-act="pp-goal-inc" data-k="${esc(g.k)}" aria-label="Aumentar a meta">+</button></div></div>
+  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-act="pp-prints" data-k="${esc(g.k)}">${g.entries.length>1?`Ver as ${g.entries.length} impressões`:'Adicionar outra impressão'}</button><button class="btn danger" type="button" data-act="pp-rm" data-id="${esc(id)}">Remover</button></div></div>`;
+}
 
 /* No fichário Pokédex: o espaço só tem a carta que você colocou nele. */
 function dexPick(ctx,id){

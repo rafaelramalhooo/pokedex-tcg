@@ -2,6 +2,7 @@
 import {visibleSet} from '../catalog.js';
 import {S} from '../state.js';
 import {imgTag, toast} from '../ui.js';
+import {closePanel, openPanel, renderPanel} from './panel.js';
 import {$, ICON, esc, fmtN, live, nz} from '../util.js';
 import {exportRows, importInto, tcgText} from '../decktext.js';
 import {addItem, newTrade, saveTrades} from '../trades.js';
@@ -25,11 +26,11 @@ export function renderDecks(){
   el.innerHTML=`<div class="empty"><h3>Você ainda não tem decks</h3><p>Crie um deck, busque as cartas pelo nome (inclusive só as que você tem) e veja na hora se ele está dentro das regras.</p><button class="btn primary" type="button" data-act="deck-new">Criar o primeiro deck</button></div>`;
   return;
  }
- el.innerHTML=`<div class="binders">${S.decks.map(d=>{
+ el.innerHTML=`<div class="binders" data-reorder="decks">${S.decks.map(d=>{
   const v=validate(d);const n=v.total;
   const st=!n?'Vazio':v.pending?'Conferindo…':v.ok?'Válido':v.errs?'Com problemas':'Válido, com avisos';
   const cls=!n||v.pending?'':v.errs?'bad':'ok';
-  return`<a class="binder" href="#/decks/${esc(d.id)}"><div class="bmeta"><h3>${esc(d.name)}</h3>
+  return`<a class="binder" data-ro="${esc(d.id)}" href="#/decks/${esc(d.id)}"><div class="bmeta"><h3>${esc(d.name)}</h3>
    <div class="chips" style="margin:0"><span class="ttag fmt">${d.format==='standard'?'Standard':'Livre'}</span> <span class="dstat ${cls}">${st}</span></div>
    <div class="count"><strong>${n}/${DECK_SIZE}</strong><span>cartas</span></div></div></a>`;}).join('')}</div>`;
 }
@@ -58,7 +59,7 @@ function deckTile(d,it,own,split){
  const i=S.dinfo[it.id];const L=d.format==='standard'?legalOf(i):'ok';
  const k=i?i.nk:nameKey(it.n);const have=own.get(nameKey(it.n))||0;
  const over=!(i&&i.be)&&nameCounts(d).get(k)&&nameCounts(d).get(k).q>MAX_COPIES;
- return`<div class="slot on tradeslot dslot ${L==='no'?'illegal':''}" data-act="deck-card" data-id="${esc(it.id)}" role="button" tabindex="0" aria-label="${esc(it.n)}, ${it.q} cópia${it.q===1?'':'s'}">
+ return`<div class="slot on tradeslot dslot ${L==='no'?'illegal':''}" data-act="deck-card" data-ro="${esc(it.id)}" data-id="${esc(it.id)}" role="button" tabindex="0" aria-label="${esc(it.n)}, ${it.q} cópia${it.q===1?'':'s'}">
   <div class="pocket">${imgTag(it.i,'low',it.n,undefined,it.id)}<span class="qty tq ${over?'over':''}">×${it.q}</span>${lglTag(L,i)}</div>
   <div class="num"><b>${esc(it.n)}</b><span>${esc(it.no)}</span></div>
   <div class="num"><span>${have?esc(ownText(split.get(nameKey(it.n)))):'Você não tem'}</span></div>
@@ -77,9 +78,9 @@ export function renderDeck(){
  if(!d.items.length){g.innerHTML=`<div class="empty"><h3>Deck vazio</h3><p>Use “Adicionar cartas” para buscar pelo nome${(S.collection&&Object.keys(S.collection).length)||S.play.length?' ou marque “Só as que eu tenho”':''}.</p></div>`;return;}
  const own=ownByName();const split=ownSplit();
  g.innerHTML=CATS.map(([k,l])=>{
-  const rows=d.items.filter(it=>{const i=S.dinfo[it.id];return(i?i.cat:'pokemon')===k;}).sort((a,b)=>a.n.localeCompare(b.n,'pt'));
+  const rows=d.items.filter(it=>{const i=S.dinfo[it.id];return(i?i.cat:'pokemon')===k;}).sort(d.manual?(()=>0):((a,b)=>a.n.localeCompare(b.n,'pt')));
   if(!rows.length)return'';
-  return`<h3 class="dsec">${l} <span>${rows.reduce((a,i)=>a+i.q,0)}</span></h3><div class="cards">${rows.map(it=>deckTile(d,it,own,split)).join('')}</div>`;
+  return`<h3 class="dsec">${l} <span>${rows.reduce((a,i)=>a+i.q,0)}</span></h3><div class="cards" data-reorder="deck:${esc(d.id)}">${rows.map(it=>deckTile(d,it,own,split)).join('')}</div>`;
  }).join('');
 }
 
@@ -150,6 +151,13 @@ export function renderAdd(){
    <div class="num"><b>${esc(c.name)}</b><span>${esc(c.localId)}</span></div><div class="num"><span>${esc(set?set.name:'')}</span></div><div class="num"><span>${have?esc(ownText(split.get(nameKey(c.name)))):'Você não tem'}</span></div>
    ${n?`<div class="stepper"><button type="button" data-act="dk-dec" data-id="${esc(id)}" aria-label="Diminuir">−</button><button type="button" data-act="dk-inc" data-id="${esc(id)}" aria-label="Aumentar">+</button></div>`:''}</div>`;}).join('')}</div>`:`<p class="lead">${shown.length?'Todas as cartas encontradas estão fora do Standard. Desmarque “Esconder as fora do Standard” para vê-las.':'Nenhuma carta encontrada.'}</p>`;
  const c=$('#tdcount');if(c)c.textContent=cntTxt(d);
+}
+function panelCopies(id,delta){
+ const d=S.cur&&S.cur.name==='deck'&&getDeck(S.cur.id);if(!d)return;
+ const it=d.items.find(x=>x.id===id);if(!it)return;
+ setCopies(d,id,it.q+delta);saveDecks();
+ if(S.cur.refresh)S.cur.refresh();
+ renderPanel();
 }
 function commit(d){
  saveDecks();
@@ -283,7 +291,14 @@ export const DECK_ACT={
  'dk-pick':t=>pick(t.dataset.id,1),
  'dk-inc':(t,e)=>{e&&e.stopPropagation();pick(t.dataset.id,1);},
  'dk-dec':(t,e)=>{e&&e.stopPropagation();pick(t.dataset.id,-1);},
- 'deck-card':()=>{},
+ 'deck-card':t=>{
+  const d=S.cur&&S.cur.name==='deck'&&getDeck(S.cur.id);if(!d)return;
+  S.cur.nav=d.items.slice().sort(d.manual?(()=>0):((a,b)=>a.n.localeCompare(b.n,'pt'))).map(it=>({id:it.id}));
+  openPanel(t.dataset.id,{deckId:d.id});
+ },
+ 'dp-inc':t=>panelCopies(t.dataset.id,1),
+ 'dp-dec':t=>panelCopies(t.dataset.id,-1),
+ 'dp-rm':t=>{const d=S.cur&&S.cur.name==='deck'&&getDeck(S.cur.id);if(!d)return;setCopies(d,t.dataset.id,0);saveDecks();closePanel();if(S.cur.refresh)S.cur.refresh();},
  'deck-trade':t=>tradeDialog(t.dataset.id),
  'dt-kind':t=>tradeDialog(S.ui.dt.id,t.dataset.v),
  'dt-go':()=>tradeGo(),

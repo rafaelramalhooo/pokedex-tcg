@@ -79,7 +79,7 @@ const TABLES={
    removed.forEach(k=>by.delete(k));
    const order=[];S.decks.forEach(b=>{if(by.has(b.id)){order.push(by.get(b.id));by.delete(b.id);}});
    by.forEach(b=>order.push(b));
-   S.decks=order;saveDecks();
+   S.decks=order.map((d,i)=>[d,i]).sort((a,b)=>((a[0].ord??1e9)-(b[0].ord??1e9))||a[1]-b[1]).map(x=>x[0]);saveDecks();
   }
  },
  play_stock:{

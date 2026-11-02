@@ -182,3 +182,26 @@ export function tradeFromDeck(d,kind){
  }
  return{items,cards,names:names.size};
 }
+
+/* Sua ordem das cartas dentro de um deck. Na primeira vez, congela a ordem alfabética que estava na tela. */
+export function moveDeckItems(d,keys){
+ if(!d.manual){d.items.sort((a,b)=>a.n.localeCompare(b.n,'pt'));d.manual=true;}
+ const idx=keys.map(k=>d.items.findIndex(x=>x.id===k));
+ if(idx.some(i=>i<0))return false;
+ const before=d.items.map(x=>x.id).join('\n');
+ const slots=idx.slice().sort((a,b)=>a-b);
+ const picked=idx.map(i=>d.items[i]);
+ slots.forEach((i,n)=>{d.items[i]=picked[n];});
+ saveDecks();
+ return d.items.map(x=>x.id).join('\n')!==before||true;
+}
+/* Sua ordem dos decks na lista; vale em todos os aparelhos (guardada em cada deck). */
+export function moveDecks(keys){
+ const by=new Map(S.decks.map(d=>[d.id,d]));
+ if(keys.length!==S.decks.length||keys.some(k=>!by.has(k)))return false;
+ const before=S.decks.map(d=>d.id).join('\n');
+ S.decks=keys.map(k=>by.get(k));
+ S.decks.forEach((d,i)=>{d.ord=i;});
+ saveDecks();
+ return S.decks.map(d=>d.id).join('\n')!==before;
+}

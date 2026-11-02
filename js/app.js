@@ -125,12 +125,15 @@ let lpTimer=0,lpFired=false,lpAt=0;
 document.addEventListener('contextmenu',e=>{
  const t=e.target.closest&&e.target.closest('[data-rc]');if(!t)return;
  e.preventDefault();
+ if(document.body.classList.contains('is-reordering'))return;
+ if(t.dataset.rc==='pg-rc'&&(e.pointerType==='touch'||e.pointerType==='pen'))return;
  if(Date.now()-lpAt<1500)return;
  RC(t);
 });
 document.addEventListener('pointerdown',e=>{
  if(e.pointerType!=='touch')return;
  const t=e.target.closest('[data-rc]');if(!t)return;
+ if(t.closest('[data-reorder]'))return;
  clearTimeout(lpTimer);
  lpTimer=setTimeout(()=>{lpTimer=0;lpFired=true;lpAt=Date.now();if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}RC(t);},450);
 },{passive:true});

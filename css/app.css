@@ -628,10 +628,10 @@ img.lgbg,.set .logo img.lgbg,.pk .logo img.lgbg,.coverpage .cvlogo img.lgbg,.her
 .lgchk small{color:var(--ink-2);font-size:12px;line-height:1.35}
 
 /* v5.0: arrastar cartas da lista de Negociação */
-#tgrid .tradeslot{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-#tgrid .tradeslot img{-webkit-user-drag:none;pointer-events:none}
+#tgrid .tradeslot,[data-reorder] [data-ro]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#tgrid .tradeslot img,[data-reorder] [data-ro] img{-webkit-user-drag:none;pointer-events:none}
 .tdraghint{margin:0 0 10px;font-size:12.5px}
-.tradeslot.dragging{opacity:.28;outline:2px dashed var(--purple);outline-offset:3px;border-radius:14px}
+.tradeslot.dragging,[data-ro].dragging{opacity:.28;outline:2px dashed var(--purple);outline-offset:3px;border-radius:14px}
 .dragghost{position:fixed;z-index:200;pointer-events:none;margin:0;opacity:.94;transform:scale(1.05) rotate(2deg);box-shadow:0 18px 40px rgba(0,0,0,.35);border-radius:14px;background:var(--sheet);transition:none}
 body.is-reordering{cursor:grabbing;-webkit-user-select:none;user-select:none}
 body.is-reordering *{cursor:grabbing!important}
@@ -767,3 +767,8 @@ a.btn{color:inherit}
  .panel-sec .row>.btn,.panel-sec .row>label.btn{flex:1 1 calc(50% - 5px)}
  label.btn{cursor:pointer}
 }
+
+/* v7.3: texto da carta no painel */
+.ptext .ctx{margin-top:8px}
+[data-reorder] [data-ro]{touch-action:manipulation}
+a.binder.dragghost{display:block}

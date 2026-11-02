@@ -1,7 +1,7 @@
 /* Cartas de jogo: estoque de cartas só para jogar, separado da coleção. Consulta rápida do que você tem por nome. */
 import {visibleSet} from '../catalog.js';
-import {getFB} from '../api.js';
-import {typePt, rarityPt} from '../constants.js';
+import {loadText, textHTML} from '../cardtext.js';
+import {closePanel, openPanel, renderPanel} from './panel.js';
 import {S} from '../state.js';
 import {imgTag, toast} from '../ui.js';
 import {$, esc, fmtN, live, nz} from '../util.js';
@@ -60,9 +60,10 @@ export function renderPlay(){
  const sum=$('#pgsum');if(sum)sum.textContent=`${fmtN(total)} carta${total===1?'':'s'} · ${fmtN(vis.length)} nome${vis.length===1?'':'s'} diferente${vis.length===1?'':'s'}${vis.length<all.length?` (de ${fmtN(all.length)} no total)`:''}${all.some(g=>g.goal)?(missAll?` · faltam ${fmtN(missAll)} para as metas`:' · todas as metas batidas'):''}`;
  if(!vis.length){body.innerHTML='<p class="lead">Nenhuma carta com esse filtro.</p>';return;}
  const groups=st.cat?[[st.cat,(CATS.find(c=>c[0]===st.cat)||[])[1]]]:CATS;
+ const canMove=!q&&!st.set&&!st.miss;
  body.innerHTML=groups.map(([k,l])=>{
   const rows=vis.filter(g=>(g.cat||'pokemon')===k);if(!rows.length)return'';
-  return`<h3 class="dsec">${l} <span>${rows.reduce((a,g)=>a+g.q,0)}</span></h3><div class="cards">${rows.map(tile).join('')}</div>`;
+  return`<h3 class="dsec">${l} <span>${rows.reduce((a,g)=>a+g.q,0)}</span></h3><div class="cards" ${canMove?'data-reorder="play"':''}>${rows.map(tile).join('')}</div>`;
  }).join('');
 }
 const STEP=(dec,inc,attr,mid)=>`<div class="stepper${mid!==undefined?' wide':''}"><button type="button" data-act="${dec}" ${attr} aria-label="Diminuir">−</button>${mid!==undefined?`<output aria-live="polite">${mid}</output>`:''}<button type="button" data-act="${inc}" ${attr} aria-label="Aumentar">+</button></div>`;
@@ -70,7 +71,7 @@ function tile(g){
  const one=g.entries.length===1;
  const sub=one?`${esc(g.top.no)} · ${esc(setName(g.top.s))}`:`${g.entries.length} impressões`;
  const goal=g.goal?`<div class="num"><span class="goal ${g.miss?'low':'ok'}">${g.miss?`Meta ${g.goal} · faltam ${g.miss}`:`Meta ${g.goal} ✓`}</span></div>`:'';
- return`<div class="slot on tradeslot pgslot" data-act="pg-open" data-rc="pg-rc" data-k="${esc(g.k)}" role="button" tabindex="0" aria-label="${esc(g.n)}, você tem ${g.q}. Ver detalhes">
+ return`<div class="slot on tradeslot pgslot" data-act="pg-open" data-rc="pg-rc" data-ro="${esc(g.k)}" data-k="${esc(g.k)}" role="button" tabindex="0" aria-label="${esc(g.n)}, você tem ${g.q}. Ver detalhes">
   <div class="pocket">${imgTag(g.i,'low',g.n,undefined,g.id)}<span class="qty tq">×${g.q}</span></div>
   <div class="num"><b>${esc(g.n)}</b><span>${esc(g.q)} na mão</span></div><div class="num"><span>${sub}</span></div>${goal}
   ${one?STEP('pg-dec','pg-inc',`data-id="${esc(g.top.id)}"`):''}</div>`;
@@ -83,37 +84,6 @@ function change(id,d){
 
 /* ---------- detalhe de uma carta (por nome) ---------- */
 const head=(title,sub,id)=>`<div class="tdhead"><div><h2>${title}</h2><span class="tdcount" ${id?`id="${id}"`:''}>${sub||''}</span></div><button class="btn primary" type="button" data-ed-act="cancel">Concluir</button></div>`;
-const CATPT={pokemon:'Pokémon',trainer:'Treinador',energy:'Energia'};
-const TRAINER={supporter:'Apoiador',item:'Item',stadium:'Estádio',tool:'Ferramenta Pokémon','pokémon tool':'Ferramenta Pokémon'};
-const texts=()=>S.ui.ctext||(S.ui.ctext={});
-const keep=c=>({name:c.name,category:c.category,stage:c.stage,trainerType:c.trainerType,energyType:c.energyType,hp:c.hp,types:c.types||[],rarity:c.rarity,mark:c.regulationMark,illustrator:c.illustrator,
- effect:c.effect,description:c.description,abilities:c.abilities||[],attacks:c.attacks||[],weaknesses:c.weaknesses||[],resistances:c.resistances||[],retreat:c.retreat,evolveFrom:c.evolveFrom,setName:c.set&&c.set.name,no:c.localId});
-async function loadText(id){
- if(texts()[id])return;
- texts()[id]='loading';
- try{texts()[id]=keep(await getFB(`/cards/${encodeURIComponent(id)}`));}catch(e){texts()[id]='err';}
- if(S.ui.pgd&&S.ui.pgd.sel===id)paintDetail();
-}
-const costTxt=a=>{const m=new Map();(a||[]).forEach(t=>m.set(typePt(t),(m.get(typePt(t))||0)+1));return[...m].map(([t,n])=>n>1?`${t} ×${n}`:t).join(', ');};
-function infoHTML(id,e){
- const c=texts()[id];
- if(!c||c==='loading')return'<div class="skel" style="height:120px"></div>';
- if(c==='err')return`<div class="note warn">Não consegui carregar o texto desta carta agora. Confira a conexão e abra de novo.</div>`;
- const facts=[CATPT[String(c.category||'').toLowerCase()]||'',c.stage||'',c.trainerType?(TRAINER[String(c.trainerType).toLowerCase()]||c.trainerType):'',c.energyType||'',c.hp?c.hp+' PS':'',...(c.types||[]).map(typePt),c.rarity?rarityPt(c.rarity):'',c.mark?'Marca '+c.mark:''].filter(Boolean);
- const abil=(c.abilities||[]).map(x=>`<div class="ctx"><b>${esc(x.type||'Habilidade')} · ${esc(x.name||'')}</b><p>${esc(x.effect||'')}</p></div>`).join('');
- const atk=(c.attacks||[]).map(x=>`<div class="ctx"><b>${esc(x.name||'')}${x.damage?` <span class="dmg">${esc(x.damage)}</span>`:''}</b>${(x.cost||[]).length?`<small>${esc(costTxt(x.cost))}</small>`:''}${x.effect?`<p>${esc(x.effect)}</p>`:''}</div>`).join('');
- const wr=[];
- if((c.weaknesses||[]).length)wr.push('Fraqueza: '+c.weaknesses.map(w=>`${typePt(w.type)} ${w.value||''}`.trim()).join(', '));
- if((c.resistances||[]).length)wr.push('Resistência: '+c.resistances.map(w=>`${typePt(w.type)} ${w.value||''}`.trim()).join(', '));
- if(c.retreat!==undefined&&c.retreat!==null&&c.category&&/pok/i.test(c.category))wr.push('Recuo: '+c.retreat);
- return`<div class="facts">${facts.map(x=>`<span class="badge">${esc(x)}</span>`).join('')}</div>
-  ${c.evolveFrom?`<p class="lead" style="margin:6px 0 0">Evolui de ${esc(c.evolveFrom)}</p>`:''}
-  ${abil}${atk}
-  ${c.effect?`<div class="ctx"><p>${esc(c.effect)}</p></div>`:''}
-  ${wr.length?`<p class="lead" style="margin:8px 0 0">${wr.map(esc).join(' · ')}</p>`:''}
-  ${c.description?`<p class="lead flav" style="margin:8px 0 0">${esc(c.description)}</p>`:''}
-  <p class="lead" style="margin:8px 0 0">${e?`${esc(setName(e.s))} · carta ${esc(e.no)}`:''}${c.illustrator?` · Ilustração: ${esc(c.illustrator)}`:''}</p>`;
-}
 function openDetail(k){
  const g=playGroups().find(x=>x.k===k);if(!g)return;
  S.ui.pgd={k,sel:g.top.id};
@@ -127,12 +97,12 @@ function paintDetail(){
  if(!g){$('#modal').classList.remove('on');S.ui.pgd=null;return;}
  if(!g.entries.some(e=>e.id===st.sel))st.sel=g.top.id;
  const sel=g.entries.find(e=>e.id===st.sel);
- loadText(sel.id);
+ loadText(sel.id,()=>{if(S.ui.pgd&&S.ui.pgd.sel===sel.id)paintDetail();});
  const own=ownSplit().get(g.k)||{c:0,p:0};
  const goal=g.goal;
  el.innerHTML=`${head(esc(g.n),`${g.q} de jogo${own.c?` · ${own.c} na coleção`:''}`)}<div class="tdbody">
   <div class="pgdet"><div class="pgimg"><div class="pocket">${imgTag(sel.i,'high',sel.n,undefined,sel.id)}</div></div>
-   <div class="pgtxt">${infoHTML(sel.id,sel)}</div></div>
+   <div class="pgtxt">${textHTML(sel.id,`${esc(setName(sel.s))} · carta ${esc(sel.no)}`)}</div></div>
   <div class="pgmeta"><div><b>Meta de quantidade</b><div class="lead" style="margin:2px 0 0">${goal?(g.miss?`Faltam ${g.miss} para chegar a ${goal}.`:`Meta de ${goal} batida.`):'Sem meta. Defina quantas você quer ter, somando todas as impressões.'}</div></div>
    ${STEP('pg-goal-dec','pg-goal-inc',`data-k="${esc(g.k)}"`,goal||'—')}</div>
   <h3 class="dsec" style="margin-top:18px">Suas impressões <span>${g.entries.length}</span></h3>
@@ -251,6 +221,19 @@ function deckGo(){
  toast(`${n} carta${n===1?'':'s'} adicionada${n===1?'':'s'} às cartas de jogo.`);
 }
 
+/* Clicar numa carta da lista abre o mesmo painel das outras listas, com a quantidade de jogo e a meta. */
+function openPlayPanel(k){
+ const all=playGroups();const g=all.find(x=>x.k===k);if(!g)return;
+ const st=ui();const q=nz(st.q);
+ const vis=all.filter(x=>(!q||nz(x.n).includes(q))&&(!st.cat||(x.cat||'pokemon')===st.cat)&&(!st.set||x.entries.some(e=>e.s===st.set))&&(!st.miss||x.miss>0));
+ const order=[];for(const [ck] of CATS){vis.filter(x=>(x.cat||'pokemon')===ck).forEach(x=>order.push(x));}
+ S.cur.nav=order.map(x=>({id:x.top.id,k:x.k}));
+ openPanel(g.top.id,{playK:g.k});
+}
+function panelChange(id,d){
+ const e=getPlay(id);if(!e)return;
+ setPlay(id,e.q+d);savePlay();renderPlay();renderPanel();
+}
 function goalStep(k,d){
  const g=playGroups().find(x=>x.k===k);if(!g)return;
  const cur=getGoal(k);
@@ -294,7 +277,13 @@ export const PLAY_ACT={
  'pg-goal-dec':t=>goalStep(t.dataset.k,-1),
  'pg-rc':t=>rcTile(t.dataset.k),
  'pg-cat':t=>pgFilter('cat',t.dataset.v),
- 'pg-open':t=>openDetail(t.dataset.k),
+ 'pg-open':t=>openPlayPanel(t.dataset.k),
+ 'pp-inc':t=>panelChange(t.dataset.id,1),
+ 'pp-dec':t=>panelChange(t.dataset.id,-1),
+ 'pp-goal-inc':t=>{goalStep(t.dataset.k,1);renderPanel();},
+ 'pp-goal-dec':t=>{goalStep(t.dataset.k,-1);renderPanel();},
+ 'pp-rm':t=>{const e=getPlay(t.dataset.id);if(!e)return;setPlay(e.id,0);savePlay();closePanel();renderPlay();},
+ 'pp-prints':t=>{closePanel();openDetail(t.dataset.k);},
  'pg-inc':(t,e)=>{e&&e.stopPropagation();change(t.dataset.id,1);},
  'pg-dec':(t,e)=>{e&&e.stopPropagation();change(t.dataset.id,-1);},
  'pg-rm':t=>{const e=getPlay(t.dataset.id);if(!e)return;setPlay(e.id,0);savePlay();renderPlay();paintDetail();},

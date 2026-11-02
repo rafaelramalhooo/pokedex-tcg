@@ -41,9 +41,24 @@ export function playGroups(){
   const inf=S.dinfo[top.id];g.cat=inf?inf.cat:'';
   g.goal=getGoal(g.k);g.miss=g.goal?Math.max(0,g.goal-g.q):0;
  }
- return[...by.values()].sort((a,b)=>a.n.localeCompare(b.n,'pt',{numeric:true}));
+ const ord=Array.isArray(S.settings.playOrder)?S.settings.playOrder:null;
+ const pos=new Map((ord||[]).map((k,i)=>[k,i]));
+ return[...by.values()].sort((a,b)=>{
+  const pa=pos.has(a.k)?pos.get(a.k):1e9,pb=pos.has(b.k)?pos.get(b.k):1e9;
+  return pa!==pb?pa-pb:a.n.localeCompare(b.n,'pt',{numeric:true});
+ });
 }
 /* Texto simples para consultar ou colar em outro lugar: "4 Nome". */
 export function playText(groups){return(groups||playGroups()).map(g=>`${g.q} ${g.n}`).join('\n');}
 /* O que falta para chegar nas metas, no mesmo formato: "2 Nome". */
 export function missingText(groups){return(groups||playGroups()).filter(g=>g.miss>0).map(g=>`${g.miss} ${g.n}`).join('\n');}
+/* Sua ordem das cartas de jogo: `keys` é a nova ordem de um grupo de cartas já na tela; elas trocam de lugar entre si. */
+export function movePlayOrder(keys){
+ const full=playGroups().map(g=>g.k);
+ const slots=keys.map(k=>full.indexOf(k)).filter(i=>i>=0).sort((a,b)=>a-b);
+ if(slots.length!==keys.length)return false;
+ const next=full.slice();
+ slots.forEach((i,n)=>{next[i]=keys[n];});
+ if(next.join('\n')===full.join('\n'))return false;
+ S.settings.playOrder=next;saveSettings();return true;
+}
