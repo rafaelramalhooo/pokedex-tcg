@@ -72,12 +72,12 @@ async function fetchSetFull(id){
  /* sem imagem na TCGdex: tenta a do Dex */
  (d.cards||[]).forEach(c=>{if(!c.image){const u=dexImage(d.id,c.localId);if(u)c.image=u;}});
  await mergeExtra(d);
- d.fullChecked=5;
+ d.fullChecked=6;
  return d;
 }
 export async function ensureSetd(id,force){
  const old=S.setd[id];
- if(old&&old.fullChecked===5&&!force)return old;
+ if(old&&old.fullChecked===6&&!force)return old;
  let d;
  try{d=await fetchSetFull(id);}
  catch(e){if(old)return old;throw e;}
@@ -89,7 +89,7 @@ export async function ensureSetd(id,force){
 }
 export async function preloadSetd(force){
  if(S.status.pre)return;
- const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==5);
+ const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==6);
  if(!todo.length){loadSelectedCards();return;}
  S.status.pre={done:0,total:todo.length};S.status.preErr=0;softNow();
  await pool(todo,6,async s=>{
