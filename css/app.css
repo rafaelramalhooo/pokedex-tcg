@@ -772,3 +772,7 @@ a.btn{color:inherit}
 .ptext .ctx{margin-top:8px}
 [data-reorder] [data-ro]{touch-action:manipulation}
 a.binder.dragghost{display:block}
+
+/* v7.5: quantidade sempre em vermelho nas listas compartilhadas e de negociação */
+.pubwrap .qty,.pubwrap .qty.tq,.tradeslot .qty.tq{background:var(--red);color:#fff;border-color:#fff}
+.pubwrap .qty.over,.tradeslot .qty.tq.over{background:#B3261E}

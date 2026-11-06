@@ -986,7 +986,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v7.4" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v7.5" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
@@ -1511,6 +1511,8 @@ Total de cartas: 60"""
       s.setd['mee']={id:'mee',cards:[{id:'mee-001',localId:'001',name:'x'}],cardCount:{total:1},fullChecked:5};
       const d=await k.ensureSetd('mee');return d.cards.map(c=>c.id);}""")
     check(len(mee) == 16 and "mee-009" in mee and "mee-016" in mee, f"v7.4: coleção mee guardada antiga é refeita e ganha as energias 009-016 {mee}")
+    qc = page.evaluate("""()=>{const w=document.createElement('div');w.className='pubwrap';w.innerHTML='<div class="slot on tradeslot"><div class="pocket"><span class="qty tq">×2</span></div></div>';document.body.appendChild(w);const c=getComputedStyle(w.querySelector('.qty')).backgroundColor;w.remove();return c;}""")
+    check(qc == "rgb(214, 58, 47)", f"v7.5: quantidade da lista compartilhada em vermelho {qc}")
     check("/en/" in ex["imgs"][0] and "/en/" in ex["imgs"][1] and "/en/" not in ex["imgs"][2] and all(ex["imgs"]), f"imagem em inglês quando o português não tem {ex['imgs']}")
     check("static.dextcg.com/cards/mep%2F3.png#" in ex["mimg"], f"imagem do Dex quando a TCGdex não tem nenhuma {ex['mimg']}")
     d30 = page.evaluate("import('./js/extra.js').then(m=>[m.dexImage('30th-c','018'),m.dexImage('30th-c','001'),m.dexImage('30th-c','021'),m.dexImage('30th-c','031'),m.dexImage('mep','086'),m.dexImage('30th','053')])")
