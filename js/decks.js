@@ -135,6 +135,19 @@ export function ownSplit(){
  for(const e of S.play||[]){if(e.q>0)row(nameKey(e.n)).p+=e.q;}
  return m;
 }
+/* Quanto de cada carta (por nome) está em uso nos decks. `exceto` é um deck que fica de fora da conta. */
+export function inUseMap(exceto){
+ const m=new Map();
+ for(const d of S.decks||[]){if(exceto&&d.id===exceto)continue;for(const it of d.items||[]){const k=nameKey(it.n);m.set(k,(m.get(k)||0)+it.q);}}
+ return m;
+}
+/* Cartas de jogo livres (total menos o que está nos decks), somando todas as cartas. */
+export function playFreeTotal(){
+ const use=inUseMap();const q=new Map();
+ for(const e of S.play||[]){if(e.q>0){const k=nameKey(e.n);q.set(k,(q.get(k)||0)+e.q);}}
+ let t=0;for(const [k,n] of q)t+=Math.max(0,n-(use.get(k)||0));
+ return t;
+}
 /* Total por nome (coleção + cartas de jogo). */
 export function ownByName(){
  const m=new Map();

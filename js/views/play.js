@@ -7,19 +7,22 @@ import {imgTag, toast} from '../ui.js';
 import {$, esc, fmtN, live, nz} from '../util.js';
 import {importInto} from '../decktext.js';
 import {ensureInfo, getDeck, nameKey, ownSplit, ownText, pool, tradeFromDeck} from '../decks.js';
-import {MAX_GOAL, addPlay, getGoal, getPlay, missingText, playGroups, playText, playTotal, savePlay, setGoal, setPlay} from '../play.js';
+import {MAX_GOAL, addPlay, canLower, playFree, getGoal, getPlay, missingText, playGroups, playText, playTotal, savePlay, setGoal, setPlay} from '../play.js';
 import {subTabs} from './decks.js';
 
 const CATS=[['pokemon','Pokémon'],['treinador','Treinador'],['energia','Energia']];
 const CHECK='<span class="plcheck" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
 const setName=sid=>(S.setMap[sid]&&S.setMap[sid].name)||sid||'';
-const ui=()=>S.ui.pg||(S.ui.pg={q:'',cat:'',set:'',miss:false});
+const ui=()=>S.ui.pg||(S.ui.pg={q:'',cat:'',set:'',miss:false,used:false});
+/* Só o que está livre (não usado em deck), a menos que o filtro "em uso" esteja ligado. */
+const shown=(all,st)=>{const q=nz(st.q);return all.filter(g=>(st.used||g.free>0)&&(!q||nz(g.n).includes(q))&&(!st.cat||(g.cat||'pokemon')===st.cat)&&(!st.set||g.entries.some(e=>e.s===st.set))&&(!st.miss||g.miss>0));};
+const BLOCK=g=>`Em uso nos decks: ${g.use}. Para tirar, primeiro tire do deck.`;
 
 /* ---------- tela principal ---------- */
 export function viewPlay(){
  S.cur={name:'play',soft:renderPlay,refresh:renderPlay};
- const st=ui();st.q='';st.cat='';st.set='';st.miss=false;
- $('#view').innerHTML=`${subTabs('play')}<div class="top"><div><h1>Cartas de jogo</h1><p class="lead">Cartas que você usa só para jogar. Elas ficam separadas da sua coleção e contam por nome: qualquer impressão serve. Use para saber quanto você tem antes de comprar. Dica: abra uma carta para ver o texto dela e definir uma meta de quantidade.</p></div>
+ const st=ui();st.q='';st.cat='';st.set='';st.miss=false;st.used=false;
+ $('#view').innerHTML=`${subTabs('play')}<div class="top"><div><h1>Cartas de jogo</h1><p class="lead">Cartas que você usa só para jogar. Elas ficam separadas da sua coleção e contam por nome: qualquer impressão serve. Aqui aparece só o que está livre: o que já está num deck fica de fora. Use para saber quanto você tem antes de comprar. Dica: abra uma carta para ver o texto dela e definir uma meta de quantidade.</p></div>
   <div class="tools"><button class="btn primary" type="button" data-act="pg-add">Adicionar cartas</button><button class="btn" type="button" data-act="pg-import">Importar lista</button><button class="btn" type="button" data-act="pg-fromdeck">Adicionar de um deck</button><button class="btn" type="button" data-act="pg-copy">Copiar lista</button><button class="btn" type="button" data-act="pg-copymiss">Copiar o que falta</button></div></div>
   <div id="pgbar"></div><div id="pgbody"></div>`;
  renderPlay();
@@ -37,7 +40,7 @@ export function renderPlay(){
  const st=ui();
  const bar=live($('#pgbar'));const body=live($('#pgbody'));if(!bar||!body)return;
  const all=playGroups();
- const sub=document.querySelector('.subtabs a[href="#/decks/cartas"] span');if(sub)sub.textContent=playTotal()||'';
+ const sub=document.querySelector('.subtabs a[href="#/decks/cartas"] span');if(sub)sub.textContent=playFree()||'';
  if(!all.length){
   bar.innerHTML='';
   body.innerHTML=`<div class="empty"><h3>Você ainda não tem cartas de jogo</h3><p>Adicione as cartas que você usa nos seus decks, uma a uma ou colando a lista do Pokémon TCG Live. Depois é só pesquisar pelo nome para ver quantas você tem.</p><button class="btn primary" type="button" data-act="pg-add">Adicionar cartas</button></div>`;
@@ -46,24 +49,25 @@ export function renderPlay(){
  needInfo();
  const sets=[...new Set(S.play.map(e=>e.s).filter(Boolean))].map(sid=>({sid,name:setName(sid)})).sort((a,b)=>a.name.localeCompare(b.name,'pt'));
  const q=nz(st.q);
- const vis=all.filter(g=>(!q||nz(g.n).includes(q))&&(!st.cat||(g.cat||'pokemon')===st.cat)&&(!st.set||g.entries.some(e=>e.s===st.set))&&(!st.miss||g.miss>0));
- const total=vis.reduce((a,g)=>a+g.q,0);const missAll=all.reduce((a,g)=>a+g.miss,0);
+ const vis=shown(all,st);
+ const total=vis.reduce((a,g)=>a+g.free,0);const useAll=all.reduce((a,g)=>a+g.use,0);const nUsed=all.filter(g=>g.use>0).length;const missAll=all.reduce((a,g)=>a+g.miss,0);
  if(!document.getElementById('pgq')){
   bar.innerHTML=`<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
    <div style="flex:1;min-width:200px"><label class="lbl2" for="pgq">Buscar pelo nome</label><input class="field" id="pgq" type="search" style="width:100%" placeholder="Ex.: Boss, Pikachu, Ultra Ball" value="${esc(st.q)}"></div>
    <div id="pgcats"></div>
-   <label class="size">Expansão <select class="field" data-pg="set" id="pgset"></select></label><div id="pgmiss"></div></div><p class="lead" id="pgsum" style="margin:0 0 6px"></p>`;
+   <label class="size">Expansão <select class="field" data-pg="set" id="pgset"></select></label><div id="pgmiss"></div><div id="pgused"></div></div><p class="lead" id="pgsum" style="margin:0 0 6px"></p>`;
  }
  const cats=$('#pgcats');if(cats)cats.innerHTML=`<div class="seg" role="group" aria-label="Categoria">${[['','Todas'],...CATS].map(([k,l])=>`<button type="button" data-act="pg-cat" data-v="${k}" aria-pressed="${st.cat===k}">${l}</button>`).join('')}</div>`;
  const mb=$('#pgmiss');if(mb){const nm=all.filter(g=>g.miss>0).length;mb.innerHTML=all.some(g=>g.goal)?`<button type="button" class="fchip" data-act="pg-miss" aria-pressed="${!!st.miss}">Só o que falta (${nm})</button>`:'';}
+ const ub=$('#pgused');if(ub)ub.innerHTML=nUsed?`<button type="button" class="fchip" data-act="pg-used" aria-pressed="${!!st.used}">Mostrar cartas em uso (${nUsed})</button>`:'';
  const sel=$('#pgset');if(sel){const h=`<option value="">Todas</option>${sets.map(x=>`<option value="${esc(x.sid)}" ${st.set===x.sid?'selected':''}>${esc(x.name)}</option>`).join('')}`;if(sel.innerHTML!==h)sel.innerHTML=h;}
- const sum=$('#pgsum');if(sum)sum.textContent=`${fmtN(total)} carta${total===1?'':'s'} · ${fmtN(vis.length)} nome${vis.length===1?'':'s'} diferente${vis.length===1?'':'s'}${vis.length<all.length?` (de ${fmtN(all.length)} no total)`:''}${all.some(g=>g.goal)?(missAll?` · faltam ${fmtN(missAll)} para as metas`:' · todas as metas batidas'):''}`;
- if(!vis.length){body.innerHTML='<p class="lead">Nenhuma carta com esse filtro.</p>';return;}
+ const sum=$('#pgsum');if(sum)sum.textContent=`${fmtN(total)} carta${total===1?'':'s'} livre${total===1?'':'s'}${useAll?` · ${fmtN(useAll)} em uso nos decks`:''} · ${fmtN(vis.length)} nome${vis.length===1?'':'s'} diferente${vis.length===1?'':'s'}${vis.length<all.length?` (de ${fmtN(all.length)} no total)`:''}${all.some(g=>g.goal)?(missAll?` · faltam ${fmtN(missAll)} para as metas`:' · todas as metas batidas'):''}`;
+ if(!vis.length){body.innerHTML=`<p class="lead">${!total&&useAll&&!st.used&&!st.q&&!st.cat&&!st.set&&!st.miss?'Todas as suas cartas de jogo estão em uso nos decks. Use “Mostrar cartas em uso” para ver quais.':'Nenhuma carta com esse filtro.'}</p>`;return;}
  const groups=st.cat?[[st.cat,(CATS.find(c=>c[0]===st.cat)||[])[1]]]:CATS;
  const canMove=!q&&!st.set&&!st.miss;
  body.innerHTML=groups.map(([k,l])=>{
   const rows=vis.filter(g=>(g.cat||'pokemon')===k);if(!rows.length)return'';
-  return`<h3 class="dsec">${l} <span>${rows.reduce((a,g)=>a+g.q,0)}</span></h3><div class="cards" ${canMove?'data-reorder="play"':''}>${rows.map(tile).join('')}</div>`;
+  return`<h3 class="dsec">${l} <span>${rows.reduce((a,g)=>a+g.free,0)}</span></h3><div class="cards" ${canMove?'data-reorder="play"':''}>${rows.map(tile).join('')}</div>`;
  }).join('');
 }
 const STEP=(dec,inc,attr,mid)=>`<div class="stepper${mid!==undefined?' wide':''}"><button type="button" data-act="${dec}" ${attr} aria-label="Diminuir">−</button>${mid!==undefined?`<output aria-live="polite">${mid}</output>`:''}<button type="button" data-act="${inc}" ${attr} aria-label="Aumentar">+</button></div>`;
@@ -71,13 +75,15 @@ function tile(g){
  const one=g.entries.length===1;
  const sub=one?`${esc(g.top.no)} · ${esc(setName(g.top.s))}`:`${g.entries.length} impressões`;
  const goal=g.goal?`<div class="num"><span class="goal ${g.miss?'low':'ok'}">${g.miss?`Meta ${g.goal} · faltam ${g.miss}`:`Meta ${g.goal} ✓`}</span></div>`:'';
- return`<div class="slot on tradeslot pgslot" data-act="pg-open" data-rc="pg-rc" data-ro="${esc(g.k)}" data-k="${esc(g.k)}" role="button" tabindex="0" aria-label="${esc(g.n)}, você tem ${g.q}. Ver detalhes">
-  <div class="pocket">${imgTag(g.i,'low',g.n,undefined,g.id)}<span class="qty tq">×${g.q}</span></div>
-  <div class="num"><b>${esc(g.n)}</b><span>${esc(g.q)} na mão</span></div><div class="num"><span>${sub}</span></div>${goal}
+ return`<div class="slot on tradeslot pgslot" data-act="pg-open" data-rc="pg-rc" data-ro="${esc(g.k)}" data-k="${esc(g.k)}" role="button" tabindex="0" aria-label="${esc(g.n)}, ${g.free} livre${g.free===1?'':'s'}${g.use?`, ${g.use} em uso nos decks`:''}. Ver detalhes">
+  <div class="pocket${g.free?'':' off'}">${imgTag(g.i,'low',g.n,undefined,g.id)}<span class="qty tq">×${g.free}</span></div>
+  <div class="num"><b>${esc(g.n)}</b><span>${g.use?`${esc(g.free)} livre${g.free===1?'':'s'} · ${esc(g.use)} em uso`:`${esc(g.free)} na mão`}</span></div><div class="num"><span>${sub}</span></div>${goal}
   ${one?STEP('pg-dec','pg-inc',`data-id="${esc(g.top.id)}"`):''}</div>`;
 }
+const lowerOk=(id,n=1)=>{if(canLower(id,n))return true;const e=getPlay(id);const g=e&&playGroups().find(x=>x.k===nameKey(e.n));toast(g?BLOCK(g):'Não dá para tirar.');return false;};
 function change(id,d){
  const e=getPlay(id);if(!e)return;
+ if(d<0&&!lowerOk(id,-d))return;
  setPlay(id,e.q+d);savePlay();renderPlay();
  if(S.ui.pgd)paintDetail();
 }
@@ -100,7 +106,7 @@ function paintDetail(){
  loadText(sel.id,()=>{if(S.ui.pgd&&S.ui.pgd.sel===sel.id)paintDetail();});
  const own=ownSplit().get(g.k)||{c:0,p:0};
  const goal=g.goal;
- el.innerHTML=`${head(esc(g.n),`${g.q} de jogo${own.c?` · ${own.c} na coleção`:''}`)}<div class="tdbody">
+ el.innerHTML=`${head(esc(g.n),`${g.free} livre${g.free===1?'':'s'}${g.use?` · ${g.use} em uso nos decks`:''} · ${g.q} no total${own.c?` · ${own.c} na coleção`:''}`)}<div class="tdbody">
   <div class="pgdet"><div class="pgimg"><div class="pocket">${imgTag(sel.i,'high',sel.n,undefined,sel.id)}</div></div>
    <div class="pgtxt">${textHTML(sel.id,`${esc(setName(sel.s))} · carta ${esc(sel.no)}`)}</div></div>
   <div class="pgmeta"><div><b>Meta de quantidade</b><div class="lead" style="margin:2px 0 0">${goal?(g.miss?`Faltam ${g.miss} para chegar a ${goal}.`:`Meta de ${goal} batida.`):'Sem meta. Defina quantas você quer ter, somando todas as impressões.'}</div></div>
@@ -161,7 +167,7 @@ export function renderAdd(){
 function pick(id,d){
  const e=getPlay(id);
  if(!e){if(d<0)return;addPlay(id,1);ensureInfo(id).then(()=>S.cur&&S.cur.refresh&&S.cur.refresh()).catch(()=>{});}
- else setPlay(id,e.q+d);
+ else{if(d<0&&!lowerOk(id,-d))return;setPlay(id,e.q+d);}
  savePlay();renderAdd();if(S.cur&&S.cur.refresh)S.cur.refresh();
 }
 
@@ -225,13 +231,14 @@ function deckGo(){
 function openPlayPanel(k){
  const all=playGroups();const g=all.find(x=>x.k===k);if(!g)return;
  const st=ui();const q=nz(st.q);
- const vis=all.filter(x=>(!q||nz(x.n).includes(q))&&(!st.cat||(x.cat||'pokemon')===st.cat)&&(!st.set||x.entries.some(e=>e.s===st.set))&&(!st.miss||x.miss>0));
+ const vis=shown(all,st);
  const order=[];for(const [ck] of CATS){vis.filter(x=>(x.cat||'pokemon')===ck).forEach(x=>order.push(x));}
  S.cur.nav=order.map(x=>({id:x.top.id,k:x.k}));
  openPanel(g.top.id,{playK:g.k});
 }
 function panelChange(id,d){
  const e=getPlay(id);if(!e)return;
+ if(d<0&&!lowerOk(id,-d))return;
  setPlay(id,e.q+d);savePlay();renderPlay();renderPanel();
 }
 function goalStep(k,d){
@@ -272,6 +279,7 @@ export const PLAY_ACT={
  'pg-copy':()=>copyList(),
  'pg-copymiss':()=>copyMissing(),
  'pg-miss':()=>pgFilter('miss',!ui().miss),
+ 'pg-used':()=>pgFilter('used',!ui().used),
  'pg-sel':t=>{if(S.ui.pgd){S.ui.pgd.sel=t.dataset.id;paintDetail();}},
  'pg-goal-inc':t=>goalStep(t.dataset.k,1),
  'pg-goal-dec':t=>goalStep(t.dataset.k,-1),
@@ -282,11 +290,11 @@ export const PLAY_ACT={
  'pp-dec':t=>panelChange(t.dataset.id,-1),
  'pp-goal-inc':t=>{goalStep(t.dataset.k,1);renderPanel();},
  'pp-goal-dec':t=>{goalStep(t.dataset.k,-1);renderPanel();},
- 'pp-rm':t=>{const e=getPlay(t.dataset.id);if(!e)return;setPlay(e.id,0);savePlay();closePanel();renderPlay();},
+ 'pp-rm':t=>{const e=getPlay(t.dataset.id);if(!e||!lowerOk(e.id,e.q))return;setPlay(e.id,0);savePlay();closePanel();renderPlay();},
  'pp-prints':t=>{closePanel();openDetail(t.dataset.k);},
  'pg-inc':(t,e)=>{e&&e.stopPropagation();change(t.dataset.id,1);},
  'pg-dec':(t,e)=>{e&&e.stopPropagation();change(t.dataset.id,-1);},
- 'pg-rm':t=>{const e=getPlay(t.dataset.id);if(!e)return;setPlay(e.id,0);savePlay();renderPlay();paintDetail();},
+ 'pg-rm':t=>{const e=getPlay(t.dataset.id);if(!e||!lowerOk(e.id,e.q))return;setPlay(e.id,0);savePlay();renderPlay();paintDetail();},
  'pa-pick':t=>pick(t.dataset.id,1),
  'pa-inc':(t,e)=>{e&&e.stopPropagation();pick(t.dataset.id,1);},
  'pa-dec':(t,e)=>{e&&e.stopPropagation();pick(t.dataset.id,-1);}

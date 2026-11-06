@@ -22,9 +22,10 @@ export async function loadExtra(){
    const r=await fetch('data/extra-cards.json');
    if(!r.ok)throw new Error('http');
    const j=await r.json();
-   const out={sets:{},cards:{}};
+   const out={sets:{},cards:{},meta:{}};
    for(const [sid,s] of Object.entries(j.sets||{})){
     out.sets[sid]=[];
+    if(s.name)out.meta[sid]={name:s.name,serie:s.serie,date:s.date,total:(s.cards||[]).length};
     (s.cards||[]).forEach(c=>{
      const n=String(c.n),id=`${sid}-${pad3(n)}`;
      const cat=c.cat==='Pokémon'?'Pokemon':c.cat;
@@ -39,7 +40,7 @@ export async function loadExtra(){
     });
    }
    EX=out;
-  }catch(e){EX={sets:{},cards:{}};loading=null;}
+  }catch(e){EX={sets:{},cards:{},meta:{}};loading=null;}
   return EX;
  })();
  return loading;

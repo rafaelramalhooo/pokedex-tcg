@@ -1,1 +1,1614 @@
-{"v":1,"fonte":"Dex (dextcg.com), páginas públicas de cada carta, lidas em 21/10/2026. Só dados factuais, sem preços.","sets":{"mep":{"ds":"mep","cards":[{"n":"89","name":"Mega Zeraora ex","cat":"Pokémon","rar":"Promo","ill":"5ban Graphics","dex":807,"type":"Lightning","reg":"J"},{"n":"90","name":"Mega Darkrai ex","cat":"Pokémon","rar":"Promo","ill":"5ban Graphics","dex":491,"type":"Darkness","reg":"J"},{"n":"91","name":"Mega Dragonite ex","cat":"Pokémon","rar":"Promo","ill":"5ban Graphics","dex":149,"type":"Dragon","reg":"I"},{"n":"92","name":"Paradise Resort","cat":"Trainer","rar":"Promo","ill":"Naoki Saito","tt":"Stadium","reg":"J"},{"n":"93","name":"Pikachu","cat":"Pokémon","rar":"Promo","ill":"DOM","dex":25,"type":"Lightning","reg":"J"},{"n":"94","name":"Alolan Exeggutor","cat":"Pokémon","rar":"Promo","ill":"yuu","dex":103,"type":"Grass","reg":"J"},{"n":"95","name":"Lucario","cat":"Pokémon","rar":"Promo","ill":"Taiga Kasai","dex":448,"type":"Fighting","reg":"J"},{"n":"96","name":"Moltres","cat":"Pokémon","rar":"Promo","ill":"Krgc","dex":146,"type":"Fire","reg":"J"},{"n":"97","name":"Articuno","cat":"Pokémon","rar":"Promo","ill":"Taira Akitsu","dex":144,"type":"Water","reg":"J"},{"n":"98","name":"Zapdos","cat":"Pokémon","rar":"Promo","ill":"SIE NANAHARA","dex":145,"type":"Lightning","reg":"J"},{"n":"99","name":"Greninja ex","cat":"Pokémon","rar":"Promo","ill":"5ban Graphics","dex":658,"type":"Water","reg":"J"},{"n":"100","name":"Sylveon ex","cat":"Pokémon","rar":"Promo","ill":"5ban Graphics","dex":700,"type":"Psychic","reg":"J"},{"n":"101","name":"Nidorina","cat":"Pokémon","rar":"Promo","ill":"Taiga Kasai","dex":30,"type":"Darkness","reg":"J"},{"n":"102","name":"Victini","cat":"Pokémon","rar":"Promo","ill":"satoma","dex":494,"type":"Fire","reg":"J"},{"n":"103","name":"Zeraora","cat":"Pokémon","rar":"Promo","ill":"HACCAN","dex":807,"type":"Lightning","reg":"J"},{"n":"104","name":"Mewtwo","cat":"Pokémon","rar":"Promo","ill":"Nisota Niso","dex":150,"type":"Psychic","reg":"J"},{"n":"105","name":"Mew","cat":"Pokémon","rar":"Promo","ill":"Cona Nitanda","dex":151,"type":"Psychic","reg":"J"},{"n":"106","name":"Ditto","cat":"Pokémon","rar":"Promo","ill":"Ounishi","dex":132,"type":"Colorless","reg":"J"},{"n":"107","name":"Pikachu ex","cat":"Pokémon","rar":"Promo","ill":"YOSHIROTTEN","dex":25,"type":"Lightning","reg":"J"},{"n":"108","name":"Espeon ex","cat":"Pokémon","rar":"Promo","ill":"REND","dex":196,"type":"Psychic","reg":"J"},{"n":"109","name":"Pikachu ex","cat":"Pokémon","rar":"Promo","ill":"YOSHIROTTEN","dex":25,"type":"Lightning","reg":"J"},{"n":"110","name":"Umbreon ex","cat":"Pokémon","rar":"Promo","ill":"REND","dex":197,"type":"Darkness","reg":"J"},{"n":"111","name":"Masquerain","cat":"Pokémon","rar":"Promo","ill":"Anderson","dex":284,"type":"Grass","reg":"J"},{"n":"112","name":"Magmortar","cat":"Pokémon","rar":"Promo","ill":"Kazumasa Yasukuni","dex":467,"type":"Fire","reg":"J"},{"n":"113","name":"Enamorus","cat":"Pokémon","rar":"Promo","ill":"CHORISO","dex":905,"type":"Psychic","reg":"J"},{"n":"114","name":"Kommo-o","cat":"Pokémon","rar":"Promo","ill":"Kazuki Minami","dex":784,"type":"Dragon","reg":"J"},{"n":"120","name":"Celebratory Fanfare","cat":"Trainer","rar":"Promo","ill":"Yuu Nishida","tt":"Stadium","reg":"J"},{"n":"131","name":"Pokémon RUN Pikachu","cat":"Pokémon","rar":"Promo","ill":"The Pokémon Company","dex":25,"type":"Lightning","reg":"J"}]},"mee":{"ds":"mee","cards":[{"n":"9","name":"Basic Grass Energy","cat":"Energy","rar":"No Rarity","ill":"YOSHIROTTEN"},{"n":"10","name":"Basic Fire Energy","cat":"Energy","rar":"No Rarity","ill":"YOSHIROTTEN"},{"n":"11","name":"Basic Water Energy","cat":"Energy","rar":"No Rarity","ill":"YOSHIROTTEN"},{"n":"12","name":"Basic Lightning Energy","cat":"Energy","rar":"No Rarity","ill":"YOSHIROTTEN"},{"n":"13","name":"Basic Psychic Energy","cat":"Energy","rar":"No Rarity","ill":"YOSHIROTTEN"},{"n":"14","name":"Basic Fighting Energy","cat":"Energy","rar":"No Rarity","ill":"YOSHIROTTEN"},{"n":"15","name":"Basic Darkness Energy","cat":"Energy","rar":"No Rarity","ill":"YOSHIROTTEN"},{"n":"16","name":"Basic Metal Energy","cat":"Energy","rar":"No Rarity","ill":"YOSHIROTTEN"}]},"30th":{"ds":"me55","cards":[{"n":"G","name":"Mew","cat":"Pokémon","rar":"RGB Rare","ill":"YOSHIROTTEN","dex":151,"type":"Psychic","reg":"J"},{"n":"B","name":"Mew","cat":"Pokémon","rar":"RGB Rare","ill":"YOSHIROTTEN","dex":151,"type":"Psychic","reg":"J"},{"n":"R","name":"Mew","cat":"Pokémon","rar":"RGB Rare","ill":"YOSHIROTTEN","dex":151,"type":"Psychic","reg":"J"}]}}}
+{
+"v": 1,
+"fonte": "Dex (dextcg.com), páginas públicas de cada carta, lidas em 21/10/2026. Só dados factuais, sem preços. Delta Reign (me06): páginas públicas do Dex, lidas em 06/11/2026 (nome, raridade, Pokédex, tipo, marca J; sem ilustrador). Nome em português ainda não confirmado.",
+"sets": {
+"mep": {
+"ds": "mep",
+"cards": [
+{
+"n": "89",
+"name": "Mega Zeraora ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "5ban Graphics",
+"dex": 807,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "90",
+"name": "Mega Darkrai ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "5ban Graphics",
+"dex": 491,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "91",
+"name": "Mega Dragonite ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "5ban Graphics",
+"dex": 149,
+"type": "Dragon",
+"reg": "I"
+},
+{
+"n": "92",
+"name": "Paradise Resort",
+"cat": "Trainer",
+"rar": "Promo",
+"ill": "Naoki Saito",
+"tt": "Stadium",
+"reg": "J"
+},
+{
+"n": "93",
+"name": "Pikachu",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "DOM",
+"dex": 25,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "94",
+"name": "Alolan Exeggutor",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "yuu",
+"dex": 103,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "95",
+"name": "Lucario",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Taiga Kasai",
+"dex": 448,
+"type": "Fighting",
+"reg": "J"
+},
+{
+"n": "96",
+"name": "Moltres",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Krgc",
+"dex": 146,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "97",
+"name": "Articuno",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Taira Akitsu",
+"dex": 144,
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "98",
+"name": "Zapdos",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "SIE NANAHARA",
+"dex": 145,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "99",
+"name": "Greninja ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "5ban Graphics",
+"dex": 658,
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "100",
+"name": "Sylveon ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "5ban Graphics",
+"dex": 700,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "101",
+"name": "Nidorina",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Taiga Kasai",
+"dex": 30,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "102",
+"name": "Victini",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "satoma",
+"dex": 494,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "103",
+"name": "Zeraora",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "HACCAN",
+"dex": 807,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "104",
+"name": "Mewtwo",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Nisota Niso",
+"dex": 150,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "105",
+"name": "Mew",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Cona Nitanda",
+"dex": 151,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "106",
+"name": "Ditto",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Ounishi",
+"dex": 132,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "107",
+"name": "Pikachu ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "YOSHIROTTEN",
+"dex": 25,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "108",
+"name": "Espeon ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "REND",
+"dex": 196,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "109",
+"name": "Pikachu ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "YOSHIROTTEN",
+"dex": 25,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "110",
+"name": "Umbreon ex",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "REND",
+"dex": 197,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "111",
+"name": "Masquerain",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Anderson",
+"dex": 284,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "112",
+"name": "Magmortar",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Kazumasa Yasukuni",
+"dex": 467,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "113",
+"name": "Enamorus",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "CHORISO",
+"dex": 905,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "114",
+"name": "Kommo-o",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "Kazuki Minami",
+"dex": 784,
+"type": "Dragon",
+"reg": "J"
+},
+{
+"n": "120",
+"name": "Celebratory Fanfare",
+"cat": "Trainer",
+"rar": "Promo",
+"ill": "Yuu Nishida",
+"tt": "Stadium",
+"reg": "J"
+},
+{
+"n": "131",
+"name": "Pokémon RUN Pikachu",
+"cat": "Pokémon",
+"rar": "Promo",
+"ill": "The Pokémon Company",
+"dex": 25,
+"type": "Lightning",
+"reg": "J"
+}
+]
+},
+"mee": {
+"ds": "mee",
+"cards": [
+{
+"n": "9",
+"name": "Basic Grass Energy",
+"cat": "Energy",
+"rar": "No Rarity",
+"ill": "YOSHIROTTEN"
+},
+{
+"n": "10",
+"name": "Basic Fire Energy",
+"cat": "Energy",
+"rar": "No Rarity",
+"ill": "YOSHIROTTEN"
+},
+{
+"n": "11",
+"name": "Basic Water Energy",
+"cat": "Energy",
+"rar": "No Rarity",
+"ill": "YOSHIROTTEN"
+},
+{
+"n": "12",
+"name": "Basic Lightning Energy",
+"cat": "Energy",
+"rar": "No Rarity",
+"ill": "YOSHIROTTEN"
+},
+{
+"n": "13",
+"name": "Basic Psychic Energy",
+"cat": "Energy",
+"rar": "No Rarity",
+"ill": "YOSHIROTTEN"
+},
+{
+"n": "14",
+"name": "Basic Fighting Energy",
+"cat": "Energy",
+"rar": "No Rarity",
+"ill": "YOSHIROTTEN"
+},
+{
+"n": "15",
+"name": "Basic Darkness Energy",
+"cat": "Energy",
+"rar": "No Rarity",
+"ill": "YOSHIROTTEN"
+},
+{
+"n": "16",
+"name": "Basic Metal Energy",
+"cat": "Energy",
+"rar": "No Rarity",
+"ill": "YOSHIROTTEN"
+}
+]
+},
+"30th": {
+"ds": "me55",
+"cards": [
+{
+"n": "G",
+"name": "Mew",
+"cat": "Pokémon",
+"rar": "RGB Rare",
+"ill": "YOSHIROTTEN",
+"dex": 151,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "B",
+"name": "Mew",
+"cat": "Pokémon",
+"rar": "RGB Rare",
+"ill": "YOSHIROTTEN",
+"dex": 151,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "R",
+"name": "Mew",
+"cat": "Pokémon",
+"rar": "RGB Rare",
+"ill": "YOSHIROTTEN",
+"dex": 151,
+"type": "Psychic",
+"reg": "J"
+}
+]
+},
+"me06": {
+"ds": "me6",
+"name": "Delta Reign",
+"serie": {
+"id": "me",
+"name": "Megaevolução"
+},
+"date": "2026-11-06",
+"cards": [
+{
+"n": "1",
+"name": "Heracross",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 214,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "2",
+"name": "Surskit",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 283,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "3",
+"name": "Masquerain",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 284,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "4",
+"name": "Cacnea",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 331,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "5",
+"name": "Cacturne",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 332,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "6",
+"name": "Combee",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 415,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "7",
+"name": "Vespiquen",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 416,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "8",
+"name": "Shaymin",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 492,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "9",
+"name": "Virizion",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 640,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "10",
+"name": "Wimpod",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 767,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "11",
+"name": "Mega Golisopod ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 768,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "12",
+"name": "Sprigatito",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 906,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "13",
+"name": "Floragato",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 907,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "14",
+"name": "Meowscarada ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 908,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "15",
+"name": "Smoliv",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 928,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "16",
+"name": "Dolliv",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 929,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "17",
+"name": "Arboliva",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 930,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "18",
+"name": "Growlithe",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 58,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "19",
+"name": "Arcanine",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 59,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "20",
+"name": "Magmar",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 126,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "21",
+"name": "Magmortar",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 467,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "22",
+"name": "Torkoal",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 324,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "23",
+"name": "Heat Rotom ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 479,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "24",
+"name": "Heatmor",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 631,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "25",
+"name": "Mantine",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 226,
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "26",
+"name": "Kyogre",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 382,
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "27",
+"name": "Frillish",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 592,
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "28",
+"name": "Jellicent",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 593,
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "29",
+"name": "Wishiwashi ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 746,
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "30",
+"name": "Electabuzz",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 125,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "31",
+"name": "Electivire",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 466,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "32",
+"name": "Jolteon",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 135,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "33",
+"name": "Raikou ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 243,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "34",
+"name": "Rotom",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 479,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "35",
+"name": "Thundurus",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 642,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "36",
+"name": "Pincurchin",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 871,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "37",
+"name": "Pawmi",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 921,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "38",
+"name": "Pawmo",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 922,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "39",
+"name": "Pawmot",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 923,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "40",
+"name": "Wattrel",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 940,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "41",
+"name": "Kilowattrel",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 941,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "42",
+"name": "Miraidon",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 1008,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "43",
+"name": "Drowzee",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 96,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "44",
+"name": "Hypno",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 97,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "45",
+"name": "Giratina",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 487,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "46",
+"name": "Golett",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 622,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "47",
+"name": "Mega Golurk ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 623,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "48",
+"name": "Enamorus",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 905,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "49",
+"name": "Sandshrew",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 27,
+"type": "Fighting",
+"reg": "J"
+},
+{
+"n": "50",
+"name": "Sandslash",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 28,
+"type": "Fighting",
+"reg": "J"
+},
+{
+"n": "51",
+"name": "Onix",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 95,
+"type": "Fighting",
+"reg": "J"
+},
+{
+"n": "52",
+"name": "Steelix",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 208,
+"type": "Fighting",
+"reg": "J"
+},
+{
+"n": "53",
+"name": "Groudon",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 383,
+"type": "Fighting",
+"reg": "J"
+},
+{
+"n": "54",
+"name": "Landorus",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 645,
+"type": "Fighting",
+"reg": "J"
+},
+{
+"n": "55",
+"name": "Nidoran♀",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 29,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "56",
+"name": "Nidorina",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 30,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "57",
+"name": "Nidoqueen",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 31,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "58",
+"name": "Spinarak",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 167,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "59",
+"name": "Ariados",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 168,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "60",
+"name": "Sableye",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 302,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "61",
+"name": "Carvanha",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 318,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "62",
+"name": "Sharpedo",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 319,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "63",
+"name": "Darkrai",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 491,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "64",
+"name": "Purrloin",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 509,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "65",
+"name": "Liepard",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 510,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "66",
+"name": "Zorua",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 570,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "67",
+"name": "Zoroark ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 571,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "68",
+"name": "Inkay",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 686,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "69",
+"name": "Mega Malamar ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 687,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "70",
+"name": "Morpeko",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 877,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "71",
+"name": "Zarude",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 893,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "72",
+"name": "Druddigon",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 621,
+"type": "Dragon",
+"reg": "J"
+},
+{
+"n": "73",
+"name": "Jangmo-o",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 782,
+"type": "Dragon",
+"reg": "J"
+},
+{
+"n": "74",
+"name": "Hakamo-o",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 783,
+"type": "Dragon",
+"reg": "J"
+},
+{
+"n": "75",
+"name": "Kommo-o",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 784,
+"type": "Dragon",
+"reg": "J"
+},
+{
+"n": "76",
+"name": "Cyclizar",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 967,
+"type": "Dragon",
+"reg": "J"
+},
+{
+"n": "77",
+"name": "Tauros",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 128,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "78",
+"name": "Eevee",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 133,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "79",
+"name": "Delibird",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 225,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "80",
+"name": "Azurill",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 298,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "81",
+"name": "Swablu",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 333,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "82",
+"name": "Altaria",
+"cat": "Pokémon",
+"rar": "Rare",
+"dex": 334,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "83",
+"name": "Kecleon",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 352,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "84",
+"name": "Mega Rayquaza ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 384,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "85",
+"name": "Tornadus",
+"cat": "Pokémon",
+"rar": "Uncommon",
+"dex": 641,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "86",
+"name": "Fletchling",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 661,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "87",
+"name": "Fletchinder",
+"cat": "Pokémon",
+"rar": "Common",
+"dex": 662,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "88",
+"name": "Talonflame ex",
+"cat": "Pokémon",
+"rar": "Double Rare",
+"dex": 663,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "89",
+"name": "Aarune",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "90",
+"name": "Adventure Lantern",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "91",
+"name": "Custom Vest",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "92",
+"name": "Emcee's Hype",
+"cat": "Trainer",
+"rar": "Common",
+"reg": "J"
+},
+{
+"n": "93",
+"name": "Grisham",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "94",
+"name": "Legendary Pyroduct",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "95",
+"name": "Legendary Pyroduct",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "96",
+"name": "Legendary Summit",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "97",
+"name": "Legendary Summit",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "98",
+"name": "Legendary Trench",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "99",
+"name": "Legendary Trench",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "100",
+"name": "Mega Rayquaza Cap",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "101",
+"name": "Tasty Rice Ball",
+"cat": "Trainer",
+"rar": "Common",
+"reg": "J"
+},
+{
+"n": "102",
+"name": "Tate & Liza's Training",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "103",
+"name": "Zinnia's Trust",
+"cat": "Trainer",
+"rar": "Uncommon",
+"reg": "J"
+},
+{
+"n": "104",
+"name": "Masquerain",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 284,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "105",
+"name": "Sprigatito",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 906,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "106",
+"name": "Growlithe",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 58,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "107",
+"name": "Magmortar",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 467,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "108",
+"name": "Electivire",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 466,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "109",
+"name": "Pincurchin",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 871,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "110",
+"name": "Enamorus",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 905,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "111",
+"name": "Groudon",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 383,
+"type": "Fighting",
+"reg": "J"
+},
+{
+"n": "112",
+"name": "Zorua",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 570,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "113",
+"name": "Inkay",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 686,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "114",
+"name": "Eevee",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 133,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "115",
+"name": "Azurill",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 298,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "116",
+"name": "Altaria",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 334,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "117",
+"name": "Kecleon",
+"cat": "Pokémon",
+"rar": "Illustration Rare",
+"dex": 352,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "118",
+"name": "Mega Golisopod ex",
+"cat": "Pokémon",
+"rar": "Ultra Rare",
+"dex": 768,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "119",
+"name": "Heat Rotom ex",
+"cat": "Pokémon",
+"rar": "Ultra Rare",
+"dex": 479,
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "120",
+"name": "Wishiwashi ex",
+"cat": "Pokémon",
+"rar": "Ultra Rare",
+"dex": 746,
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "121",
+"name": "Raikou ex",
+"cat": "Pokémon",
+"rar": "Ultra Rare",
+"dex": 243,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "122",
+"name": "Mega Golurk ex",
+"cat": "Pokémon",
+"rar": "Ultra Rare",
+"dex": 623,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "123",
+"name": "Mega Malamar ex",
+"cat": "Pokémon",
+"rar": "Ultra Rare",
+"dex": 687,
+"type": "Darkness",
+"reg": "J"
+},
+{
+"n": "124",
+"name": "Talonflame ex",
+"cat": "Pokémon",
+"rar": "Ultra Rare",
+"dex": 663,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "125",
+"name": "Aarune",
+"cat": "Trainer",
+"rar": "Ultra Rare",
+"reg": "J"
+},
+{
+"n": "126",
+"name": "Adventure Lantern",
+"cat": "Trainer",
+"rar": "Ultra Rare",
+"reg": "J"
+},
+{
+"n": "127",
+"name": "Custom Vest",
+"cat": "Trainer",
+"rar": "Ultra Rare",
+"reg": "J"
+},
+{
+"n": "128",
+"name": "Emcee's Hype",
+"cat": "Trainer",
+"rar": "Ultra Rare",
+"reg": "J"
+},
+{
+"n": "129",
+"name": "Pokémon Catcher",
+"cat": "Trainer",
+"rar": "Ultra Rare",
+"reg": "J"
+},
+{
+"n": "130",
+"name": "Tate & Liza's Training",
+"cat": "Trainer",
+"rar": "Ultra Rare",
+"reg": "J"
+},
+{
+"n": "131",
+"name": "Zinnia's Trust",
+"cat": "Trainer",
+"rar": "Ultra Rare",
+"reg": "J"
+},
+{
+"n": "132",
+"name": "Bubbly Water Energy",
+"cat": "Energy",
+"rar": "Ultra Rare",
+"type": "Water",
+"reg": "J"
+},
+{
+"n": "133",
+"name": "Growing Grass Energy",
+"cat": "Energy",
+"rar": "Ultra Rare",
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "134",
+"name": "Nitro Fire Energy",
+"cat": "Energy",
+"rar": "Ultra Rare",
+"type": "Fire",
+"reg": "J"
+},
+{
+"n": "135",
+"name": "Mega Golisopod ex",
+"cat": "Pokémon",
+"rar": "Special Illustration Rare",
+"dex": 768,
+"type": "Grass",
+"reg": "J"
+},
+{
+"n": "136",
+"name": "Raikou ex",
+"cat": "Pokémon",
+"rar": "Special Illustration Rare",
+"dex": 243,
+"type": "Lightning",
+"reg": "J"
+},
+{
+"n": "137",
+"name": "Mega Golurk ex",
+"cat": "Pokémon",
+"rar": "Special Illustration Rare",
+"dex": 623,
+"type": "Psychic",
+"reg": "J"
+},
+{
+"n": "138",
+"name": "Mega Rayquaza ex",
+"cat": "Pokémon",
+"rar": "Special Illustration Rare",
+"dex": 384,
+"type": "Colorless",
+"reg": "J"
+},
+{
+"n": "139",
+"name": "Aarune",
+"cat": "Trainer",
+"rar": "Special Illustration Rare",
+"reg": "J"
+},
+{
+"n": "140",
+"name": "Zinnia's Trust",
+"cat": "Trainer",
+"rar": "Special Illustration Rare",
+"reg": "J"
+},
+{
+"n": "141",
+"name": "Mega Rayquaza ex",
+"cat": "Pokémon",
+"rar": "Mega Hyper Rare",
+"dex": 384,
+"type": "Colorless",
+"reg": "J"
+}
+]
+}
+}
+}

@@ -151,7 +151,7 @@ function playBlock(ctx,id,c){
  const e=getPlay(id);if(!e)return null;
  const g=playGroups().find(x=>x.k===ctx.playK);if(!g)return null;
  const goal=getGoal(g.k);
- return`<div class="fin has tpanel"><div class="fin-head"><h3>Nas cartas de jogo</h3><span class="ttag fmt">${g.q} no total</span></div>
+ return`<div class="fin has tpanel"><div class="fin-head"><h3>Nas cartas de jogo</h3><span class="ttag fmt">${g.free} livre${g.free===1?'':'s'}${g.use?` · ${g.use} em uso`:''} · ${g.q} no total</span></div>
   <div class="row" style="justify-content:space-between;align-items:center"><span class="lbl2" style="margin:0">Esta impressão</span>
    <div class="step"><button type="button" data-act="pp-dec" data-id="${esc(id)}" aria-label="Tirar uma">−</button><output aria-live="polite">${e.q}</output><button type="button" data-act="pp-inc" data-id="${esc(id)}" aria-label="Adicionar uma">+</button></div></div>
   <div class="row" style="justify-content:space-between;align-items:center;margin-top:10px"><span class="lbl2" style="margin:0">Meta${goal?(g.miss?` · faltam ${g.miss}`:' · batida'):''}</span>

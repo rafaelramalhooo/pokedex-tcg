@@ -776,3 +776,11 @@ a.binder.dragghost{display:block}
 /* v7.5: quantidade sempre em vermelho nas listas compartilhadas e de negociação */
 .pubwrap .qty,.pubwrap .qty.tq,.tradeslot .qty.tq{background:var(--red);color:#fff;border-color:#fff}
 .pubwrap .qty.over,.tradeslot .qty.tq.over{background:#B3261E}
+
+/* v7.6: carta de jogo toda em uso fica esmaecida */
+.pgslot .pocket.off img{filter:grayscale(1) contrast(.9);opacity:.4}
+.pgslot .pocket.off .qty{opacity:.75}
+.rvslot .rvn{display:flex;gap:8px;font-size:11.5px;color:var(--ink-2)}
+.rvslot .rvbad{color:var(--red);font-weight:700}.rvslot .rvok{color:var(--ok);font-weight:700}
+.rvslot.none .pocket img{filter:grayscale(1) contrast(.9);opacity:.4}.rvslot.part .pocket img{opacity:.7}
+.rvslot .pocket.off img{filter:grayscale(1) contrast(.9);opacity:.4}

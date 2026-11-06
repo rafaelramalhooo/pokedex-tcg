@@ -19,6 +19,19 @@ export const visibleSets=()=>S.sets.filter(s=>visibleSet(s.id));
 export const mySetIds=()=>new Set(S.settings.mySets||[]);
 export function mySets(){const ids=mySetIds();return visibleSets().filter(s=>ids.has(s.id));}
 
+/* Coleções que a TCGdex ainda não publicou mas que o complemento (data/extra-cards.json) conhece, como a Delta Reign. */
+export async function ensureExtraSets(){
+ const ex=await loadExtra();const have=new Set(S.sets.map(s=>s.id));let n=0;
+ for(const [sid,m] of Object.entries(ex.meta||{})){
+  if(have.has(sid))continue;
+  /* só entra se a série já existe na TCGdex (coleção nova de uma série conhecida) */
+  if(m.serie&&!Object.values(S.serieOf).some(x=>x&&x.id===m.serie.id))continue;
+  S.sets.push({id:sid,name:m.name,cardCount:{official:m.total,total:m.total},releaseDate:m.date,lang:'en',extra:true});
+  if(m.serie&&!S.serieOf[sid])S.serieOf[sid]=m.serie;n++;
+ }
+ if(n)indexSets();
+ return n;
+}
 export async function fetchCatalog(){
  S.status.catalog='loading';S.status.err='';softNow();
  try{
@@ -35,7 +48,7 @@ export async function fetchCatalog(){
    const d=(await getOrNull(p,'pt'))||(await getOrNull(p,'en'));
    if(d)(d.sets||[]).forEach(x=>{serieOf[x.id]={id:d.id,name:d.name};});
   });
-  S.sets=out;S.serieOf=serieOf;S.catalogAt=Date.now();indexSets();
+  S.sets=out;S.serieOf=serieOf;S.catalogAt=Date.now();await ensureExtraSets();indexSets();
   await saveKV('sets',out);await saveKV('serieOf',serieOf);await saveKV('catalogAt',S.catalogAt);
   S.status.catalog='ok';
  }catch(e){
@@ -49,7 +62,13 @@ export async function fetchCatalog(){
    Depois entram as cartas do complemento (js/extra.js), que a TCGdex ainda não cadastrou. */
 async function fetchSetFull(id){
  const path=`/sets/${encodeURIComponent(id)}`;
- const d=await getFB(path);
+ let d;
+ try{d=await getFB(path);}
+ catch(e){
+  const ex=await loadExtra();
+  if((e.status===404||e.status===400)&&ex.meta&&ex.meta[id]){const m=ex.meta[id];d={id,name:m.name,releaseDate:m.date,cardCount:{official:m.total,total:m.total},cards:[],__lang:'en'};}
+  else throw e;
+ }
  const cc=d.cardCount||{};
  if(d.__lang!=='en'){
   const en=await getOrNull(path,'en');

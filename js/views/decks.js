@@ -6,9 +6,10 @@ import {closePanel, openPanel, renderPanel} from './panel.js';
 import {$, ICON, esc, fmtN, live, nz} from '../util.js';
 import {exportRows, importInto, tcgText} from '../decktext.js';
 import {addItem, newTrade, saveTrades} from '../trades.js';
-import {DECK_SIZE, MAX_COPIES, addCopy, ensureInfo, ensureReprint, getDeck, legalOf, markTxt, nameKey, newDeck, ownByName, ownSplit, ownText, resolveDeck, saveDecks, setCopies, totalCards, validate, nameCounts, tradeFromDeck} from '../decks.js';
+import {playGroups} from '../play.js';
+import {DECK_SIZE, MAX_COPIES, addCopy, ensureInfo, ensureReprint, getDeck, legalOf, markTxt, nameKey, newDeck, ownByName, ownSplit, ownText, resolveDeck, saveDecks, setCopies, totalCards, validate, nameCounts, tradeFromDeck, inUseMap, playFreeTotal} from '../decks.js';
 
-export const subTabs=on=>`<nav class="subtabs" aria-label="Decks e cartas de jogo"><a href="#/decks" class="${on==='decks'?'on':''}" ${on==='decks'?'aria-current="page"':''}>Decks</a><a href="#/decks/cartas" class="${on==='play'?'on':''}" ${on==='play'?'aria-current="page"':''}>Cartas de jogo <span>${S.play.reduce((a,e)=>a+e.q,0)||''}</span></a></nav>`;
+export const subTabs=on=>`<nav class="subtabs" aria-label="Decks e cartas de jogo"><a href="#/decks" class="${on==='decks'?'on':''}" ${on==='decks'?'aria-current="page"':''}>Decks</a><a href="#/decks/cartas" class="${on==='play'?'on':''}" ${on==='play'?'aria-current="page"':''}>Cartas de jogo <span>${playFreeTotal()||''}</span></a></nav>`;
 const FMT={standard:'Standard',livre:'Livre (sem validar o Standard)'};
 const CATS=[['pokemon','Pokémon'],['treinador','Treinador'],['energia','Energia']];
 const CHECK='<span class="plcheck" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
@@ -94,6 +95,7 @@ function deckDialog(d,isNew){
   <label class="lbl2" style="margin-top:12px">Formato</label>
   <div class="seg" role="group" aria-label="Formato"><button type="button" data-act="dk-fmt" data-v="standard" aria-pressed="${d.format==='standard'}">Standard</button><button type="button" data-act="dk-fmt" data-v="livre" aria-pressed="${d.format==='livre'}">Livre</button></div>
   <p class="lead" style="margin-top:8px">No Standard o app confere as marcas de regulamentação e as reimpressões. No formato Livre ele só confere 60 cartas e o limite de cópias.</p>
+  ${isNew?'<div style="margin-top:12px"><button class="btn" type="button" data-act="dpk-open">Montar com as minhas Cartas de jogo</button><p class="lead" style="margin:6px 0 0">Escolha as cartas direto do seu estoque de jogo. O que entrar no deck deixa de aparecer como livre lá.</p></div>':''}
   <div class="actions">${isNew?'<span></span>':`<button class="btn" type="button" data-act="deck-del" data-id="${esc(d.id)}">Excluir deck</button>`}<span><button class="btn" type="button" data-ed-act="cancel">Cancelar</button> <button class="btn primary" type="button" data-act="dk-save">Salvar</button></span></div>`;
  $('#modal').classList.add('on');setTimeout(()=>{const n=$('#dkn');if(n)n.focus();},30);
 }
@@ -230,13 +232,94 @@ async function deckImportGo(){
  const r=await importInto(d,text,t=>{if(msg)msg.textContent=t;});
  st.busy=false;
  if(!r.ok){if(msg)msg.textContent='Não consegui reconhecer nenhuma carta. Confira se o texto está no formato “4 Nome SIGLA 123”.';$('#digo').disabled=false;return;}
+ st.pend={d,target,r};
+ reviewImport();
+}
+/* Conferência antes de criar: o que sai do estoque de Cartas de jogo e o que falta. */
+export function stockRows(d,exceto){
+ const use=inUseMap(exceto);const have=new Map();
+ for(const e of S.play||[]){if(e.q>0){const k=nameKey(e.n);have.set(k,(have.get(k)||0)+e.q);}}
+ const by=new Map();
+ for(const it of d.items){const k=nameKey(it.n);const g=by.get(k)||{k,n:it.n,i:it.i,id:it.id,need:0};g.need+=it.q;by.set(k,g);}
+ return[...by.values()].map(g=>{const free=Math.max(0,(have.get(g.k)||0)-(use.get(g.k)||0));const from=Math.min(g.need,free);return{...g,free,from,miss:g.need-from};}).sort((a,b)=>a.n.localeCompare(b.n,'pt'));
+}
+function reviewImport(){
+ const st=S.ui.di;const pd=st&&st.pend;if(!pd)return;
+ const {d,target,r}=pd;
+ const rows=stockRows(d,target?target.id:'');
+ const need=rows.reduce((a,x)=>a+x.need,0),from=rows.reduce((a,x)=>a+x.from,0),miss=need-from;
+ $('#dialog').innerHTML=`<div class="tdlg"><div class="tdhead"><div><h2>${target?'Conferir as cartas importadas':'Conferir o deck importado'}</h2><span class="tdcount">${esc(`${r.ok} de ${r.total} linhas reconhecidas (${r.cards} cartas)`)}</span></div></div><div class="tdbody">
+  <p class="note ${miss?'warn':''}"><b>${from} de ${need}</b> carta${need===1?'':'s'} saem do seu estoque de Cartas de jogo${miss?` e <b>${miss} faltam</b>`:'. Nada falta'}. Ao criar, o que sai do estoque passa a contar como em uso neste deck.</p>
+  <div class="cards" style="--tile:96px;margin-top:10px">${rows.map(x=>`<div class="slot on rvslot ${x.miss?(x.from?'part':'none'):''}" title="${esc(x.n)}">
+   <div class="pocket${x.from?'':' off'}">${imgTag(x.i,'low',x.n,undefined,x.id)}<span class="qty tq">×${x.need}</span></div>
+   <div class="num"><b>${esc(x.n)}</b></div>
+   <div class="num rvn"><span>precisa ${x.need}</span><span>tem ${x.free}</span></div>
+   <div class="num rvn"><span class="${x.miss?'rvbad':'rvok'}">${x.miss?`faltam ${x.miss}`:`sai ${x.from}`}${x.miss&&x.from?` · sai ${x.from}`:''}</span></div></div>`).join('')}</div>
+  ${r.bad.length?`<div class="note err" style="margin-top:12px"><b>Não encontrei:</b><br>${r.bad.map(esc).join('<br>')}</div>`:''}
+  ${r.notes.length?`<div class="note warn" style="margin-top:12px"><b>Confira:</b><br>${r.notes.map(esc).join('<br>')}</div>`:''}
+  ${r.skipped.length?`<div class="note" style="margin-top:12px"><b>Linhas ignoradas:</b><br>${r.skipped.map(esc).join('<br>')}</div>`:''}
+  <div class="actions"><button class="btn" type="button" data-ed-act="cancel">Cancelar</button><button class="btn primary" type="button" data-act="di-confirm">${target?'Importar para o deck':'Criar o deck'}</button></div></div></div>`;
+}
+function importConfirm(){
+ const st=S.ui.di;const pd=st&&st.pend;if(!pd)return;
+ const {d,target}=pd;
  if(target){target.items=d.items;}else S.decks.push(d);saveDecks();
- const rep=[`${r.ok} de ${r.total} linhas reconhecidas (${r.cards} cartas).`];
- $('#dialog').innerHTML=`<h2>${target?'Cartas importadas':'Deck importado'}</h2><p>${esc(rep[0])}</p>
-  ${r.bad.length?`<div class="note err"><b>Não encontrei:</b><br>${r.bad.map(esc).join('<br>')}</div>`:''}
-  ${r.notes.length?`<div class="note warn"><b>Confira:</b><br>${r.notes.map(esc).join('<br>')}</div>`:''}
-  ${r.skipped.length?`<div class="note"><b>Linhas ignoradas:</b><br>${r.skipped.map(esc).join('<br>')}</div>`:''}
-  <div class="actions"><span></span><button class="btn primary" type="button" data-act="di-open" data-id="${esc(d.id)}">${target?'Ver o deck':'Abrir o deck'}</button></div>`;
+ st.pend=null;$('#modal').classList.remove('on');
+ location.hash=target&&location.hash==='#/decks/'+target.id?location.hash:'#/decks/'+d.id;
+ if(target&&S.cur&&S.cur.name==='deck'&&S.cur.id===target.id){resolveSoon(target);renderDeck();}
+ toast(target?'Cartas importadas.':'Deck criado.');
+}
+
+/* ---------- novo deck a partir das cartas de jogo ---------- */
+const CHK2=CHECK;
+const stepB=(dec,inc,attr)=>`<div class="stepper"><button type="button" data-act="${dec}" ${attr} aria-label="Diminuir">−</button><button type="button" data-act="${inc}" ${attr} aria-label="Aumentar">+</button></div>`;
+const capOf=g=>{const i=S.dinfo[g.id];return Math.min(g.free,i&&i.be?DECK_SIZE:MAX_COPIES);};
+const pickTotal=st=>Object.values(st.pick).reduce((a,n)=>a+n,0);
+function dpkOpen(){
+ const dk=S.ui.dk;const name=(($('#dkn')&&$('#dkn').value)||'').trim();
+ S.ui.dpk={name,format:dk&&dk.d?dk.d.format:'standard',pick:{},q:''};
+ $('#dialog').innerHTML=`<div class="tdlg"><div class="tdhead"><div><h2>Novo deck com as cartas de jogo</h2><span class="tdcount" id="dpkcount"></span></div><button class="btn" type="button" data-ed-act="cancel">Cancelar</button></div><div class="tdbody">
+  <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+   <div style="flex:1;min-width:180px"><label class="lbl2" for="dpkn">Nome do deck</label><input class="field" id="dpkn" style="width:100%" maxlength="40" value="${esc(name)}" placeholder="Ex.: Lucario ex"></div>
+   <div style="flex:1;min-width:180px"><label class="lbl2" for="dpkq">Buscar nas cartas de jogo</label><input class="field" id="dpkq" type="search" style="width:100%" placeholder="Nome da carta"></div></div>
+  <p class="lead" style="margin:8px 0 0">Mostra só o que está livre. Clique (ou toque) numa carta para colocá-la no deck; clique com o botão direito (ou segure o dedo) para tirar uma. Máximo de ${MAX_COPIES} cópias por nome (Energia Básica sem limite) e ${DECK_SIZE} no total.</p>
+  <div id="dpkgrid" style="margin-top:12px"></div>
+  <div class="actions"><span></span><button class="btn primary" type="button" data-act="dpk-go">Criar o deck</button></div></div></div>`;
+ $('#modal').classList.add('on');setTimeout(()=>{const i=$('#dpkn');if(i&&!name)i.focus();},30);
+ dpkPaint();
+}
+export function dpkPaint(){
+ const st=S.ui.dpk;const el=live($('#dpkgrid'));if(!st||!el)return;
+ const q=nz(st.q);
+ const rows=playGroups().filter(g=>g.free>0&&(!q||nz(g.n).includes(q)));
+ const cnt=$('#dpkcount');if(cnt)cnt.textContent=`${pickTotal(st)} de ${DECK_SIZE} cartas`;
+ if(!S.play.length){el.innerHTML='<p class="lead">Você ainda não tem cartas de jogo. Adicione cartas na aba Cartas de jogo e volte aqui.</p>';return;}
+ el.innerHTML=rows.length?`<div class="cards" style="--tile:118px">${rows.map(g=>{const n=st.pick[g.k]||0;
+  return`<div class="slot on plslot ${n?'sel':''}" data-act="dpk-pick" data-rc="dpk-dec" data-k="${esc(g.k)}" role="button" tabindex="0" aria-label="${esc(g.n)}, ${g.free} livre${g.free===1?'':'s'}, ${n?'no deck ×'+n:'adicionar ao deck'}">
+   <div class="pocket">${imgTag(g.i,'low',g.n,undefined,g.id)}${n?CHK2+`<span class="qty tq">×${n}</span>`:''}</div>
+   <div class="num"><b>${esc(g.n)}</b></div><div class="num"><span>${g.free} livre${g.free===1?'':'s'}</span></div>
+   ${n?stepB('dpk-dec','dpk-inc',`data-k="${esc(g.k)}"`):''}</div>`;}).join('')}</div>`:'<p class="lead">Nenhuma carta livre com esse nome.</p>';
+}
+function dpkPick(k,d){
+ const st=S.ui.dpk;if(!st)return;
+ const g=playGroups().find(x=>x.k===k);if(!g)return;
+ const n=st.pick[k]||0;
+ if(d>0){
+  if(n>=capOf(g)){toast(n>=g.free?'Você não tem mais cópias livres desta carta.':`O limite é de ${MAX_COPIES} cópias por nome.`);return;}
+  if(pickTotal(st)>=DECK_SIZE){toast(`O deck já tem ${DECK_SIZE} cartas.`);return;}
+  st.pick[k]=n+1;
+ }else{if(n<=1)delete st.pick[k];else st.pick[k]=n-1;}
+ dpkPaint();
+}
+function dpkGo(){
+ const st=S.ui.dpk;if(!st)return;
+ const name=(($('#dpkn')&&$('#dpkn').value)||'').trim();if(!name){toast('Dê um nome para o deck.');return;}
+ if(!pickTotal(st)){toast('Escolha ao menos uma carta.');return;}
+ const d=newDeck(name);d.format=st.format||'standard';
+ for(const g of playGroups()){let n=st.pick[g.k]||0;if(!n)continue;
+  for(const e of g.entries){if(n<=0)break;const t=Math.min(n,e.q);addCopy(d,e.id,t);n-=t;}}
+ S.decks.push(d);saveDecks();S.ui.dpk=null;$('#modal').classList.remove('on');
+ location.hash='#/decks/'+d.id;toast(`Deck criado com ${totalCards(d)} cartas de jogo.`);
 }
 
 /* ---------- criar lista de negociação a partir do deck ---------- */
@@ -308,6 +391,12 @@ export const DECK_ACT={
  'dx-print':()=>{const st=S.ui.dx;const d=st&&getDeck(st.id);if(!d||!st.rows)return;printSheet(d,st.rows);document.title=d.name;setTimeout(()=>window.print(),80);},
  'deck-import':t=>deckImportDialog(t&&t.dataset?t.dataset.id:''),
  'di-go':()=>deckImportGo(),
+ 'di-confirm':()=>importConfirm(),
+ 'dpk-open':()=>dpkOpen(),
+ 'dpk-pick':t=>dpkPick(t.dataset.k,1),
+ 'dpk-inc':(t,e)=>{e&&e.stopPropagation();dpkPick(t.dataset.k,1);},
+ 'dpk-dec':(t,e)=>{e&&e.stopPropagation();dpkPick(t.dataset.k,-1);},
+ 'dpk-go':()=>dpkGo(),
  'di-open':t=>{$('#modal').classList.remove('on');if(location.hash==='#/decks/'+t.dataset.id){resolveSoon(getDeck(t.dataset.id));renderDeck();}else location.hash='#/decks/'+t.dataset.id;},
  'deck-inc':(t,e)=>{e&&e.stopPropagation();const d=S.cur&&getDeck(S.cur.id);const it=d&&d.items.find(x=>x.id===t.dataset.id);if(!it)return;setCopies(d,it.id,it.q+1);commit(d);},
  'deck-dec':(t,e)=>{e&&e.stopPropagation();const d=S.cur&&getDeck(S.cur.id);const it=d&&d.items.find(x=>x.id===t.dataset.id);if(!it)return;setCopies(d,it.id,it.q-1);commit(d);}

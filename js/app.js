@@ -1,10 +1,10 @@
 /* Eventos, rotas e início do app. */
-import {ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, loadOwnedCards, preloadSetd, runSync} from './catalog.js';
+import {ensureExtraSets, ensureSetCards, fetchCatalog, indexSetd, indexSets, loadAllSetLists, loadIds, loadOwnedCards, preloadSetd, runSync} from './catalog.js';
 import {scopeIds} from './rules.js';
 import {viewTrade, viewTrades, TRADE_ACT, renderAddTrade, pullFilter, tradeSetFilter, tradePanelChange} from './views/trades.js';
 import {viewShared, SHARED_ACT} from './views/shared.js';
 import {viewPlay, PLAY_ACT, pgFilter, paFilter, renderAdd as renderPlayAdd, deckPick} from './views/play.js';
-import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter, deckExportLang} from './views/decks.js';
+import {viewDeck, viewDecks, DECK_ACT, renderAdd, deckAddFilter, deckExportLang, dpkPaint} from './views/decks.js';
 import {binderExport} from './views/binders.js';
 import {exportScopeChanged, runExport, shareAgain} from './exportimg.js';
 import {coverChange, coverAct} from './coverdlg.js';
@@ -205,6 +205,7 @@ document.addEventListener('input',e=>{
  if(t.id==='pgq'){pgFilter('q',t.value);return;}
  if(t.id==='pga'&&S.ui.pa){S.ui.pa.q=t.value;renderPlayAdd();return;}
  if(t.id==='plq'&&S.ui.pull){pullFilter('q',t.value);return;}
+ if(t.id==='dpkq'&&S.ui.dpk){S.ui.dpk.q=t.value;dpkPaint();return;}
  if(t.id==='dka'&&S.ui.deckAdd){S.ui.deckAdd.q=t.value;renderAdd();return;}
  if(t.id==='tra'&&S.ui.tradeAdd){S.ui.tradeAdd.q=t.value;renderAddTrade();return;}
  if(t.id==='ac'&&S.ui.adding){S.ui.adding.q=t.value;renderAddResults();return;}
@@ -299,7 +300,7 @@ async function boot(){
    await saveSettings();
   }
  }else if(!Array.isArray(S.settings.mySets))S.settings.mySets=[];
- indexSets();Object.values(S.setd).forEach(indexSetd);
+ await ensureExtraSets();indexSets();Object.values(S.setd).forEach(indexSetd);
  const st=await initCloud();
  const ownedSoon=debounce(()=>loadOwnedCards(),1500);
  onCloud(c=>{if(c.recovery&&!document.querySelector('#auth.on'))showAuth();if(c.state==='idle')ownedSoon();});

@@ -3,12 +3,16 @@
 import {S} from './state.js';
 import {saveKV, saveSettings} from './db.js';
 import {snapOf} from './trades.js';
-import {nameKey} from './decks.js';
+import {inUseMap, nameKey} from './decks.js';
 
 export const MAX_PLAY=999;
 export const savePlay=()=>saveKV('play',S.play);
 export const getPlay=id=>S.play.find(x=>x.id===id);
 export const playTotal=()=>S.play.reduce((a,e)=>a+e.q,0);
+/* Só o que não está em uso nos decks. */
+export const playFree=()=>playGroups().reduce((a,g)=>a+g.free,0);
+/* Pode tirar `n` cópias desta carta de jogo sem mexer no que os decks usam? */
+export function canLower(id,n=1){const e=getPlay(id);if(!e)return false;const g=playGroups().find(x=>x.k===nameKey(e.n));return!g||g.free>=n;}
 export function addPlay(id,q=1){
  const ex=getPlay(id);
  if(ex){ex.q=Math.min(MAX_PLAY,ex.q+q);return ex;}
@@ -29,7 +33,7 @@ export function setGoal(k,n){
 }
 /* Uma linha por nome de carta, com as impressões que você tem. */
 export function playGroups(){
- const by=new Map();
+ const by=new Map();const use=inUseMap();
  for(const e of S.play){
   if(!(e.q>0))continue;
   const k=nameKey(e.n);const g=by.get(k)||{k,n:e.n,q:0,entries:[]};
@@ -39,6 +43,7 @@ export function playGroups(){
   g.entries.sort((a,b)=>b.q-a.q);
   const top=g.entries[0];g.top=top;g.i=top.i;g.id=top.id;
   const inf=S.dinfo[top.id];g.cat=inf?inf.cat:'';
+  g.use=use.get(g.k)||0;g.free=Math.max(0,g.q-g.use);
   g.goal=getGoal(g.k);g.miss=g.goal?Math.max(0,g.goal-g.q):0;
  }
  const ord=Array.isArray(S.settings.playOrder)?S.settings.playOrder:null;
