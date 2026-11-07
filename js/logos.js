@@ -15,6 +15,7 @@ export function logoCandidates(s){
  const out=[];const add=u=>{if(u&&!out.includes(u))out.push(u);};
  add(customLogo(s.id));
  add(S.logoOk[s.id]);
+ add(s.logoUrl);
  const both=b=>{if(b){add(b+'.webp');add(b+'.png');}};
  both(s.logo);both(s.logoEn);
  const se=S.serieOf[s.id];

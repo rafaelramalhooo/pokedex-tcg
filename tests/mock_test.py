@@ -1237,7 +1237,7 @@ Total de cartas: 60"""
       S.serieOf['mee']={id:'me',name:'Megaevolução'};await k.ensureExtraSets();
       const inSet=!!S.setMap['me06'];const d=await k.ensureSetd('me06',true);
       return {inSet,n:d.cards.length,first:d.cards[0].id,img:d.cards[0].image,name:S.setMap['me06']&&S.setMap['me06'].name,serie:(S.serieOf['me06']||{}).id,k:(()=>{S.sets=S.sets.filter(x=>x.id!=='me06');delete S.serieOf['me06'];delete S.serieOf['mee'];k.indexSets();return 1})()};}""")
-    check(dr["inSet"] and dr["n"] == 141 and dr["first"] == "me06-001" and "static.dextcg.com/cards/me6%2F1.png" in dr["img"] and dr["serie"] == "me", f"v7.6: Delta Reign (me06) entra pelo complemento enquanto a TCGdex não publica {dr}")
+    check(dr["inSet"] and dr["n"] == 141 and dr["first"] == "me06-001" and "static.dextcg.com/cards/me6%2F1.png" in dr["img"] and dr["serie"] == "me" and dr["name"] == "Reinado Delta", f"v7.6: Delta Reign (me06) entra pelo complemento enquanto a TCGdex não publica {dr}")
     page.route(re.compile(r"https://limitlesstcg\.nyc3\.cdn\.digitaloceanspaces\.com/.*"), lambda route: route.fulfill(status=200, headers={"access-control-allow-origin": "*", "content-type": "image/png"}, body=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")))
     lim = page.evaluate("""import('./js/reprints.js').then(m=>[m.limitlessUrl('me06-011','low'),m.limitlessUrl('mee-009','high'),m.limitlessUrl('mep-010','low'),m.limitlessUrl('30th-050','low'),m.limitlessUrl('30th-G','low'),m.limitlessUrl('sv02-1','low')])""")
     check(lim == ["https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_011_R_EN_SM.png", "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_009_R_EN_LG.png", "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEP/MEP_010_R_EN_SM.png", "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_050_R_EN_SM.png", "", ""], f"v7.7: endereço de imagem do Limitless só para coleções conferidas {lim}")
@@ -1252,6 +1252,14 @@ Total de cartas: 60"""
     check("teste e estudo" in open(str(ROOT/"js/views/auth.js"), encoding="utf-8").read() and "Creatures" in open(str(ROOT/"js/views/auth.js"), encoding="utf-8").read(), "v7.7: tela inicial (login) com os textos de crédito")
     page.screenshot(path=str(ROOT/"tests/v77_creditos.png"))
     page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".binder")
+    vr = page.evaluate("""async()=>{const S=(await import('./js/state.js')).S;const k=await import('./js/catalog.js');
+      S.serieOf['mee']={id:'me',name:'Megaevolução'};await k.ensureExtraSets();
+      const v=id=>{const x=S.cards[id];return x&&x.variants};
+      await k.ensureCard('me06-001');await k.ensureCard('me06-005');await k.ensureCard('me06-011');await k.ensureCard('me06-021');
+      const r={c:v('me06-001'),r:v('me06-005'),h:v('me06-011'),n:v('me06-021'),logo:(S.sets.find(x=>x.id==='me06')||{}).logoUrl};
+      S.sets=S.sets.filter(x=>x.id!=='me06');delete S.serieOf['mee'];k.indexSets();return r;}""")
+    check(vr["c"] == {"normal": True, "holo": False, "reverse": True, "firstEdition": False} and vr["r"]["holo"] and vr["r"]["reverse"] and not vr["r"]["normal"] and vr["h"] == {"normal": False, "holo": True, "reverse": False, "firstEdition": False} and vr["n"]["normal"] and vr["n"]["holo"] and vr["n"]["reverse"] and vr["logo"] == "assets/logo-me06-reinado-delta.png", f"v7.7: Delta Reign com acabamentos por carta (Dex) e logo próprio {vr}")
+    check((ROOT/"assets/logo-me06-reinado-delta.png").exists(), "v7.7: arquivo do logo Reinado Delta na pasta assets")
     # ---- decks: criar lista de negociação ----
     tf = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
       const own=m.ownByName();const have=own.get(m.nameKey('Carta sv02 3'))||0;
@@ -1559,7 +1567,7 @@ Total de cartas: 60"""
       const c=await k.ensureCard('mep-101');const e=await k.ensureCard('mep-Z');
       return {imgs:a.cards.map(x=>x.image||''),mimg:(b.cards.find(x=>x.id==='mep-003')||{}).image,ids:a.cards.map(x=>x.id),names:a.cards.map(x=>x.name),fc:a.fullChecked,tot:a.cardCount.total,en:a.completedFromEn,
         mn:b.cards.length,has101:b.cards.some(x=>x.id==='mep-101'),brief:s.briefs['mep-101'],card:c};}""".replace("const e=await k.ensureCard('mep-Z');", ""))
-    check(ex["ids"] == [f"zz1-{i}" for i in range(1, 6)] and ex["names"] == ["P1", "P2", "P3", "E4", "E5"] and ex["fc"] == 6 and ex["tot"] == 5 and ex["en"] is True,
+    check(ex["ids"] == [f"zz1-{i}" for i in range(1, 6)] and ex["names"] == ["P1", "P2", "P3", "E4", "E5"] and ex["fc"] == 7 and ex["tot"] == 5 and ex["en"] is True,
           f"coleção com contagem igual no português completa com o inglês {ex['ids']} {ex['names']}")
     page.route(re.compile(r"https://api\.tcgdex\.net/v2/\w+/sets/mee$"), lambda route: route.fulfill(status=200, headers={"access-control-allow-origin": "*", "content-type": "application/json"}, body=json.dumps({"id": "mee", "name": "Megaevolução Energia", "cardCount": {"official": 8, "total": 8}, "cards": [{"id": f"mee-{i:03d}", "localId": f"{i:03d}", "name": "E" + str(i)} for i in range(1, 9)]})))
     mee = page.evaluate("""async()=>{const k=await import('./js/catalog.js');const s=(await import('./js/state.js')).S;

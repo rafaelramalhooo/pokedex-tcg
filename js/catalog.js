@@ -22,11 +22,19 @@ export function mySets(){const ids=mySetIds();return visibleSets().filter(s=>ids
 /* Coleções que a TCGdex ainda não publicou mas que o complemento (data/extra-cards.json) conhece, como a Delta Reign. */
 export async function ensureExtraSets(){
  const ex=await loadExtra();const have=new Set(S.sets.map(s=>s.id));let n=0;
+ /* cartas do complemento já guardadas no navegador: atualiza acabamentos e dados quando o complemento muda */
+ for(const [id,c] of Object.entries(ex.cards||{})){
+  const o=S.cards[id];
+  if(o&&o.extra&&JSON.stringify([o.variants,o.rarity,o.name])!==JSON.stringify([c.variants,c.rarity,c.name])){S.cards[id]={...o,variants:c.variants,rarity:c.rarity,name:c.name};viewCache.delete(id);DB.put('cards',id,S.cards[id]).catch(()=>{});}
+ }
  for(const [sid,m] of Object.entries(ex.meta||{})){
+  /* coleção do complemento já na lista (de uma versão anterior): atualiza nome e logo */
+  const cur=S.sets.find(x=>x.id===sid);
+  if(cur&&cur.extra){cur.name=m.name;cur.logoUrl=m.logo;cur.cardCount={official:m.total,total:m.total};}
   if(have.has(sid))continue;
   /* só entra se a série já existe na TCGdex (coleção nova de uma série conhecida) */
   if(m.serie&&!Object.values(S.serieOf).some(x=>x&&x.id===m.serie.id))continue;
-  S.sets.push({id:sid,name:m.name,cardCount:{official:m.total,total:m.total},releaseDate:m.date,lang:'en',extra:true});
+  S.sets.push({id:sid,name:m.name,cardCount:{official:m.total,total:m.total},releaseDate:m.date,logoUrl:m.logo,lang:'en',extra:true});
   if(m.serie&&!S.serieOf[sid])S.serieOf[sid]=m.serie;n++;
  }
  if(n)indexSets();
@@ -91,12 +99,12 @@ async function fetchSetFull(id){
  /* sem imagem na TCGdex: tenta a do Dex */
  (d.cards||[]).forEach(c=>{if(!c.image){const u=dexImage(d.id,c.localId);if(u)c.image=u;}});
  await mergeExtra(d);
- d.fullChecked=6;
+ d.fullChecked=7;
  return d;
 }
 export async function ensureSetd(id,force){
  const old=S.setd[id];
- if(old&&old.fullChecked===6&&!force)return old;
+ if(old&&old.fullChecked===7&&!force)return old;
  let d;
  try{d=await fetchSetFull(id);}
  catch(e){if(old)return old;throw e;}
@@ -108,7 +116,7 @@ export async function ensureSetd(id,force){
 }
 export async function preloadSetd(force){
  if(S.status.pre)return;
- const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==6);
+ const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==7);
  if(!todo.length){loadSelectedCards();return;}
  S.status.pre={done:0,total:todo.length};S.status.preErr=0;softNow();
  await pool(todo,6,async s=>{

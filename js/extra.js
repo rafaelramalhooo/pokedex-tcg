@@ -25,13 +25,13 @@ export async function loadExtra(){
    const out={sets:{},cards:{},meta:{}};
    for(const [sid,s] of Object.entries(j.sets||{})){
     out.sets[sid]=[];
-    if(s.name)out.meta[sid]={name:s.name,serie:s.serie,date:s.date,total:(s.cards||[]).length};
+    if(s.name)out.meta[sid]={name:s.name,serie:s.serie,date:s.date,logo:s.logo,total:(s.cards||[]).length};
     (s.cards||[]).forEach(c=>{
      const n=String(c.n),id=`${sid}-${pad3(n)}`;
      const cat=c.cat==='Pokémon'?'Pokemon':c.cat;
      const card={
       id,localId:pad3(n),name:c.name,image:imageOf(s.ds,n),category:cat,illustrator:c.ill||undefined,rarity:c.rar||undefined,
-      set:sid,variants:{normal:false,holo:true,reverse:false,firstEdition:false},rvp:[],
+      set:sid,variants:c.v?{normal:c.v.includes('n'),holo:c.v.includes('h'),reverse:c.v.includes('r'),firstEdition:false}:{normal:false,holo:true,reverse:false,firstEdition:false},rvp:[],
       dexId:c.dex?[c.dex]:undefined,types:c.type?[c.type]:undefined,trainerType:c.tt||undefined,
       energyType:cat==='Energy'?'Normal':undefined,regulationMark:c.reg||undefined,lang:'en',extra:true
      };
