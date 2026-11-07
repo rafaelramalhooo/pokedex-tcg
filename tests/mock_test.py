@@ -1,4 +1,4 @@
-import json, re, sys, pathlib, subprocess, time
+import base64, json, re, sys, pathlib, subprocess, time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -986,7 +986,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v7.6" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v7.7" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
@@ -1238,6 +1238,20 @@ Total de cartas: 60"""
       const inSet=!!S.setMap['me06'];const d=await k.ensureSetd('me06',true);
       return {inSet,n:d.cards.length,first:d.cards[0].id,img:d.cards[0].image,name:S.setMap['me06']&&S.setMap['me06'].name,serie:(S.serieOf['me06']||{}).id,k:(()=>{S.sets=S.sets.filter(x=>x.id!=='me06');delete S.serieOf['me06'];delete S.serieOf['mee'];k.indexSets();return 1})()};}""")
     check(dr["inSet"] and dr["n"] == 141 and dr["first"] == "me06-001" and "static.dextcg.com/cards/me6%2F1.png" in dr["img"] and dr["serie"] == "me", f"v7.6: Delta Reign (me06) entra pelo complemento enquanto a TCGdex não publica {dr}")
+    page.route(re.compile(r"https://limitlesstcg\.nyc3\.cdn\.digitaloceanspaces\.com/.*"), lambda route: route.fulfill(status=200, headers={"access-control-allow-origin": "*", "content-type": "image/png"}, body=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")))
+    lim = page.evaluate("""import('./js/reprints.js').then(m=>[m.limitlessUrl('me06-011','low'),m.limitlessUrl('mee-009','high'),m.limitlessUrl('mep-010','low'),m.limitlessUrl('30th-050','low'),m.limitlessUrl('30th-G','low'),m.limitlessUrl('sv02-1','low')])""")
+    check(lim == ["https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_011_R_EN_SM.png", "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_009_R_EN_LG.png", "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEP/MEP_010_R_EN_SM.png", "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_050_R_EN_SM.png", "", ""], f"v7.7: endereço de imagem do Limitless só para coleções conferidas {lim}")
+    chain = page.evaluate("""async()=>{const u=await import('./js/ui.js');const d=document.createElement('div');d.innerHTML=u.imgTag('https://dextcg.com/x/me6%2F11.png','low','Mega Golisopod ex','','me06-011');const img=d.firstChild;document.body.appendChild(d);img.src=img.dataset.src;
+      for(let i=0;i<9;i++){img.dispatchEvent(new Event('error'));if(!img.isConnected||/limitlesstcg/.test(img.src))break;}
+      const r=img.isConnected?img.src:'sumiu';d.remove();return r;}""")
+    check("limitlesstcg" in chain and chain.endswith("DLR_011_R_EN_SM.png"), f"v7.7: carta sem imagem da TCGdex tenta o Limitless antes do cartão com nome {chain}")
+    page.evaluate("location.hash='#/ajustes'"); page.wait_for_selector("#creditos")
+    cr = page.locator("#creditos").inner_text()
+    check(all(x in cr for x in ["teste, estudo", "fins comerciais", "Limitless", "TCGdex", "Dex", "Creatures", "limitlesstcg.com/privacy"]), "v7.7: créditos e uso pessoal em Ajustes")
+    check("TCGdex, Limitless e Dex" in page.locator(".rail .foot").inner_text() and "sem fins comerciais" in page.locator(".rail .foot").inner_text(), "v7.7: rodapé do menu com os créditos")
+    check("teste e estudo" in open(str(ROOT/"js/views/auth.js"), encoding="utf-8").read() and "Creatures" in open(str(ROOT/"js/views/auth.js"), encoding="utf-8").read(), "v7.7: tela inicial (login) com os textos de crédito")
+    page.screenshot(path=str(ROOT/"tests/v77_creditos.png"))
+    page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".binder")
     # ---- decks: criar lista de negociação ----
     tf = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
       const own=m.ownByName();const have=own.get(m.nameKey('Carta sv02 3'))||0;

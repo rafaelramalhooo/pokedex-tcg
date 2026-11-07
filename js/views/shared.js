@@ -32,7 +32,7 @@ function openPub(i){
 const KIND={sell:'Vendo / Troco',want:'Procuro'};
 const KCOLOR={sell:'#D93A2B',want:'#2F6FDE'};
 let cur=null;
-const shell=inner=>`<div class="pubwrap">${inner}<p class="pubfoot">Lista compartilhada pelo app de uso pessoal TCG Collection (não é vendido nem distribuído). Dados e imagens: TCGdex. Não afiliado à The Pokémon Company.</p></div>`;
+const shell=inner=>`<div class="pubwrap">${inner}<p class="pubfoot">Lista compartilhada pelo app de uso pessoal TCG Collection (não é vendido nem distribuído). Dados e imagens: TCGdex e Limitless; uso pessoal, sem fins comerciais. Não afiliado à The Pokémon Company.</p></div>`;
 const cardHTML=(it,idx)=>{
  const tag=[finShort(it.f),it.l&&it.l!=='xx'?String(it.l).toUpperCase():'',it.c?String(it.c):''].filter(Boolean).join(' · ');
  return`<div class="slot on tradeslot" data-act="pub-open" data-i="${idx}" role="button" tabindex="0" aria-label="${esc(it.n)}. Ver detalhes"><div class="pocket">${imgTag(it.i,'low',it.n)}<span class="qty tq">×${esc(it.q)}</span></div>

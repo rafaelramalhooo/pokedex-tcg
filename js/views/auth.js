@@ -51,7 +51,8 @@ export function showAuth(done){
  const el=host();
  el.innerHTML=`<div class="acard"><img src="assets/logo-tcg-collection.png" alt="TCG Collection App" width="300" height="411">
   <p class="asub">Minha coleção de cartas</p><div id="aform">${formHTML()}</div>
-  <p class="afoot"><strong>App de uso pessoal.</strong> Não é vendido nem distribuído, e não tem relação com outros apps de nome parecido. Não afiliado à The Pokémon Company.</p></div>`;
+  <p class="afoot"><strong>App de uso pessoal, feito para teste e estudo.</strong> Sem fins comerciais: nada é vendido nem cobrado, e ele não é distribuído. Não tem relação com outros apps de nome parecido.</p>
+  <p class="afoot">Textos e imagens das cartas do Pokémon Trading Card Game são propriedade da The Pokémon Company, Nintendo, Game Freak e/ou Creatures. Este app não é produzido, endossado, apoiado nem afiliado a elas. Dados e imagens: TCGdex e Limitless; complemento: Dex.</p></div>`;
  el.classList.add('on');document.body.classList.add('locked');
  setTimeout(()=>{const f=$('#au-em')||$('#au-pw');if(f)f.focus();},30);
 }

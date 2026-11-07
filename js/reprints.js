@@ -49,5 +49,15 @@ export function ptcgUrl(id,q){
  const n=/^\d+$/.test(loc)?String(+loc):loc;
  return`https://images.pokemontcg.io/${sl}/${n}${q==='high'?'_hires':''}.png`;
 }
+/* Terceira alternativa de imagem: o servidor de imagens do Limitless (limitlesstcg.com), só para coleções novas em que a TCGdex
+   e o pokemontcg.io ainda não têm a arte. Código da coleção na TCGdex -> código no Limitless. Conferido em 06/11/2026 pelo nome e número
+   de cartas de cada coleção (Delta Reign, Mega Evolution Energy, Mega Promos e 30th Celebration). Sem regra segura, não tenta. */
+const LIMITLESS={me06:'DLR',mee:'MEE',mep:'MEP','30th':'30C'};
+export function limitlessUrl(id,q){
+ const b=S.briefs[id];const [sid,lid]=split(id);
+ const sl=LIMITLESS[b&&b.setId||sid];if(!sl)return'';
+ const loc=String(b&&b.localId||lid);if(!/^\d+$/.test(loc))return'';
+ return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/${sl}/${sl}_${loc.padStart(3,'0')}_R_EN${q==='high'?'_LG':'_SM'}.png`;
+}
 /* O pokemontcg.io devolve uma figura em branco de 640×892 para carta que não existe; isso conta como falha. */
 export const isPtcgBlank=i=>!!i&&typeof i.src==='string'&&i.src.includes('images.pokemontcg.io')&&i.naturalWidth===640&&i.naturalHeight===892;

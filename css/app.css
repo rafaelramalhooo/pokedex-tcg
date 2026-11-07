@@ -784,3 +784,5 @@ a.binder.dragghost{display:block}
 .rvslot .rvbad{color:var(--red);font-weight:700}.rvslot .rvok{color:var(--ok);font-weight:700}
 .rvslot.none .pocket img{filter:grayscale(1) contrast(.9);opacity:.4}.rvslot.part .pocket img{opacity:.7}
 .rvslot .pocket.off img{filter:grayscale(1) contrast(.9);opacity:.4}
+
+.credits{margin:6px 0 10px;padding-left:18px;font-size:14px;line-height:1.5}.credits li{margin:4px 0}

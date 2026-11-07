@@ -66,8 +66,17 @@ export function renderSettings(){
   <p>Apaga só o catálogo baixado (coleções e detalhes das cartas). Sua coleção e seus fichários não são tocados.</p>
   <button class="btn danger" type="button" data-act="clear-cache">Limpar catálogo baixado</button>
  </section>
- <section class="panel-sec"><h2>Sobre</h2>
-  <p><strong>TCG Collection é um aplicativo de uso pessoal: não é vendido nem distribuído</strong> e não tem relação com outros apps de nome parecido. Não afiliado à The Pokémon Company. Nomes, ilustrações, logos e marcas pertencem aos seus donos. Dados e imagens são carregados da <strong>TCGdex</strong> (tcgdex.dev). Confira as licenças de dados e imagens antes de qualquer uso público ou comercial. Preços não são exibidos.</p>
+ <section class="panel-sec" id="creditos"><h2>Sobre, créditos e uso pessoal</h2>
+  <p><strong>TCG Collection é um aplicativo de uso pessoal, feito como teste, estudo e organização da minha própria coleção.</strong> Não tem fins comerciais: nada é vendido, cobrado ou distribuído, e ele não tem relação com outros apps de nome parecido.</p>
+  <p>As informações textuais e gráficas do Pokémon Trading Card Game exibidas aqui, incluindo imagens e textos das cartas, são propriedade da The Pokémon Company (Pokémon), Nintendo, Game Freak e/ou Creatures. Este app não é produzido, endossado, apoiado nem afiliado à Pokémon, Nintendo, Game Freak ou Creatures. Nomes, ilustrações, logos e marcas pertencem aos seus donos.</p>
+  <p class="lbl2" style="margin-top:12px">Fontes de dados e imagens</p>
+  <ul class="credits">
+   <li><strong>TCGdex</strong> (tcgdex.dev): fonte principal de coleções, cartas e imagens, em português do Brasil. Projeto comunitário e aberto.</li>
+   <li><strong>Limitless</strong> (limitlesstcg.com): segunda opção de <em>imagens</em>, só para cartas novas que a TCGdex ainda não publicou (hoje: Delta Reign, energias de 30 Anos e promos). As imagens são carregadas do servidor deles e não são copiadas nem guardadas por este app. Como em qualquer imagem de outro servidor, o endereço do seu navegador (IP) chega a ele. Política de privacidade: <a href="https://limitlesstcg.com/privacy" target="_blank" rel="noopener noreferrer">limitlesstcg.com/privacy</a>.</li>
+   <li><strong>Dex</strong> (dextcg.com): complemento de <em>dados</em> (nome, número, raridade, tipo e marca) de coleções ainda não publicadas na TCGdex. Esses dados são provisórios e sem ilustrador. As imagens do Dex não são usadas.</li>
+   <li><strong>pokemontcg.io</strong>: tentativa de imagem para cartas antigas, quando existir.</li>
+  </ul>
+  <p>Confira as licenças de dados e imagens antes de qualquer uso público ou comercial. Preços não são exibidos. Não há aconselhamento jurídico aqui.</p>
  </section>`;
 }
 function logoDiagHTML(){
