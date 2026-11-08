@@ -9,6 +9,8 @@ import {importInto} from '../decktext.js';
 import {ensureInfo, getDeck, nameKey, ownSplit, ownText, pool, tradeFromDeck} from '../decks.js';
 import {MAX_GOAL, addPlay, canLower, playFree, getGoal, getPlay, missingText, playGroups, playText, playTotal, savePlay, setGoal, setPlay} from '../play.js';
 import {subTabs} from './decks.js';
+import {addItem, getTrade, newTrade, saveTrades} from '../trades.js';
+import {langOf} from '../cardlabel.js';
 
 const CATS=[['pokemon','Pokémon'],['treinador','Treinador'],['energia','Energia']];
 const CHECK='<span class="plcheck" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
@@ -255,8 +257,43 @@ function rcTile(k){
  if(g.q<=1){toast('Só resta uma. Para tirar, abra a carta e use Remover.');return;}
  change(g.top.id,-1);
 }
-async function copyMissing(){
+/* "Copiar o que falta": janela com o que falta e três saídas (copiar texto, nova lista Procuro, acrescentar a uma lista Procuro). */
+const missGroups=()=>playGroups().filter(g=>g.miss>0);
+function missDialog(){
  if(!playGroups().some(g=>g.goal)){toast('Defina uma meta numa carta para usar este botão.');return;}
+ const list=missGroups();if(!list.length){toast('Você já bateu todas as metas.');return;}
+ const cards=list.reduce((a,g)=>a+g.miss,0);
+ const wants=S.trades.filter(t=>t.kind==='want');
+ S.ui.pgm={};
+ $('#dialog').innerHTML=`<h2>O que falta para jogar</h2>
+  <p class="lead">${fmtN(cards)} carta${cards===1?'':'s'} em ${fmtN(list.length)} nome${list.length===1?'':'s'}, segundo as suas metas. Escolha o que fazer com a lista. Suas cartas de jogo não mudam.</p>
+  <div class="pgmlist" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;max-height:34vh;overflow:auto;margin:6px 0 12px">${list.map(g=>`<div class="slot on" title="${esc(g.n)}"><div class="pocket">${imgTag(g.i,'low',g.n,undefined,g.id)}<span class="qty tq low">×${g.miss}</span></div></div>`).join('')}</div>
+  <label class="lbl2" for="pgmn">Nome da nova lista</label><input class="field" id="pgmn" style="width:100%" maxlength="40" value="Falta para jogar">
+  <div class="actions" style="flex-wrap:wrap;gap:8px"><button class="btn" type="button" data-act="pgm-copy">Copiar texto</button><button class="btn primary" type="button" data-act="pgm-new">Criar nova lista Procuro</button></div>
+  ${wants.length?`<label class="lbl2" for="pgmt" style="margin-top:14px">Ou acrescentar a uma lista Procuro</label><div class="row" style="gap:8px;flex-wrap:wrap"><select class="field" id="pgmt" style="flex:1;min-width:160px">${wants.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}</select><button class="btn" type="button" data-act="pgm-add">Acrescentar</button></div>`:''}
+  <div class="actions"><span></span><button class="btn" type="button" data-ed-act="cancel">Fechar</button></div>`;
+ $('#modal').classList.add('on');live($('#dialog'));
+}
+function missItems(t){
+ let n=0;
+ missGroups().forEach(g=>{addItem(t,g.top.id,'normal',langOf(g.top.id),g.miss);n+=g.miss;});
+ return n;
+}
+function missNew(){
+ if(!missGroups().length)return;
+ const name=(($('#pgmn')||{}).value||'').trim()||'Falta para jogar';
+ const t=newTrade(name,'want');const n=missItems(t);
+ S.trades.push(t);saveTrades();S.ui.pgm=null;$('#modal').classList.remove('on');
+ location.hash='#/negociacao/'+t.id;
+ toast(`Lista “${name}” criada com ${n} carta${n===1?'':'s'}.`);
+}
+function missAppend(){
+ const sel=$('#pgmt');const t=sel&&getTrade(sel.value);if(!t||!missGroups().length)return;
+ const n=missItems(t);saveTrades();S.ui.pgm=null;$('#modal').classList.remove('on');
+ location.hash='#/negociacao/'+t.id;
+ toast(`${n} carta${n===1?'':'s'} acrescentada${n===1?'':'s'} a “${t.name}”.`);
+}
+async function copyMissing(){
  const text=missingText();if(!text){toast('Você já bateu todas as metas.');return;}
  let ok=false;try{await navigator.clipboard.writeText(text);ok=true;}catch(e){}
  toast(ok?'Lista do que falta copiada.':'Não consegui copiar neste navegador.');
@@ -277,7 +314,10 @@ export const PLAY_ACT={
  'pdk-mode':t=>deckDialog(S.ui.pdk&&S.ui.pdk.id,t.dataset.v),
  'pdk-go':()=>deckGo(),
  'pg-copy':()=>copyList(),
- 'pg-copymiss':()=>copyMissing(),
+ 'pg-copymiss':()=>missDialog(),
+ 'pgm-copy':()=>copyMissing(),
+ 'pgm-new':()=>missNew(),
+ 'pgm-add':()=>missAppend(),
  'pg-miss':()=>pgFilter('miss',!ui().miss),
  'pg-used':()=>pgFilter('used',!ui().used),
  'pg-sel':t=>{if(S.ui.pgd){S.ui.pgd.sel=t.dataset.id;paintDetail();}},

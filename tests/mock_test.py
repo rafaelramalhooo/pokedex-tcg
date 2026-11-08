@@ -986,7 +986,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v7.8" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v7.9" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
@@ -1238,6 +1238,21 @@ Total de cartas: 60"""
     check(g76 == [["Carta sv02 3", 5, 3, 2], ["Carta sv02 5", 2, 0, 2]], f"v7.8: excluir o deck devolve as cartas de jogo ao estoque livre {g76}")
     page.evaluate("location.hash='#/decks/cartas'"); page.wait_for_selector(".pgslot")
     check(page.locator("#pgbody .pgslot").count() == 2 and "Carta sv02 3" in page.locator("#pgbody").inner_text(), "v7.8: carta de jogo volta a aparecer na lista depois de excluir o deck")
+    # v7.9: "Copiar o que falta" abre a janela e envia para Negociação
+    page.evaluate("""async()=>{const S=(await import('./js/state.js')).S;const p=await import('./js/play.js');window.__tr79=S.trades;S.trades=[];
+      const g=p.playGroups().find(x=>x.n==='Carta sv02 3');p.setGoal(g.k,7);window.__k79=g.k;}""")
+    page.evaluate("location.hash='#/decks/cartas'"); page.wait_for_selector(".pgslot")
+    page.locator('[data-act="pg-copymiss"]').click(); page.wait_for_selector('[data-act="pgm-new"]')
+    check("2 cartas" in page.locator("#dialog").inner_text() and page.locator("#pgmn").input_value() == "Falta para jogar" and page.locator("#pgmt").count() == 0, "v7.9: janela do que falta mostra o total, nome padrão e sem lista Procuro ainda")
+    page.fill("#pgmn", "Minha busca"); page.locator('[data-act="pgm-new"]').click(); page.wait_for_timeout(300)
+    t79 = page.evaluate("import('./js/state.js').then(m=>m.S.trades.map(t=>[t.name,t.kind,t.items.map(i=>[i.id,i.q])]))")
+    check(t79 == [["Minha busca", "want", [["sv02-3", 2]]]] and "negociacao/" in page.evaluate("location.hash"), f"v7.9: cria lista Procuro com o que falta {t79}")
+    page.evaluate("location.hash='#/decks/cartas'"); page.wait_for_selector(".pgslot")
+    page.locator('[data-act="pg-copymiss"]').click(); page.wait_for_selector('[data-act="pgm-add"]')
+    page.locator('[data-act="pgm-add"]').click(); page.wait_for_timeout(300)
+    t79 = page.evaluate("import('./js/state.js').then(m=>m.S.trades.map(t=>[t.name,t.items.map(i=>[i.id,i.q])]))")
+    check(t79 == [["Minha busca", [["sv02-3", 4]]]], f"v7.9: acrescentar soma as quantidades sem duplicar {t79}")
+    page.evaluate("""async()=>{const S=(await import('./js/state.js')).S;const p=await import('./js/play.js');p.setGoal(window.__k79,0);S.trades=window.__tr79;}""")
     page.evaluate("""async()=>{const S=(await import('./js/state.js')).S;S.play=window.__bk76.p;S.decks=window.__bk76.d;}""")
     page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".binder")
     dr = page.evaluate("""async()=>{const k=await import('./js/catalog.js');const S=(await import('./js/state.js')).S;
