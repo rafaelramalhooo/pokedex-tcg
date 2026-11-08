@@ -986,7 +986,7 @@ with sync_playwright() as p:
     sel = page.locator("#pullres .plslot.sel").first
     check(sel.locator(".plcheck").count() == 1 and page.evaluate("getComputedStyle(document.querySelector('#pullres .plslot.sel .pocket')).boxShadow.includes('3px')"), "puxar: carta marcada tem borda de 3px e check no centro")
     check(page.locator("#pullres .plslot:not(.sel) .plcheck").count() == 0, "puxar: carta não marcada não tem check")
-    check("v7.7" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
+    check("v7.8" in page.locator(".rail .ver").inner_text() and "TCG Collection" in page.locator(".rail .ver").inner_text(), "menu lateral: nome e versão 3.6")
     pm = page.evaluate("import('./js/reprints.js').then(m=>JSON.stringify([m.ptcgSet('sv03.5'),m.ptcgSet('me01'),m.ptcgSet('swsh12.5'),m.ptcgSet('sv10.5b'),m.ptcgSet('mep'),m.ptcgSet('base1'),m.ptcgSet('30th-c')]))")
     check(pm == '["sv3pt5","me1","swsh12pt5","","mep","base1",""]', f"pokemontcg.io: tradução dos códigos de coleção {pm}")
     page.screenshot(path=str(ROOT/"tests/37_puxar_selecao.png"))
@@ -1231,6 +1231,13 @@ Total de cartas: 60"""
     page.screenshot(path=str(ROOT/"tests/v76_estoque.png"))
     rv = page.evaluate("""import('./js/views/decks.js').then(m=>m.stockRows({items:[{id:'sv02-3',q:4,n:'Carta sv02 3',i:''},{id:'sv02-5',q:3,n:'Carta sv02 5',i:''},{id:'x-1',q:1,n:'Carta zz 9',i:''}]}).map(r=>[r.n,r.need,r.free,r.from,r.miss]))""")
     check(rv == [["Carta sv02 3", 4, 0, 0, 4], ["Carta sv02 5", 3, 1, 1, 2], ["Carta zz 9", 1, 0, 0, 1]], f"v7.6: conferência da importação: precisa, tem, sai e falta {rv}")
+    page.once("dialog", lambda d: d.accept())
+    page.evaluate("""async()=>{const S=(await import('./js/state.js')).S;const m=await import('./js/views/decks.js');const d=S.decks.find(x=>x.name==='Do estoque');m.DECK_ACT['deck-del']({dataset:{id:d.id}});}""")
+    page.wait_for_timeout(300)
+    g76 = page.evaluate("import('./js/play.js').then(m=>m.playGroups().map(g=>[g.n,g.q,g.use,g.free]))")
+    check(g76 == [["Carta sv02 3", 5, 3, 2], ["Carta sv02 5", 2, 0, 2]], f"v7.8: excluir o deck devolve as cartas de jogo ao estoque livre {g76}")
+    page.evaluate("location.hash='#/decks/cartas'"); page.wait_for_selector(".pgslot")
+    check(page.locator("#pgbody .pgslot").count() == 2 and "Carta sv02 3" in page.locator("#pgbody").inner_text(), "v7.8: carta de jogo volta a aparecer na lista depois de excluir o deck")
     page.evaluate("""async()=>{const S=(await import('./js/state.js')).S;S.play=window.__bk76.p;S.decks=window.__bk76.d;}""")
     page.evaluate("location.hash='#/decks'"); page.wait_for_selector(".binder")
     dr = page.evaluate("""async()=>{const k=await import('./js/catalog.js');const S=(await import('./js/state.js')).S;

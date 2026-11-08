@@ -367,8 +367,10 @@ export const DECK_ACT={
  'deck-edit':t=>{const d=getDeck(t.dataset.id);if(d)deckDialog(d,false);},
  'deck-del':t=>{
   const d=getDeck(t.dataset.id);if(!d)return;
-  if(!confirm(`Excluir o deck “${d.name}”? Sua coleção não muda.`))return;
+  if(!confirm(`Excluir o deck “${d.name}”? Sua coleção não muda, e as cartas de jogo que ele usava voltam a ficar livres no estoque.`))return;
+  const volta=d.items.reduce((a,it)=>a+it.q,0);
   S.decks=S.decks.filter(x=>x.id!==d.id);saveDecks();$('#modal').classList.remove('on');location.hash='#/decks';
+  toast(`Deck excluído. ${volta} carta${volta===1?'':'s'} ${volta===1?'voltou':'voltaram'} para o estoque de jogo.`);
  },
  'deck-add':t=>addDialog(t.dataset.id),
  'dk-pick':t=>pick(t.dataset.id,1),
