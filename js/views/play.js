@@ -257,30 +257,54 @@ function rcTile(k){
  if(g.q<=1){toast('Só resta uma. Para tirar, abra a carta e use Remover.');return;}
  change(g.top.id,-1);
 }
-/* "Copiar o que falta": janela com o que falta e três saídas (copiar texto, nova lista Procuro, acrescentar a uma lista Procuro). */
+/* "Copiar o que falta": janela com o que falta, quantidade escolhida por carta e três saídas
+   (copiar texto, nova lista Procuro, acrescentar a uma lista Procuro). */
 const missGroups=()=>playGroups().filter(g=>g.miss>0);
+const missPick=g=>{const st=S.ui.pgm;const v=st&&st.sel[g.k];return v===undefined?g.miss:Math.max(0,Math.min(g.miss,v));};
 function missDialog(){
  if(!playGroups().some(g=>g.goal)){toast('Defina uma meta numa carta para usar este botão.');return;}
  const list=missGroups();if(!list.length){toast('Você já bateu todas as metas.');return;}
- const cards=list.reduce((a,g)=>a+g.miss,0);
  const wants=S.trades.filter(t=>t.kind==='want');
- S.ui.pgm={};
+ S.ui.pgm={sel:{}};
  $('#dialog').innerHTML=`<h2>O que falta para jogar</h2>
-  <p class="lead">${fmtN(cards)} carta${cards===1?'':'s'} em ${fmtN(list.length)} nome${list.length===1?'':'s'}, segundo as suas metas. Escolha o que fazer com a lista. Suas cartas de jogo não mudam.</p>
-  <div class="pgmlist" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;max-height:34vh;overflow:auto;margin:6px 0 12px">${list.map(g=>`<div class="slot on" title="${esc(g.n)}"><div class="pocket">${imgTag(g.i,'low',g.n,undefined,g.id)}<span class="qty tq low">×${g.miss}</span></div></div>`).join('')}</div>
+  <p class="lead" id="pgmsum"></p>
+  <div class="row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap"><button class="btn small" type="button" data-act="pgm-all">Marcar todas</button><button class="btn small" type="button" data-act="pgm-none">Limpar</button><span class="muted" style="font-size:13px">Toque na carta para alternar entre todas e nenhuma; use − e + para escolher a quantidade.</span></div>
+  <div id="pgmlist" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;max-height:38vh;overflow:auto;margin:6px 0 12px"></div>
   <label class="lbl2" for="pgmn">Nome da nova lista</label><input class="field" id="pgmn" style="width:100%" maxlength="40" value="Falta para jogar">
-  <div class="actions" style="flex-wrap:wrap;gap:8px"><button class="btn" type="button" data-act="pgm-copy">Copiar texto</button><button class="btn primary" type="button" data-act="pgm-new">Criar nova lista Procuro</button></div>
-  ${wants.length?`<label class="lbl2" for="pgmt" style="margin-top:14px">Ou acrescentar a uma lista Procuro</label><div class="row" style="gap:8px;flex-wrap:wrap"><select class="field" id="pgmt" style="flex:1;min-width:160px">${wants.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}</select><button class="btn" type="button" data-act="pgm-add">Acrescentar</button></div>`:''}
+  <div class="actions" style="flex-wrap:wrap;gap:8px"><button class="btn" type="button" data-act="pgm-copy" id="pgmcopy">Copiar texto</button><button class="btn primary" type="button" data-act="pgm-new" id="pgmnew">Criar nova lista Procuro</button></div>
+  ${wants.length?`<label class="lbl2" for="pgmt" style="margin-top:14px">Ou acrescentar a uma lista Procuro</label><div class="row" style="gap:8px;flex-wrap:wrap"><select class="field" id="pgmt" style="flex:1;min-width:160px">${wants.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}</select><button class="btn" type="button" data-act="pgm-add" id="pgmadd">Acrescentar</button></div>`:''}
   <div class="actions"><span></span><button class="btn" type="button" data-ed-act="cancel">Fechar</button></div>`;
- $('#modal').classList.add('on');live($('#dialog'));
+ $('#modal').classList.add('on');
+ missPaint();
 }
+function missPaint(){
+ const list=missGroups();const box=$('#pgmlist');if(!box)return;
+ const tot=list.reduce((a,g)=>a+g.miss,0);
+ const n=list.reduce((a,g)=>a+missPick(g),0),names=list.filter(g=>missPick(g)>0).length;
+ const sum=$('#pgmsum');
+ if(sum)sum.textContent=`Faltam ${fmtN(tot)} carta${tot===1?'':'s'} em ${fmtN(list.length)} nome${list.length===1?'':'s'}, segundo as suas metas. Selecionadas: ${fmtN(n)} carta${n===1?'':'s'} (${fmtN(names)} nome${names===1?'':'s'}). Suas cartas de jogo não mudam.`;
+ box.innerHTML=list.map(g=>{const v=missPick(g);return`<div class="pgm${v?'':' off'}" data-k="${esc(g.k)}">
+   <div class="slot on" data-act="pgm-tog" data-k="${esc(g.k)}" role="button" tabindex="0" aria-label="${esc(g.n)}: ${v} de ${g.miss}" title="${esc(g.n)}"><div class="pocket${v?'':' off'}">${imgTag(g.i,'low',g.n,undefined,g.id)}<span class="qty tq low">×${v}</span></div></div>
+   <div class="stepper"><button type="button" class="btn small" data-act="pgm-dec" data-k="${esc(g.k)}" aria-label="Diminuir">−</button><button type="button" class="btn small" data-act="pgm-inc" data-k="${esc(g.k)}" aria-label="Aumentar">+</button></div>
+  </div>`;}).join('');
+ live(box);
+ ['pgmcopy','pgmnew','pgmadd'].forEach(id=>{const b=$('#'+id);if(b)b.disabled=!n;});
+}
+function missSet(k,d){
+ const g=missGroups().find(x=>x.k===k);if(!g)return;
+ const st=S.ui.pgm;if(!st)return;
+ st.sel[k]=d==='all'?g.miss:d==='none'?0:Math.max(0,Math.min(g.miss,missPick(g)+d));
+ missPaint();
+}
+function missToggle(k){const g=missGroups().find(x=>x.k===k);if(g)missSet(k,missPick(g)?'none':'all');}
+function missAll(v){const st=S.ui.pgm;if(!st)return;missGroups().forEach(g=>{st.sel[g.k]=v?g.miss:0;});missPaint();}
 function missItems(t){
  let n=0;
- missGroups().forEach(g=>{addItem(t,g.top.id,'normal',langOf(g.top.id),g.miss);n+=g.miss;});
+ missGroups().forEach(g=>{const q=missPick(g);if(q>0){addItem(t,g.top.id,'normal',langOf(g.top.id),q);n+=q;}});
  return n;
 }
 function missNew(){
- if(!missGroups().length)return;
+ if(!missGroups().some(g=>missPick(g)>0))return;
  const name=(($('#pgmn')||{}).value||'').trim()||'Falta para jogar';
  const t=newTrade(name,'want');const n=missItems(t);
  S.trades.push(t);saveTrades();S.ui.pgm=null;$('#modal').classList.remove('on');
@@ -288,13 +312,14 @@ function missNew(){
  toast(`Lista “${name}” criada com ${n} carta${n===1?'':'s'}.`);
 }
 function missAppend(){
- const sel=$('#pgmt');const t=sel&&getTrade(sel.value);if(!t||!missGroups().length)return;
+ const sel=$('#pgmt');const t=sel&&getTrade(sel.value);if(!t||!missGroups().some(g=>missPick(g)>0))return;
  const n=missItems(t);saveTrades();S.ui.pgm=null;$('#modal').classList.remove('on');
  location.hash='#/negociacao/'+t.id;
  toast(`${n} carta${n===1?'':'s'} acrescentada${n===1?'':'s'} a “${t.name}”.`);
 }
 async function copyMissing(){
- const text=missingText();if(!text){toast('Você já bateu todas as metas.');return;}
+ const text=missGroups().filter(g=>missPick(g)>0).map(g=>`${missPick(g)} ${g.n}`).join('\n');
+ if(!text){toast('Nada selecionado.');return;}
  let ok=false;try{await navigator.clipboard.writeText(text);ok=true;}catch(e){}
  toast(ok?'Lista do que falta copiada.':'Não consegui copiar neste navegador.');
 }
@@ -317,6 +342,11 @@ export const PLAY_ACT={
  'pg-copymiss':()=>missDialog(),
  'pgm-copy':()=>copyMissing(),
  'pgm-new':()=>missNew(),
+ 'pgm-tog':t=>missToggle(t.dataset.k),
+ 'pgm-inc':(t,e)=>{e&&e.stopPropagation();missSet(t.dataset.k,1);},
+ 'pgm-dec':(t,e)=>{e&&e.stopPropagation();missSet(t.dataset.k,-1);},
+ 'pgm-all':()=>missAll(true),
+ 'pgm-none':()=>missAll(false),
  'pgm-add':()=>missAppend(),
  'pg-miss':()=>pgFilter('miss',!ui().miss),
  'pg-used':()=>pgFilter('used',!ui().used),

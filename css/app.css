@@ -786,3 +786,4 @@ a.binder.dragghost{display:block}
 .rvslot .pocket.off img{filter:grayscale(1) contrast(.9);opacity:.4}
 
 .credits{margin:6px 0 10px;padding-left:18px;font-size:14px;line-height:1.5}.credits li{margin:4px 0}
+.pgm .stepper{max-width:96px}.pgm.off .slot{opacity:.55}
