@@ -1,7 +1,7 @@
 /* Complemento de cartas que a TCGdex ainda não cadastrou (promos recentes, como a Nidorina MEP 101).
    Os dados factuais vêm de data/extra-cards.json (nome, número, raridade, ilustrador, Pokédex), lidos das páginas públicas
    do Dex (dextcg.com) em 21/10/2026. As imagens são carregadas direto do endereço do Dex; se não existirem ou falharem,
-   aparece o espaço reservado. Quando a TCGdex passar a ter a carta, a da TCGdex vence e a daqui é ignorada. */
+   aparece o espaço reservado. Quando a TCGdex passar a ter a carta, a da TCGdex vence; daqui ficam só o logo e os acabamentos conferidos (campo v). */
 import {DEX_EXTRA} from './dex30.js';
 
 const IMG='https://dextcg.com/cdn-cgi/image/q=75,f=auto/https://static.dextcg.com/cards/';
@@ -33,7 +33,7 @@ export async function loadExtra(){
       id,localId:pad3(n),name:c.name,image:imageOf(s.ds,n),category:cat,illustrator:c.ill||undefined,rarity:c.rar||undefined,
       set:sid,variants:c.v?{normal:c.v.includes('n'),holo:c.v.includes('h'),reverse:c.v.includes('r'),firstEdition:false}:{normal:false,holo:true,reverse:false,firstEdition:false},rvp:[],
       dexId:c.dex?[c.dex]:undefined,types:c.type?[c.type]:undefined,trainerType:c.tt||undefined,
-      energyType:cat==='Energy'?'Normal':undefined,regulationMark:c.reg||undefined,lang:'en',extra:true
+      energyType:cat==='Energy'?'Normal':undefined,regulationMark:c.reg||undefined,lang:'en',extra:true,curatedV:!!c.v
      };
      out.cards[id]=card;out.sets[sid].push(id);
      if(c.dex)DEX_EXTRA[id]=[c.dex];

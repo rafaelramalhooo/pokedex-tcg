@@ -6,6 +6,8 @@ import {C, S, soft, softNow, viewCache} from './state.js';
 import {nz} from './util.js';
 import {dexImage,extraCard,isExtraId,loadExtra,mergeExtra} from './extra.js';
 
+/* Versão do formato guardado de cada coleção: ao subir, as coleções já baixadas são conferidas de novo. */
+const FULL=8;
 export function indexSets(){
  S.setMap={};S.setIdx={};
  S.sets.forEach((s,i)=>{S.setMap[s.id]=s;S.setIdx[s.id]=i;});
@@ -31,6 +33,8 @@ export async function ensureExtraSets(){
   /* coleção do complemento já na lista (de uma versão anterior): atualiza nome e logo */
   const cur=S.sets.find(x=>x.id===sid);
   if(cur&&cur.extra){cur.name=m.name;cur.logoUrl=m.logo;cur.cardCount={official:m.total,total:m.total};}
+  /* coleção que a TCGdex já tem mas sem logo (como a Reinado Delta): usa o logo enviado por você */
+  else if(cur&&m.logo&&!cur.logo&&!cur.logoEn)cur.logoUrl=m.logo;
   if(have.has(sid))continue;
   /* só entra se a série já existe na TCGdex (coleção nova de uma série conhecida) */
   if(m.serie&&!Object.values(S.serieOf).some(x=>x&&x.id===m.serie.id))continue;
@@ -99,16 +103,18 @@ async function fetchSetFull(id){
  /* sem imagem na TCGdex: tenta a do Dex */
  (d.cards||[]).forEach(c=>{if(!c.image){const u=dexImage(d.id,c.localId);if(u)c.image=u;}});
  await mergeExtra(d);
- d.fullChecked=7;
+ d.fullChecked=FULL;
  return d;
 }
 export async function ensureSetd(id,force){
  const old=S.setd[id];
- if(old&&old.fullChecked===7&&!force)return old;
+ if(old&&old.fullChecked===FULL&&!force)return old;
  let d;
  try{d=await fetchSetFull(id);}
  catch(e){if(old)return old;throw e;}
  S.setd[id]=d;indexSetd(d);viewCache.clear();C.opt=null;
+ /* detalhes guardados a partir do complemento, de cartas que a TCGdex já publicou: descarta para baixar os da TCGdex */
+ (d.cards||[]).forEach(c=>{const k=S.cards[c.id];if(k&&k.extra&&!c.extra){delete S.cards[c.id];viewCache.delete(c.id);DB.del('cards',c.id).catch(()=>{});}});
  /* imagem do Dex guardada antes com o número errado: corrige nos detalhes já baixados */
  (d.cards||[]).forEach(c=>{const k=S.cards[id+'-'+c.localId]||S.cards[c.id];if(k&&k.image&&c.image&&k.image!==c.image&&/dextcg\.com/.test(k.image)){k.image=c.image;DB.put('cards',k.id,k);}});
  await DB.put('setd',id,d);
@@ -116,7 +122,7 @@ export async function ensureSetd(id,force){
 }
 export async function preloadSetd(force){
  if(S.status.pre)return;
- const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==7);
+ const todo=mySets().filter(s=>force||!S.setd[s.id]||S.setd[s.id].fullChecked!==FULL);
  if(!todo.length){loadSelectedCards();return;}
  S.status.pre={done:0,total:todo.length};S.status.preErr=0;softNow();
  await pool(todo,6,async s=>{
@@ -174,7 +180,19 @@ export function ensureCard(id,force){
  if(inflight.has(id))return inflight.get(id);
  const p=(async()=>{
   await loadExtra();
-  const c=isExtraId(id)?{...extraCard(id)}:trimCard(await getFB(`/cards/${encodeURIComponent(id)}`));
+  let c;
+  if(isExtraId(id)){
+   /* a TCGdex vence quando já tem a carta; o complemento fica de reserva e confere os acabamentos */
+   const ex={...extraCard(id)};
+   /* lista da coleção já baixada e sem esta carta: a TCGdex ainda não a tem, nem adianta perguntar */
+   const lst=S.setd[ex.set];
+   if(lst&&!(lst.cards||[]).some(x=>x.id===id&&!x.extra))c=ex;
+   else try{
+    c=trimCard(await getFB(`/cards/${encodeURIComponent(id)}`));
+    if(!c.image&&ex.image)c.image=ex.image;
+    if(ex.curatedV)c.variants=ex.variants;
+   }catch(e){c=ex;}
+  }else c=trimCard(await getFB(`/cards/${encodeURIComponent(id)}`));
   if(!c.image){const b=S.briefs[id];c.image=(b&&b.image)||dexImage(c.set,c.localId)||c.image;}
   S.cards[id]=c;viewCache.delete(id);C.opt=null;
   await DB.put('cards',id,c);

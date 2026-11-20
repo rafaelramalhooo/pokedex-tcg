@@ -127,6 +127,7 @@ def handle(route):
         hits["cards"] += 1
         sid = ms.group(1).rsplit("-", 1)[0]
         if sid in EN_ONLY and lang == "pt": return nf()
+        if sid not in {**SETS, **EN_ONLY}: return nf()
         return ok(card_detail(ms.group(1), lang))
     return nf()
 
@@ -1289,6 +1290,32 @@ Total de cartas: 60"""
       S.sets=S.sets.filter(x=>x.id!=='me06');delete S.serieOf['mee'];k.indexSets();return r;}""")
     check(vr["c"] == {"normal": True, "holo": False, "reverse": True, "firstEdition": False} and vr["r"]["holo"] and vr["r"]["reverse"] and not vr["r"]["normal"] and vr["h"] == {"normal": False, "holo": True, "reverse": False, "firstEdition": False} and vr["n"]["normal"] and vr["n"]["holo"] and vr["n"]["reverse"] and vr["logo"] == "assets/logo-me06-reinado-delta.png", f"v7.7: Delta Reign com acabamentos por carta (Dex) e logo próprio {vr}")
     check((ROOT/"assets/logo-me06-reinado-delta.png").exists(), "v7.7: arquivo do logo Reinado Delta na pasta assets")
+    # v7.10.1: quando a TCGdex publica a coleção, ela vence; ficam o logo e os acabamentos conferidos
+    page.evaluate("""async()=>{const S=(await import('./js/state.js')).S;const k=await import('./js/catalog.js');
+      S.serieOf['mee']={id:'me',name:'Megaevolução'};await k.ensureExtraSets();
+      delete S.cards['me06-001'];delete S.cards['me06-005'];
+      await k.ensureCard('me06-001');window.__old7101=!!S.cards['me06-001'].extra&&!S.cards['me06-001'].illustrator;}""")
+    check(page.evaluate("window.__old7101"), "v7.10.1: sem a TCGdex, a carta do complemento ainda serve de reserva")
+    CARD = lambda n, ill, rar: {"id": f"me06-{n}", "localId": n, "name": "Heracross" if n == "001" else "Cacturne", "image": f"https://assets.tcgdex.net/pt/me/me06/{n}", "category": "Pokemon", "illustrator": ill, "rarity": rar, "set": {"id": "me06"}, "variants": {"normal": True, "holo": False, "reverse": False, "firstEdition": False}}
+    def me06route(route):
+        u = route.request.url; h = {"access-control-allow-origin": "*", "content-type": "application/json"}
+        if u.endswith("/pt/sets/me06"):
+            return route.fulfill(status=200, headers=h, body=json.dumps({"id": "me06", "name": "Reinado Delta", "releaseDate": "2026-11-06", "cardCount": {"total": 141, "official": 103}, "cards": [{"id": "me06-001", "localId": "001", "name": "Heracross", "image": "https://assets.tcgdex.net/pt/me/me06/001"}, {"id": "me06-005", "localId": "005", "name": "Cacturne", "image": "https://assets.tcgdex.net/pt/me/me06/005"}]}))
+        if u.endswith("/pt/cards/me06-001"): return route.fulfill(status=200, headers=h, body=json.dumps(CARD("001", "Satoshi Ito", "Comum")))
+        if u.endswith("/pt/cards/me06-005"): return route.fulfill(status=200, headers=h, body=json.dumps(CARD("005", "okayamatakatoshi", "Rara")))
+        return route.fallback()
+    page.route(re.compile(r"https://api\.tcgdex\.net/v2/pt/(sets/me06|cards/me06-00[15])$"), me06route)
+    r7101 = page.evaluate("""async()=>{const S=(await import('./js/state.js')).S;const k=await import('./js/catalog.js');
+      const d=await k.ensureSetd('me06',true);
+      const gone=!S.cards['me06-001'];
+      await k.ensureCard('me06-001');await k.ensureCard('me06-005');
+      const a=S.cards['me06-001'],b=S.cards['me06-005'];
+      const r={gone,fc:d.fullChecked,n:d.cards.length,a:[a.extra||false,a.illustrator,a.rarity,a.variants,a.image],b:[b.illustrator,b.variants],tgd:d.cards[0].extra||false};
+      S.sets=S.sets.filter(x=>x.id!=='me06');delete S.serieOf['mee'];k.indexSets();return r;}""")
+    page.unroute(re.compile(r"https://api\.tcgdex\.net/v2/pt/(sets/me06|cards/me06-00[15])$"), me06route)
+    check(r7101["gone"] and r7101["fc"] == 8 and r7101["n"] == 141 and r7101["tgd"] is False, f"v7.10.1: coleção que a TCGdex já tem troca a do complemento e descarta os detalhes antigos {r7101}")
+    check(r7101["a"][0] is False and r7101["a"][1] == "Satoshi Ito" and r7101["a"][2] == "Comum" and r7101["a"][4] == "https://assets.tcgdex.net/pt/me/me06/001" and r7101["b"][0] == "okayamatakatoshi", f"v7.10.1: ilustradora, raridade e imagem vêm da TCGdex {r7101['a']}")
+    check(r7101["a"][3] == {"normal": True, "holo": False, "reverse": True, "firstEdition": False} and r7101["b"][1]["holo"] and r7101["b"][1]["reverse"] and not r7101["b"][1]["normal"], f"v7.10.1: acabamentos conferidos valem mais que os da TCGdex {r7101['b']}")
     # ---- decks: criar lista de negociação ----
     tf = page.evaluate("""async()=>{const m=await import('./js/decks.js');const s=(await import('./js/state.js')).S;
       const own=m.ownByName();const have=own.get(m.nameKey('Carta sv02 3'))||0;
@@ -1596,7 +1623,7 @@ Total de cartas: 60"""
       const c=await k.ensureCard('mep-101');const e=await k.ensureCard('mep-Z');
       return {imgs:a.cards.map(x=>x.image||''),mimg:(b.cards.find(x=>x.id==='mep-003')||{}).image,ids:a.cards.map(x=>x.id),names:a.cards.map(x=>x.name),fc:a.fullChecked,tot:a.cardCount.total,en:a.completedFromEn,
         mn:b.cards.length,has101:b.cards.some(x=>x.id==='mep-101'),brief:s.briefs['mep-101'],card:c};}""".replace("const e=await k.ensureCard('mep-Z');", ""))
-    check(ex["ids"] == [f"zz1-{i}" for i in range(1, 6)] and ex["names"] == ["P1", "P2", "P3", "E4", "E5"] and ex["fc"] == 7 and ex["tot"] == 5 and ex["en"] is True,
+    check(ex["ids"] == [f"zz1-{i}" for i in range(1, 6)] and ex["names"] == ["P1", "P2", "P3", "E4", "E5"] and ex["fc"] == 8 and ex["tot"] == 5 and ex["en"] is True,
           f"coleção com contagem igual no português completa com o inglês {ex['ids']} {ex['names']}")
     page.route(re.compile(r"https://api\.tcgdex\.net/v2/\w+/sets/mee$"), lambda route: route.fulfill(status=200, headers={"access-control-allow-origin": "*", "content-type": "application/json"}, body=json.dumps({"id": "mee", "name": "Megaevolução Energia", "cardCount": {"official": 8, "total": 8}, "cards": [{"id": f"mee-{i:03d}", "localId": f"{i:03d}", "name": "E" + str(i)} for i in range(1, 9)]})))
     mee = page.evaluate("""async()=>{const k=await import('./js/catalog.js');const s=(await import('./js/state.js')).S;
